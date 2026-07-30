@@ -13,6 +13,9 @@ const fs = require("fs");
 const path = require("path");
 const mysql = require("mysql2/promise");
 
+const APP_VERSION = Date.now().toString();
+let globalDataVersion = Date.now();
+
 const { databaseConfig } = require("./config/database");
 const logger = require("./config/logger");
 const errorHandler = require("./middleware/errorHandler");
@@ -387,6 +390,7 @@ app.use(errorHandler);
 
 async function handleAction(action, payload, req) {
   const coreActions = {
+    sync: () => ({ appVersion: APP_VERSION, dataVersion: globalDataVersion }),
     bootstrap: () => bootstrap(),
     dashboard: () => dashboard(),
     list: () => listRows(payload.collection, req),
@@ -708,6 +712,7 @@ async function listRows(collection, req = null) {
 
 async function addRow(collection, item = {}) {
   assertCollection(collection);
+  globalDataVersion = Date.now();
 
   // [SECURITY] Sanitasi semua input text untuk mencegah Stored XSS
   if (item && typeof item === "object") {
@@ -929,6 +934,7 @@ async function addRow(collection, item = {}) {
 
 async function updateRow(collection, id, item = {}) {
   assertCollection(collection);
+  globalDataVersion = Date.now();
   if (!id) throw new Error("ID wajib dikirim.");
 
   // [SECURITY] Sanitasi semua input text untuk update
@@ -1035,6 +1041,7 @@ async function updateRow(collection, id, item = {}) {
 
 async function removeRow(collection, id) {
   assertCollection(collection);
+  globalDataVersion = Date.now();
   if (!id) throw new Error("ID wajib dikirim.");
 
   if (collection === "users") await validateUserDelete(id);

@@ -16,6 +16,9 @@
       currentUser: JSON.parse(localStorage.getItem("currentUser") || "null"),
       data: { products: [], suppliers: [], purchases: [], sales: [], users: [], priceHistory: [], auditLogs: [], dashboard: {} }
     };
+    window.appVersion = null;
+    window.dataVersion = null;
+    window.hasPendingUpdate = false;
     
     // Global listener untuk menutup dropdown menu saat klik di luar
     document.addEventListener("click", () => {
@@ -89,8 +92,43 @@
     }
     window.clearAuditLogs = clearAuditLogs;
 
+    async function pollSync() {
+      if (!localStorage.getItem("jwt_token")) return;
+      try {
+        const syncData = await gas("sync");
+        if (!window.appVersion) {
+           window.appVersion = syncData.appVersion;
+           window.dataVersion = syncData.dataVersion;
+           return;
+        }
+        
+        if (window.appVersion !== syncData.appVersion) {
+           window.hasPendingUpdate = true;
+           window.appVersion = syncData.appVersion;
+           showToast("🚀 Pembaruan aplikasi tersedia! Refresh halaman untuk memuat versi terbaru.", "success");
+           renderShell();
+           return;
+        }
+
+        if (window.dataVersion !== syncData.dataVersion) {
+           window.dataVersion = syncData.dataVersion;
+           showToast("🔄 Sinkronisasi: Ada aktivitas data baru.", "info");
+           state.data = await gas("bootstrap");
+           render();
+        }
+      } catch(e) {}
+    }
+
+    function startSyncPolling() {
+      if (!window.syncInterval) {
+        pollSync();
+        window.syncInterval = setInterval(pollSync, 15000);
+      }
+    }
+
     async function load() {
       state.data = await gas("bootstrap");
+      startSyncPolling();
       renderShell();
       render();
     }
