@@ -454,6 +454,16 @@
       input[type=number] {
           -moz-appearance: textfield;
       }
+
+      /* Inline Editing visual cue */
+      div[data-collection="products"] td.editable-cell {
+          cursor: cell;
+          transition: background-color 0.2s;
+      }
+      div[data-collection="products"] td.editable-cell:hover {
+          background-color: rgba(16, 185, 129, 0.15); /* light mint background */
+          box-shadow: inset 0 0 0 1px var(--mint);
+      }
 </style>
 </head>
 <body>

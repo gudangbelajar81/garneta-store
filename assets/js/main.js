@@ -4403,20 +4403,22 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
     }
 
     function actionTable(collection, rows, keys, labels, formatter) {
-      return table(rows, labels.concat(["Aksi"]), (row) => keys.map((key) => td(formatter ? formatter(key, row[key]) : row[key])).join("") + `<td class="actions" style="position:relative; overflow:visible; width:40px;"><button class="btn soft" onclick="document.querySelectorAll('.kebab-menu').forEach(m => m !== this.nextElementSibling && m.classList.add('hidden')); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();" style="padding: 2px 6px !important; font-size: 13px !important; min-height: 24px !important; line-height: 1 !important; border-radius: 4px !important;">⋮</button><div class="kebab-menu hidden" style="position:absolute; right:36px; top:50%; transform:translateY(-50%); background:var(--card-bg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.8); z-index: 50; display:flex; flex-direction:row; gap:12px; min-width:unset;"><button data-edit="${collection}" data-id="${row.id}" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">✏️</button><button data-delete="${collection}" data-id="${row.id}" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">🗑️</button></div></td>`);
+      return `<div data-collection="${collection}">${table(rows, labels.concat(["Aksi"]), (row) => keys.map((key) => td(formatter ? formatter(key, row[key]) : row[key], key)).join("") + `<td class="actions" style="position:relative; overflow:visible; width:40px;"><button class="btn soft" onclick="document.querySelectorAll('.kebab-menu').forEach(m => m !== this.nextElementSibling && m.classList.add('hidden')); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();" style="padding: 2px 6px !important; font-size: 13px !important; min-height: 24px !important; line-height: 1 !important; border-radius: 4px !important;">⋮</button><div class="kebab-menu hidden" style="position:absolute; right:36px; top:50%; transform:translateY(-50%); background:var(--card-bg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.8); z-index: 50; display:flex; flex-direction:row; gap:12px; min-width:unset;"><button data-edit="${collection}" data-id="${row.id}" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">✏️</button><button data-delete="${collection}" data-id="${row.id}" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">🗑️</button></div></td>`)}</div>`;
     }
 
     function simpleTable(rows, keys, labels, formatter) {
-      return table(rows, labels, (row) => keys.map((key) => td(formatter ? formatter(key, row[key]) : row[key])).join(""));
+      return table(rows, labels, (row) => keys.map((key) => td(formatter ? formatter(key, row[key]) : row[key], key)).join(""));
     }
 
     function table(rows, labels, body) {
       if (!rows.length) return `<p class="muted">Belum ada data.</p>`;
-      return `<div class="table-wrap"><table><thead><tr>${labels.map((label) => `<th>${label}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${body(row)}</tr>`).join("")}</tbody></table></div>`;
+      return `<div class="table-wrap"><table><thead><tr>${labels.map((label) => `<th>${label}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr data-id="${row.id}">${body(row)}</tr>`).join("")}</tbody></table></div>`;
     }
 
-    function td(value) {
-      return `<td>${value ?? ""}</td>`;
+    function td(value, field = "") {
+      const fieldAttr = field ? ` data-field="${field}"` : "";
+      const editableClass = field ? 'editable-cell' : '';
+      return `<td${fieldAttr} class="${editableClass}" title="${field ? 'Klik Ganda (Double-Click) untuk mengedit' : ''}">${value ?? ""}</td>`;
     }
 
     function input(name, label, required, type = "text", value = "") {
@@ -6493,6 +6495,91 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       });
   
       setInterval(() => el("clock").textContent = new Date().toLocaleString("id-ID"), 1000);
+      
+      // Inline Editing Excel-like
+      document.addEventListener("dblclick", (e) => {
+        const cell = e.target.closest("td[data-field]");
+        if (!cell) return;
+        const tr = cell.closest("tr[data-id]");
+        if (!tr) return;
+        const collectionDiv = tr.closest("div[data-collection]");
+        if (!collectionDiv || collectionDiv.dataset.collection !== "products") return;
+        
+        const id = tr.dataset.id;
+        const field = cell.dataset.field;
+        
+        const editableFields = ["category", "name", "unit", "unitContent", "basePrice", "basePriceEcer", "salePrice", "salePriceEcer", "displayPot", "displayMin"];
+        if (!editableFields.includes(field)) return;
+        
+        if (cell.querySelector("input")) return; // already editing
+        
+        const product = state.data.products.find(p => String(p.id) === String(id));
+        if (!product) return;
+        
+        let rawValue = product[field] !== null && product[field] !== undefined ? String(product[field]) : "";
+        if (field === "displayPot") rawValue = product.discountValue || "";
+        if (field === "displayMin") rawValue = product.discountMinQty || "";
+        
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = rawValue;
+        input.style.width = "100%";
+        input.style.minWidth = "60px";
+        input.style.boxSizing = "border-box";
+        input.style.padding = "4px 6px";
+        input.style.color = "black";
+        input.style.borderRadius = "4px";
+        input.style.border = "2px solid var(--mint)";
+        input.style.outline = "none";
+        input.style.backgroundColor = "#fff";
+        input.style.fontSize = "inherit";
+        input.style.fontWeight = "bold";
+        
+        const originalHtml = cell.innerHTML;
+        cell.innerHTML = "";
+        cell.appendChild(input);
+        input.focus();
+        input.select();
+        
+        let saved = false;
+        const doSave = async () => {
+          if (saved) return;
+          saved = true;
+          let val = input.value;
+          const updates = {};
+          
+          if (field === "displayPot") {
+            updates.discountValue = val.replace(/[^0-9]/g, '');
+            updates.discountType = val.includes('%') ? '%' : 'Rp';
+          } else if (field === "displayMin") {
+            updates.discountMinQty = val.replace(/[^0-9]/g, '');
+          } else if (["basePrice", "basePriceEcer", "salePrice", "salePriceEcer", "unitContent"].includes(field)) {
+            updates[field] = Number(val.replace(/[^0-9-]/g, '')) || 0;
+          } else {
+            updates[field] = val;
+          }
+          
+          // Show loading
+          cell.innerHTML = `<span class="spinner" style="width:12px;height:12px;border:2px solid var(--mint);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;display:inline-block;"></span>`;
+          try {
+            await gas("update", { collection: "products", id, item: { ...product, ...updates } });
+            // Update local state directly so we don't have to wait for sync polling
+            Object.assign(product, updates);
+            render();
+            showToast("Barang berhasil diperbarui!", "success");
+          } catch (err) {
+            showToast("Gagal menyimpan data", "error");
+            cell.innerHTML = originalHtml;
+          }
+        };
+        
+        input.addEventListener("blur", doSave);
+        input.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter") { ev.preventDefault(); doSave(); }
+          if (ev.key === "Escape") { saved = true; cell.innerHTML = originalHtml; }
+        });
+      });
+
     load().catch((error) => {
       console.error("Load Error:", error);
       const msg = error?.message || String(error);
