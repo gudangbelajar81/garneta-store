@@ -41,7 +41,14 @@ CREATE TABLE products (
     END
   ) STORED,
   sale_price DECIMAL(14,2) NOT NULL DEFAULT 0,
-  profit_per_unit DECIMAL(14,2) GENERATED ALWAYS AS (sale_price - cost_price) STORED,
+  profit_per_unit DECIMAL(14,2) GENERATED ALWAYS AS (
+    sale_price - (
+      CASE
+        WHEN unit_content > 0 THEN base_price / unit_content
+        ELSE 0
+      END
+    )
+  ) STORED,
   stock DECIMAL(14,2) NOT NULL DEFAULT 0,
   photo_path VARCHAR(255) NULL,
   barcode VARCHAR(120) NULL,
@@ -266,15 +273,4 @@ CREATE TABLE ngitung_sales (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Struktur untuk tabel ngitung_sales
-CREATE TABLE IF NOT EXISTS ngitung_sales (
-  id VARCHAR(50) PRIMARY KEY,
-  date VARCHAR(20) NOT NULL,
-  customer_name VARCHAR(100),
-  total_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
-  paid_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
-  status VARCHAR(50),
-  items TEXT,
-  installments TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+

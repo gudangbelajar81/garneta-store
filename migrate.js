@@ -11,11 +11,11 @@ const database = dbConfig.database;
 
 async function createConnection() {
   try {
-    return await mysql.createConnection({ ...dbConfig, database });
+    return await mysql.createConnection({ ...dbConfig, database, multipleStatements: true });
   } catch (error) {
     if (error.code !== "ER_BAD_DB_ERROR") throw error;
 
-    const connection = await mysql.createConnection({ ...dbConfig, database: undefined });
+    const connection = await mysql.createConnection({ ...dbConfig, database: undefined, multipleStatements: true });
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${database}\``);
     await connection.query(`USE \`${database}\``);
     return connection;
@@ -29,26 +29,46 @@ function prepareSql(sql) {
     .filter(Boolean)
     .filter((statement) => !/^CREATE\s+DATABASE\b/i.test(statement))
     .filter((statement) => !/^USE\s+/i.test(statement))
-    .map((statement) => statement.replace(/^CREATE\s+TABLE\b/i, "CREATE TABLE IF NOT EXISTS"))
-    .join(";\n");
+    .map((statement) => statement.replace(/^CREATE\s+TABLE\b/i, "CREATE TABLE IF NOT EXISTS"));
 }
 
 async function migrate() {
   const schemaPath = path.join(__dirname, "database", "schema.sql");
   const rawSql = fs.readFileSync(schemaPath, "utf8");
-  const sql = prepareSql(rawSql);
+  const sqlStatements = prepareSql(rawSql);
 
-  if (!sql) {
+  if (!sqlStatements || sqlStatements.length === 0) {
     logger.info("Tidak ada statement migrasi yang dijalankan.");
     return;
   }
 
   const connection = await createConnection();
   try {
-    await connection.query(sql);
+    for (let i = 0; i < sqlStatements.length; i++) {
+      try {
+        await connection.query(sqlStatements[i]);
+      } catch (err) {
+        logger.error(`Error on statement ${i+1}: ${sqlStatements[i].substring(0, 100)}...`, { error: err.message });
+        throw err;
+      }
+    }
     logger.info(`Skema database dasar selesai: ${database}`);
 
     // Jalankan migrasi ALTER TABLE aman (idempotent jika dimungkinkan, atau ignore error)
+    try {
+      await connection.query(`ALTER TABLE employees ADD COLUMN phone VARCHAR(40) NULL`);
+      logger.info(`Migrasi: employees.phone ditambahkan`);
+    } catch (e) {
+      // Abaikan jika sudah ada
+    }
+
+    try {
+      await connection.query(`ALTER TABLE payrolls ADD COLUMN sisa_kasbon DECIMAL(14,2) NOT NULL DEFAULT 0`);
+      logger.info(`Migrasi: payrolls.sisa_kasbon ditambahkan`);
+    } catch (e) {
+      // Abaikan jika sudah ada
+    }
+
     try {
       await connection.query(`ALTER TABLE purchases MODIFY supplier_id BIGINT UNSIGNED NULL`);
       logger.info(`Migrasi: purchases.supplier_id dibuat NULLable`);
@@ -174,6 +194,33 @@ async function migrate() {
       logger.info(`Migrasi: Tabel payrolls dipastikan ada`);
     } catch (e) {
       logger.error('Migrasi tabel payrolls gagal', { error: e.message });
+    }
+
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS cuan_reports (
+          id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          execution_date DATE NOT NULL,
+          amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB
+      `);
+      logger.info(`Migrasi: Tabel cuan_reports dipastikan ada`);
+    } catch (e) {
+      logger.error('Migrasi tabel cuan_reports gagal', { error: e.message });
+    }
+
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS orders (
+          id VARCHAR(100) PRIMARY KEY,
+          data JSON NOT NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB
+      `);
+      logger.info(`Migrasi: Tabel orders dipastikan ada`);
+    } catch (e) {
+      logger.error('Migrasi tabel orders gagal', { error: e.message });
     }
 
     logger.info(`Migrasi database sepenuhnya selesai: ${database}`);
