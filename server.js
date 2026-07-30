@@ -105,8 +105,11 @@ app.use((req, res, next) => {
 app.use(compression());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static("public", { maxAge: "1d" }));
-app.use("/assets", express.static(path.join(__dirname, "assets"), { maxAge: "7d" }));
+app.use(express.static("public", { maxAge: "1h" }));
+// [CACHE] JS/CSS no-cache agar update langsung terasa, gambar cache 1 hari
+app.use("/assets/js", express.static(path.join(__dirname, "assets/js"), { maxAge: 0, etag: true, lastModified: true }));
+app.use("/assets/css", express.static(path.join(__dirname, "assets/css"), { maxAge: 0, etag: true, lastModified: true }));
+app.use("/assets", express.static(path.join(__dirname, "assets"), { maxAge: "1d" }));
 
 // [SECURITY] Rate limiting global — 120 request per menit per IP
 const apiLimiter = rateLimit({
