@@ -6329,7 +6329,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
           role: "Super Admin",
           status: "Aktif"
         };
-        await gas("add", { collection: "users", item });
+        await gas("setupSuperAdmin", item);
         await load();
         const user = await gas("login", { name: item.name, password: item.password });
         loginAs(user);

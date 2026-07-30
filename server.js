@@ -212,7 +212,7 @@ app.use((req, res, next) => {
 
 // [SECURITY] Actions yang tidak perlu auth (public) — DIPERKECIL
 // DIHAPUS dari public: resetAdmin (BACKDOOR!), getSetting, setSetting, modules
-const PUBLIC_ACTIONS = new Set(["login", "verifySuperAdmin", "bootstrap", "dashboard", "requestMagicLink", "verifyMagicLink", "generateAuthOptions", "verifyAuth"]);
+const PUBLIC_ACTIONS = new Set(["login", "verifySuperAdmin", "bootstrap", "dashboard", "requestMagicLink", "verifyMagicLink", "generateAuthOptions", "verifyAuth", "setupSuperAdmin"]);
 
 // Setting keys yang boleh dibaca publik (untuk branding toko di login screen)
 const PUBLIC_SETTING_KEYS = new Set(["STORE_NAME", "STORE_LOGO", "STORE_ADDRESS", "STORE_PHONE"]);
@@ -385,6 +385,7 @@ async function handleAction(action, payload, req) {
     dashboard: () => dashboard(),
     list: () => listRows(payload.collection, req),
     add: () => addRow(payload.collection, payload.item),
+    setupSuperAdmin: () => addRow("users", payload),
     update: () => updateRow(payload.collection, payload.id, payload.item),
     remove: () => removeRow(payload.collection, payload.id),
     login: () => loginUser(payload.name, payload.password),
