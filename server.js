@@ -2,6 +2,7 @@ require("dotenv").config({ quiet: true });
 const simplewebauthn = require("@simplewebauthn/server");
 const crypto = require("crypto");
 const express = require("express");
+const compression = require("compression");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcrypt");
@@ -101,10 +102,11 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(compression());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static("public"));
-app.use("/assets", express.static(path.join(__dirname, "assets")));
+app.use(express.static("public", { maxAge: "1d" }));
+app.use("/assets", express.static(path.join(__dirname, "assets"), { maxAge: "7d" }));
 
 // [SECURITY] Rate limiting global — 120 request per menit per IP
 const apiLimiter = rateLimit({
@@ -540,16 +542,10 @@ function actionNotFoundMessage(action) {
 }
 
 async function bootstrap() {
-  // BATCH 1: Core (4 queries)
-  const [products, suppliers, purchases, sales] = await Promise.all([
-    listRows("products"), listRows("suppliers"), listRows("purchases"), listRows("sales")
-  ]);
-  // BATCH 2: Analytics & Logs (4 queries)
-  const [users, priceHistory, auditLogs, stats] = await Promise.all([
-    listRows("users"), listRows("priceHistory"), listRows("auditLogs"), dashboard()
-  ]);
-  // BATCH 3: HR & Extra (4 queries)
-  const [employees, cashAdvances, payrolls, ngitungSales] = await Promise.all([
+  // Execute ALL queries concurrently in a single batch (0ms blocking between queries)
+  const [products, suppliers, purchases, sales, users, priceHistory, auditLogs, stats, employees, cashAdvances, payrolls, ngitungSales] = await Promise.all([
+    listRows("products"), listRows("suppliers"), listRows("purchases"), listRows("sales"),
+    listRows("users"), listRows("priceHistory"), listRows("auditLogs"), dashboard(),
     listRows("employees"), listRows("cashAdvances"), listRows("payrolls"), listRows("ngitungSales")
   ]);
 
