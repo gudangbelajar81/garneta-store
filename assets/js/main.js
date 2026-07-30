@@ -1,4 +1,4 @@
-﻿
+
     // --- GLOBAL ERROR BOUNDARY ---
     window.addEventListener('error', function(e) {
       console.error("Global Error Caught:", e.error || e.message);
@@ -32,7 +32,7 @@
     const rupiah = (value) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(String(value || 0).replace(/[^0-9-]/g, "")));
     const today = () => new Date().toISOString().slice(0, 10);
     const el = (id) => document.getElementById(id);
-    const API_URL = "http://localhost:3000/api";
+    const API_URL = "/api";
 
     async function gas(action, payload = {}) {
       let response;
