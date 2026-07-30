@@ -1099,11 +1099,8 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
         { id: 'ai-input', icon: '🤖', label: 'AI Input' },
         { id: 'ai', icon: '🪄', label: 'AI Nota' },
         { id: 'import', icon: '📥', label: 'Import' },
-        { id: 'scanner', icon: '📱', label: 'Scanner' },
-        { id: 'list', icon: '📋', label: 'Daftar' }
-      ] : [
-        { id: 'list', icon: '📋', label: 'Daftar' }
-      ];
+        { id: 'scanner', icon: '📱', label: 'Scanner' }
+      ] : [];
 
       const activeWorkspace = window.barangWorkspace || 'list';
       const isSubTabActive = subTabs.some(t => t.id === activeWorkspace);
@@ -1124,6 +1121,14 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
           </button>
       `;
 
+      const daftarBtn = `
+          <button class="workspace-tab ${activeWorkspace === 'list' ? 'active' : ''}" 
+                  onclick="switchBarangWorkspace('list')" style="flex:0 0 auto;">
+            <span class="workspace-icon">📋</span>
+            <span class="workspace-label">Daftar</span>
+          </button>
+      `;
+
       const searchBtn = `
           <button class="workspace-tab ${activeWorkspace === 'search' ? 'active' : ''}" 
                   onclick="switchBarangWorkspace('search')" style="flex:0 0 auto;">
@@ -1132,7 +1137,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
           </button>
       `;
 
-      const dropdownHtml = `
+      const dropdownHtml = subTabs.length > 0 ? `
           <div class="workspace-tab ${isSubTabActive ? 'active' : ''}" style="padding:0; position:relative; display:flex; flex:1; justify-content:center; max-width:200px; margin:0 auto;">
              <select onchange="switchBarangWorkspace(this.value)" style="width:100%; height:100%; background:transparent; color:inherit; border:none; padding:2px 16px 2px 4px; appearance:none; -webkit-appearance:none; font-family:inherit; font-weight:inherit; font-size:inherit; cursor:pointer; z-index:2; text-align:center;">
                  <option value="" disabled style="color:black;" ${isSubTabActive ? '' : 'selected'}>🛠️ Menu Data</option>
@@ -1140,12 +1145,13 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
              </select>
              <div style="position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none; z-index:1; font-size:10px;">▼</div>
           </div>
-      `;
+      ` : '';
 
-      // Render toolbar: Supplier Kiri, Form, Dropdown Tengah, Cari Kanan
+      // Render toolbar: Supplier Kiri, Form, Daftar, Dropdown Tengah, Cari Kanan
       const toolbar = `<div class="workspace-toolbar" style="display:flex; justify-content:space-between; width:100%; gap:4px; margin-bottom:8px;">
           ${supplierBtn}
           ${formBtn}
+          ${daftarBtn}
           ${dropdownHtml}
           ${searchBtn}
       </div>`;
