@@ -78,9 +78,10 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Longgar untuk SPA
+      scriptSrcAttr: ["'unsafe-inline'"], // WAJIB untuk onclick attribute
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "blob:"],
+      imgSrc: ["'self'", "data:", "blob:", "https://api.qrserver.com"], // QR Code API allowed
       connectSrc: ["'self'"],
     }
   },
