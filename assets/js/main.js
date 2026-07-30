@@ -3034,10 +3034,10 @@ window.restoreRiwayatItem = function(idx) {
       
       const activeTopWorkspace = window.kalkulatorTopWorkspace || 'expres';
       
-      const topToolbar = `<div class="workspace-toolbar" style="background: transparent; border: none; margin-bottom: 12px; display:flex; gap: 8px;">
+      const topToolbar = `<div class="workspace-toolbar" style="background: transparent; border: none; margin-bottom: 12px; display:flex; gap: 8px; position: relative; z-index: 99;">
         ${topWorkspaces.map(ws => `
           <button class="workspace-tab ${activeTopWorkspace === ws.id ? 'active' : ''}" 
-                  onclick="switchKalkulatorTopWorkspace('${ws.id}')" style="flex:1;">
+                  onclick="switchKalkulatorTopWorkspace('${ws.id}')" style="flex:1; position:relative; z-index:100; cursor:pointer;">
             <span class="workspace-icon">${ws.icon}</span>
             <span class="workspace-label">${ws.label}</span>
           </button>
