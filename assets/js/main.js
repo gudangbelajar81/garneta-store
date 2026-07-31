@@ -37,7 +37,7 @@
     const el = (id) => document.getElementById(id);
     const API_URL = "/api";
 
-    async function gas(action, payload = {}) {
+    async function gas(action, payload = {}, silentAuthError = false) {
       let response;
       let headers = { "Content-Type": "application/json" };
       const token = localStorage.getItem("jwt_token");
@@ -64,8 +64,16 @@
       if (!response.ok) {
         if ((response.status === 401 || response.status === 400) && result?.message && result.message.includes("Akses ditolak")) {
            localStorage.removeItem("jwt_token");
-           const loginBtn = document.getElementById("super-login");
-           if (loginBtn) loginBtn.click();
+           localStorage.removeItem("role");
+           localStorage.removeItem("currentUser");
+           state.role = "Admin";
+           state.currentUser = null;
+           
+           if (!silentAuthError) {
+               showToast("Sesi habis atau ditolak. Silakan login kembali.", "error");
+               renderShell();
+               render();
+           }
            throw new Error(result.message);
         }
         throw new Error(result?.message || `Error ${response.status}: ${response.statusText}`);
@@ -95,7 +103,7 @@
     async function pollSync() {
       if (!localStorage.getItem("jwt_token")) return;
       try {
-        const syncData = await gas("sync");
+        const syncData = await gas("sync", {}, true); // silentAuthError = true
         if (!window.appVersion) {
            window.appVersion = syncData.appVersion;
            window.dataVersion = syncData.dataVersion;
@@ -2033,6 +2041,7 @@ Minyak Goreng 3 45000"></textarea>
                 <h2 style="font-size: 22px; margin-bottom: 2px;">Toko GARNETA STORE</h2>
                 <div>085123871118</div>
                 <div>${data.date}</div>
+                <div>Kasir: ${data.operator}</div>
                 <div>Pelanggan: ${data.customer}</div>
                 <div>Status: ${data.paymentType === "tunai" ? "LUNAS" : "KASBON"}</div>
               </div>
@@ -2150,6 +2159,7 @@ Minyak Goreng 3 45000"></textarea>
             }
             
             receiptLines.push(...encoder.encode("Struk Belanja - " + data.date + "\n"));
+            receiptLines.push(...encoder.encode("Kasir: " + data.operator + "\n"));
             receiptLines.push(...encoder.encode("Pelanggan: " + data.customer + "\n"));
             receiptLines.push(...encoder.encode("--------------------------------\n"));
             
@@ -3069,12 +3079,16 @@ window.restoreRiwayatItem = function(idx) {
 
       function kalkulator() {
 
-      const topWorkspaces = [
+      let topWorkspaces = [
         { id: 'expres', icon: '🚀', label: 'Jual Expres' },
         { id: 'orderan', icon: '📦', label: 'Orderan' },
         { id: 'belanja', icon: '🛒', label: 'Belanja' },
         { id: 'laporanA', icon: '🧾', label: 'Laporan A' }
       ];
+      
+      if (state.role !== "Super Admin") {
+        topWorkspaces = topWorkspaces.filter(ws => ["expres", "orderan"].includes(ws.id));
+      }
       
       const activeTopWorkspace = window.kalkulatorTopWorkspace || 'expres';
       
@@ -3847,7 +3861,7 @@ Beras Premium 1"></textarea>
       const titles = {
         api: ["Pusat API", "Kelola koneksi AI dari server Railway. Key tetap tersembunyi dan hanya dipakai backend."],
         warna: ["Warna Tampilan", "Racik warna dashboard, sidebar, topbar, dan halaman agar tidak membosankan."],
-        users: ["Manajemen Super Admin", "Kelola akun pengguna dan hak akses aplikasi ini."],
+        users: ["Manajemen Pengguna", "Kelola akun kasir/admin dan owner (Super Admin)."],
         backup: ["Backup & Export", "Export Excel/PDF, backup database ke JSON, atau restore dari file backup."],
         audit: ["Audit", "Catatan semua aktivitas penting yang terjadi di sistem."],
         gaji: ["Gaji & Kasbon", "Manajemen data gaji karyawan dan pinjaman (kasbon)."]
@@ -3952,8 +3966,8 @@ Beras Premium 1"></textarea>
         ` : ""}
         ${tab === "users" ? `
         <div class="theme-panel">
-          <div class="api-section-title">Manajemen Super Admin</div>
-          <p class="muted">Kelola akun dan password untuk akses penuh aplikasi.</p>
+          <div class="api-section-title">Manajemen Karyawan / Pengguna</div>
+          <p class="muted">Tambah, edit, atau hapus akses untuk kasir dan bos.</p>
           ${userForm()}
           <div style="margin-top:20px;"></div>
           ${userRows()}
@@ -4290,8 +4304,12 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
     function userForm() {
       const hasSuperAdmin = state.data.users.some((user) => user.role === "Super Admin");
       return `<form data-form="users" class="grid forms user-settings-form">
-        ${hiddenId()}${input("name", "Nama Super Admin", true)}${input("password", hasSuperAdmin ? "Password Baru" : "Password", !hasSuperAdmin, "password")}${select("status", "Status", ["Aktif", "Nonaktif"])}${formButtons()}
-        <p class="muted" style="grid-column:1/-1">${hasSuperAdmin ? "Super Admin sudah ada. Form ini hanya untuk mengedit akun yang dipilih dari tabel." : "Belum ada Super Admin. Buat satu akun Super Admin untuk membuka menu khusus."}</p>
+        ${hiddenId()}${input("name", "Nama Karyawan / Owner", true)}
+        ${input("password", "Password", !hasSuperAdmin, "password")}
+        ${select("role", "Hak Akses", hasSuperAdmin ? ["Admin", "Super Admin"] : ["Super Admin"])}
+        ${select("status", "Status", ["Aktif", "Nonaktif"])}
+        ${formButtons()}
+        <p class="muted" style="grid-column:1/-1">${hasSuperAdmin ? "Untuk mengganti password/nama, pilih akun di bawah lalu klik tombol Edit (Pena)." : "Belum ada Owner. Buat satu akun Super Admin pertama kali."}</p>
       </form>`;
     }
 
@@ -4341,7 +4359,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
     }
 
     function userRows() {
-      return actionTable("users", superAdmins(), ["name", "role", "status"], ["Nama", "Role", "Status"]);
+      return actionTable("users", state.data.users || [], ["name", "role", "status"], ["Nama", "Role", "Status"]);
     }
 
     function shoppingRows() {
@@ -6388,6 +6406,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       state.currentUser = null;
       localStorage.removeItem("role");
       localStorage.removeItem("currentUser");
+      localStorage.removeItem("jwt_token");
       renderShell();
       render();
     };
@@ -6607,8 +6626,11 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
             alert("Login Magic Link Berhasil!");
             window.history.replaceState({}, document.title, "/");
             // Prompt to register fingerprint
-            el("login-modal").classList.remove("hidden");
-            el("webauthn-register-panel").classList.remove("hidden");
+            setTimeout(() => {
+              if (confirm("Login berhasil! Apakah Anda ingin mendaftarkan Sidik Jari/Face ID untuk login lebih cepat berikutnya?")) {
+                el("webauthn-register").click();
+              }
+            }, 500);
           }
         } catch (e) {
           alert("Gagal memverifikasi Magic Link: " + e.message);

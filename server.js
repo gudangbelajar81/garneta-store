@@ -1083,7 +1083,7 @@ async function loginUser(name, password) {
   const [rows] = await db.query(`
     SELECT id, name, email, role, status, password_hash
     FROM users
-    WHERE name = ? AND role = 'Super Admin'
+    WHERE name = ?
     LIMIT 1
   `, [safeName]);
   const user = rows[0];
@@ -1250,7 +1250,7 @@ async function userPayload(item, requirePassword) {
     name: required(item.name, "Nama user"),
     email: item.email || `${String(item.name || "user").toLowerCase().replace(/\s+/g, ".")}@example.com`,
     passwordHash,
-    role: "Super Admin",
+    role: item.role === "Super Admin" ? "Super Admin" : "Admin",
     status: item.status || "Aktif"
   };
 }
