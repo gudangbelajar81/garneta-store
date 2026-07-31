@@ -4,7 +4,7 @@
   "main": "server.js",
   "scripts": {
     "migrate": "node migrate.js",
-    "start": "node migrate.js && node server.js",
+    "start": "node migrate.js && node scripts/migrate_security.js && node server.js",
     "cron": "node scripts/run-cron.js"
   },
   "engines": {
