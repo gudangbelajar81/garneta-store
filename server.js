@@ -221,7 +221,8 @@ app.use((req, res, next) => {
 
 // [SECURITY] Actions yang tidak perlu auth (public) — DIPERKECIL
 // DIHAPUS dari public: resetAdmin (BACKDOOR!), getSetting, setSetting, modules
-const PUBLIC_ACTIONS = new Set(["login", "verifySuperAdmin", "bootstrap", "dashboard", "requestMagicLink", "verifyMagicLink", "generateAuthOptions", "verifyAuth", "setupSuperAdmin"]);
+const PUBLIC_ACTIONS = new Set(["login", "verifySuperAdmin", "bootstrap", "dashboard", "requestMagicLink", 
+"verifyMagicLink", "generateAuthOptions", "verifyAuth", "setupSuperAdmin", "requestResetOTP", "verifyReset"]);
 
 // Setting keys yang boleh dibaca publik (untuk branding toko di login screen)
 const PUBLIC_SETTING_KEYS = new Set(["STORE_NAME", "STORE_LOGO", "STORE_ADDRESS", "STORE_PHONE"]);
@@ -416,8 +417,11 @@ async function handleAction(action, payload, req) {
     generateAuthOptions: () => generateAuthenticationOptionsWebAuthn(payload),
     verifyAuth: () => verifyAuthenticationWebAuthn(payload),
     requestMagicLink: () => requestMagicLink(payload.phoneOrEmail),
-    verifyMagicLink: () => verifyMagicLink(payload.token),
-    modules: () => availableModules(), // [SECURITY] Sekarang butuh auth
+      verifyMagicLink: () => verifyMagicLink(payload.token),
+      generateRecoveryKey: () => generateRecoveryKey(req),
+      requestResetOTP: () => requestResetOTP(),
+      verifyReset: () => verifyReset(payload.type, payload.code, payload.newPassword),
+      modules: () => availableModules(), // [SECURITY] Sekarang butuh auth
     getSetting: () => getSetting(payload.key, payload.fallback),
     setSetting: async () => { await setSetting(payload.key, payload.value); return { ok: true }; },
     // [SECURITY] resetAdmin DIHAPUS dari sini — tidak boleh ada endpoint public reset password!
@@ -2318,6 +2322,88 @@ async function requestMagicLink(phoneOrEmail) {
     // Fallback if env is missing
     return { ok: true, message: "Magic link berhasil dibuat (Namun Token Fonnte/WA belum diset di .env).", demoLink: link };
   }
+}
+
+
+async function generateRecoveryKey(req) {
+  if (!req.user || req.user.role !== 'Super Admin') throw new Error("Akses ditolak. Harus Super Admin.");
+  
+  // Generate code: GNT-XXXX-XXXX
+  const crypto = require('crypto');
+  const segment1 = crypto.randomBytes(2).toString('hex').toUpperCase();
+  const segment2 = crypto.randomBytes(2).toString('hex').toUpperCase();
+  const rawKey = `GNT-${segment1}-${segment2}`;
+  
+  const hash = await bcrypt.hash(rawKey, 10);
+  await db.query('UPDATE users SET recovery_key_hash = ? WHERE id = ?', [hash, req.user.id]);
+  
+  return { ok: true, recoveryKey: rawKey };
+}
+
+async function requestResetOTP() {
+  const [users] = await db.query('SELECT id, name FROM users WHERE role="Super Admin" LIMIT 1');
+  if (users.length === 0) throw new Error("Super Admin tidak ditemukan.");
+  const user = users[0];
+  
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 15 * 60000); // 15 mins
+  
+  await db.query('UPDATE users SET otp_code = ?, otp_expires_at = ? WHERE id = ?', [otpCode, expiresAt, user.id]);
+  
+  const fonnteToken = process.env.FONNTE_TOKEN;
+  const targetWa = process.env.SUPERADMIN_WA;
+  
+  if (fonnteToken && targetWa) {
+    try {
+      const waMessage = `*GNT STORE OTP RESET*
+
+Kode OTP Anda untuk reset password adalah: *uid*
+
+Berlaku 15 menit. JANGAN BERIKAN KODE INI KE SIAPAPUN.`.replace('uid', otpCode);
+      
+      const fonnteRes = await fetch("https://api.fonnte.com/send", {
+        method: "POST",
+        headers: { "Authorization": fonnteToken, "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ target: targetWa, message: waMessage, countryCode: "62" })
+      });
+      const fonnteData = await fonnteRes.json();
+      if (!fonnteData.status) throw new Error("Gagal kirim via Fonnte");
+      return { ok: true, message: "OTP telah dikirim ke WA Super Admin." };
+    } catch (e) {
+      throw new Error("Gagal mengirim WA. Pastikan Fonnte aktif.");
+    }
+  } else {
+    throw new Error("Token Fonnte atau Nomor WA Super Admin belum disetel di pengaturan environment.");
+  }
+}
+
+async function verifyReset(type, code, newPassword) {
+  if (!code || !newPassword || newPassword.length < 8) throw new Error("Kode dan password baru (min 8 karakter) wajib diisi.");
+  
+  const [users] = await db.query('SELECT * FROM users WHERE role="Super Admin" LIMIT 1');
+  if (users.length === 0) throw new Error("Super Admin tidak ditemukan.");
+  const user = users[0];
+  
+  let valid = false;
+  if (type === 'recovery') {
+    if (!user.recovery_key_hash) throw new Error("Kunci Master belum di-generate di pengaturan.");
+    valid = await bcrypt.compare(String(code), user.recovery_key_hash);
+  } else if (type === 'otp') {
+    if (!user.otp_code || !user.otp_expires_at) throw new Error("OTP tidak valid atau kadaluarsa.");
+    if (new Date() > new Date(user.otp_expires_at)) throw new Error("Kode OTP sudah kedaluwarsa.");
+    valid = String(code) === String(user.otp_code);
+  } else {
+    throw new Error("Tipe reset tidak dikenali.");
+  }
+  
+  if (!valid) throw new Error("Kode yang dimasukkan salah.");
+  
+  const newHash = await bcrypt.hash(newPassword, 10);
+  await db.query('UPDATE users SET password_hash = ?, otp_code = NULL, otp_expires_at = NULL WHERE id = ?', [newHash, user.id]);
+  
+  // Return a new token so they get logged in automatically
+  const jwtToken = jwt.sign({ id: user.id, name: user.name, role: user.role }, process.env.JWT_SECRET || 'alveza_jwt_secret_123', { expiresIn: '8h' });
+  return { ok: true, token: jwtToken, name: user.name, role: user.role, isSuperAdmin: true };
 }
 
 async function verifyMagicLink(token) {

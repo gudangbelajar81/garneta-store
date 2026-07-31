@@ -6626,11 +6626,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
             alert("Login Magic Link Berhasil!");
             window.history.replaceState({}, document.title, "/");
             // Prompt to register fingerprint
-            setTimeout(() => {
-              if (confirm("Login berhasil! Apakah Anda ingin mendaftarkan Sidik Jari/Face ID untuk login lebih cepat berikutnya?")) {
-                el("webauthn-register").click();
-              }
-            }, 500);
+            
           }
         } catch (e) {
           alert("Gagal memverifikasi Magic Link: " + e.message);
@@ -6650,24 +6646,30 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       }
     };
 
-    el("webauthn-login").onclick = async () => {
-      const name = el("login-name").value.trim();
-      try {
-        // 1. Get options from server
-        const options = await gas("generateAuthOptions", { name });
-        // 2. Pass options to browser
-        const authResp = await startAuthentication(options);
-        // 3. Verify with server
-        const verification = await gas("verifyAuth", authResp);
-        if (verification.token) {
-          localStorage.setItem("jwt_token", verification.token);
-          loginAs(verification);
-        }
-      } catch (error) {
-        console.error(error);
-        alert("Gagal login dengan Sidik Jari: " + error.message);
-      }
-    };
+    
+el("webauthn-login").onclick = async () => {
+  const btn = el("webauthn-login");
+  const oldText = btn.innerHTML;
+  btn.innerHTML = '<span class="icon">⏳</span> Memproses...';
+  try {
+    const { startAuthentication } = window.SimpleWebAuthnBrowser || {};
+    if (!startAuthentication) throw new Error("Library WebAuthn belum siap.");
+    const name = el("login-name").value.trim() || 'Super Admin';
+    const options = await gas("generateAuthOptions", { name });
+    const authResp = await startAuthentication(options);
+    const verification = await gas("verifyAuth", authResp);
+    if (verification.token) {
+      localStorage.setItem("jwt_token", verification.token);
+      loginAs(verification);
+    }
+  } catch (error) {
+    console.error(error);
+    showToast("Gagal login dengan Sidik Jari: " + error.message, "danger");
+  } finally {
+    btn.innerHTML = oldText;
+  }
+};
+
 
     el("webauthn-register").onclick = async () => {
       try {
@@ -6687,3 +6689,101 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
     };
 
   
+
+// --- SECURITY / RESET UI ---
+window.showResetModal = function() {
+  el("login-modal").classList.add("hidden");
+  el("reset-modal").classList.remove("hidden");
+  el("reset-method-selection").classList.remove("hidden");
+  el("reset-form-area").classList.add("hidden");
+  el("cancel-reset-main-btn").classList.remove("hidden");
+};
+
+window.cancelReset = function() {
+  el("reset-method-selection").classList.remove("hidden");
+  el("reset-form-area").classList.add("hidden");
+  el("cancel-reset-main-btn").classList.remove("hidden");
+};
+
+let resetMethod = '';
+window.selectResetMethod = async function(method) {
+  resetMethod = method;
+  el("reset-code-input").value = "";
+  el("reset-new-password").value = "";
+  
+  if (method === 'otp') {
+    const btn = el("reset-method-selection").querySelector('button');
+    btn.textContent = "Mengirim...";
+    btn.disabled = true;
+    try {
+      const res = await gas("requestResetOTP", {});
+      showToast(res.message, 'success');
+      el("reset-code-label").textContent = "Masukkan 6 Digit OTP dari WA";
+      el("reset-method-selection").classList.add("hidden");
+      el("reset-form-area").classList.remove("hidden");
+      el("cancel-reset-main-btn").classList.add("hidden");
+    } catch (e) {
+      showToast(e.message, 'danger');
+    } finally {
+      btn.textContent = "Kirim OTP via WhatsApp";
+      btn.disabled = false;
+    }
+  } else {
+    el("reset-code-label").textContent = "Masukkan Kunci Master (GNT-...)";
+    el("reset-method-selection").classList.add("hidden");
+    el("reset-form-area").classList.remove("hidden");
+    el("cancel-reset-main-btn").classList.add("hidden");
+  }
+};
+
+window.submitReset = async function() {
+  const code = el("reset-code-input").value.trim();
+  const newPassword = el("reset-new-password").value;
+  if (!code || newPassword.length < 8) return showToast("Kode harus diisi dan password minimal 8 karakter.", "danger");
+  
+  const btn = el("submit-reset-btn");
+  btn.textContent = "Memproses...";
+  btn.disabled = true;
+  try {
+    const res = await gas("verifyReset", { type: resetMethod, code, newPassword });
+    showToast("Password berhasil diganti!", 'success');
+    el("reset-modal").classList.add("hidden");
+    
+    // Auto login
+    if (res.token) {
+      localStorage.setItem("jwt_token", res.token);
+      loginAs(res);
+    }
+  } catch (e) {
+    showToast(e.message, 'danger');
+  } finally {
+    btn.textContent = "Simpan Password";
+    btn.disabled = false;
+  }
+};
+
+window.generateRecoveryKey = async function() {
+  if (!confirm("Apakah Anda yakin ingin membuat Kunci Master baru? Kunci sebelumnya (jika ada) akan hangus.")) return;
+  try {
+    const res = await gas("generateRecoveryKey", {});
+    alert("KUNCI MASTER ANDA:\n\n" + res.recoveryKey + "\n\nSIMPAN KODE INI BAIK-BAIK! KODE INI HANYA MUNCUL SATU KALI INI SAJA.");
+  } catch (e) {
+    showToast(e.message, 'danger');
+  }
+};
+
+window.registerPasskey = async function() {
+  try {
+    const { startRegistration } = window.SimpleWebAuthnBrowser || {};
+    if (!startRegistration) throw new Error("Library WebAuthn tidak termuat.");
+    
+    showToast("Meminta otorisasi sidik jari...", "info");
+    const options = await gas("generateRegOptions", {});
+    const regResp = await startRegistration(options);
+    const verification = await gas("verifyReg", regResp);
+    
+    alert("Sukses! Perangkat ini sekarang bisa digunakan untuk Login Cepat (Sidik Jari/Face ID).");
+  } catch (e) {
+    showToast("Gagal mendaftarkan Sidik Jari: " + e.message, "danger");
+  }
+};
