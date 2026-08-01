@@ -2196,7 +2196,7 @@ Minyak Goreng 3 45000"></textarea>
             let flatPayload = [];
             function flatten(arr) {
                 for (let i = 0; i < arr.length; i++) {
-                    if (Array.isArray(arr[i])) flatten(arr[i]);
+                    if (Array.isArray(arr[i]) || arr[i] instanceof Uint8Array) flatten(arr[i]);
                     else flatPayload.push(arr[i]);
                 }
             }
