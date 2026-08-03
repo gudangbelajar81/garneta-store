@@ -1916,18 +1916,18 @@ Minyak Goreng 3 45000"></textarea>
             if (actionType === "pdf") {
                document.getElementById("checkout-loading-text").innerText = "Menyiapkan PDF...";
                window.ngitungPrintPDF(receiptData);
-               showToast("Transaksi Disimpan & PDF Dicetak", "success");
+               Swal.fire({title: "Berhasil!", text: "Transaksi Disimpan & PDF Dicetak", icon: "success", confirmButtonColor: "#00ffcc"});
             } else if (actionType === "bluetooth") {
                document.getElementById("checkout-loading-text").innerText = "Menghubungkan ke Printer Bluetooth...";
                await window.ngitungPrintBluetoothCheckout(receiptData);
-               showToast("Transaksi Disimpan & Berhasil Dicetak", "success");
+               Swal.fire({title: "Berhasil!", text: "Transaksi Disimpan & Berhasil Dicetak Bluetooth", icon: "success", confirmButtonColor: "#00ffcc"});
             } else if (actionType === "wa") {
                document.getElementById("checkout-loading-text").innerText = "Membuka WhatsApp...";
                window.ngitungPrintWhatsApp(receiptData);
-               showToast("Transaksi Disimpan & Dialihkan ke WA", "success");
+               Swal.fire({title: "Berhasil!", text: "Transaksi Disimpan & Dialihkan ke WA", icon: "success", confirmButtonColor: "#00ffcc"});
             } else if (actionType === "save") {
                document.getElementById("checkout-loading-text").innerText = "Menyimpan ke Database...";
-               showToast("Transaksi Berhasil Disimpan!", "success");
+               Swal.fire({title: "Tersimpan!", text: "Transaksi Berhasil Disimpan", icon: "success", confirmButtonColor: "#00ffcc"});
             }
             
             // Save to localStorage ONLY AFTER action succeeds
@@ -1948,7 +1948,7 @@ Minyak Goreng 3 45000"></textarea>
 
         } catch (error) {
             console.error("Checkout Error:", error);
-            showToast(error.message || "Gagal memproses transaksi. Silakan coba lagi.", "error");
+            Swal.fire({title: "Gagal!", text: error.message || "Gagal memproses transaksi.", icon: "error", confirmButtonColor: "#ff4757"});
         } finally {
             if (overlay) overlay.style.display = "none";
         }
