@@ -35,7 +35,7 @@
     const rupiah = (value) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(String(value || 0).replace(/[^0-9-]/g, "")));
     const today = () => new Date().toISOString().slice(0, 10);
     const el = (id) => document.getElementById(id);
-    const API_URL = "/api";
+    const API_URL = (window.location.port === "8000" || window.location.port === "5500") ? "http://localhost:3000/api" : "/api";
 
     async function gas(action, payload = {}, silentAuthError = false) {
       let response;
