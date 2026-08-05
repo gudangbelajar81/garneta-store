@@ -1,3 +1,4 @@
+window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined") { Swal.fire({toast: true, position: "top-end", showConfirmButton: false, timer: 3000, title: msg, icon: icon}); } else { alert(msg); } };
 
     // --- GLOBAL ERROR BOUNDARY ---
     window.addEventListener('error', function(e) {
