@@ -3510,14 +3510,52 @@ Beras Premium 1"></textarea>
     };
 
     window.eksekusiCuan = async function(total) {
-       } catch (e) {
-           if (btn) {
-               btn.disabled = false;
-               btn.innerHTML = '🚀 Eksekusi';
-               btn.style.opacity = '1';
-           }
-           alert("Gagal eksekusi: " + e.message);
-       }
+        if (total <= 0) return;
+        
+        const result = await Swal.fire({
+            title: 'Yakin Eksekusi?',
+            text: `Data cuan ${isSuperAdmin() ? rupiah(total) : 'Shift Ini'} akan masuk ke Laporan A.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#00ffcc',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ya, Eksekusi!',
+            cancelButtonText: 'Batal',
+            background: '#0a1526',
+            color: '#e0f8f5'
+        });
+        
+        if (!result.isConfirmed) return;
+
+        const btn = document.getElementById('btn-eksekusi-cuan');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Memproses...';
+            btn.style.opacity = '0.7';
+        }
+        try {
+            const payload = { amount: total, executionDate: today() };
+            await gas("add", { collection: "cuan_reports", item: payload });
+            window.expresCart = Array.from({length: 20}, () => ({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0}));
+            
+            if (btn) {
+                btn.innerHTML = '✅ Berhasil!';
+                btn.style.background = '#10b981';
+                btn.style.opacity = '1';
+            }
+            
+            showToast("Sukses mengeksekusi cuan!", "success");
+            render();
+            load().catch(console.error);
+            
+        } catch (e) {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '🚀 Eksekusi';
+                btn.style.opacity = '1';
+            }
+            showToast("Gagal eksekusi: " + e.message, "error");
+        }
     };
 
     window.setCuanLaporanTab = function(tab) {
