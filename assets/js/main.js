@@ -3510,30 +3510,6 @@ Beras Premium 1"></textarea>
     };
 
     window.eksekusiCuan = async function(total) {
-       if (total <= 0) return;
-       if (!confirm(`Yakin ingin mengeksekusi Total Cuan ${isSuperAdmin() ? rupiah(total) : 'Shift Ini'}? Data akan masuk ke Laporan A tanggal hari ini.`)) return;
-       const btn = document.getElementById('btn-eksekusi-cuan');
-       if (btn) {
-           btn.disabled = true;
-           btn.innerHTML = '⏳ Memproses...';
-           btn.style.opacity = '0.7';
-       }
-       try {
-           const payload = { amount: total, executionDate: today() };
-           await gas("add", { collection: "cuan_reports", item: payload });
-           // Reset cart
-           window.expresCart = Array.from({length: 20}, () => ({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0}));
-           
-           if (btn) {
-               btn.innerHTML = '✅ Berhasil!';
-               btn.style.background = '#10b981'; // Green color for success
-               btn.style.opacity = '1';
-           }
-           
-           setTimeout(async () => {
-               alert("Sukses mengeksekusi cuan!");
-               await load();
-           }, 500);
        } catch (e) {
            if (btn) {
                btn.disabled = false;
