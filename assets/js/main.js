@@ -3512,20 +3512,10 @@ Beras Premium 1"></textarea>
     window.eksekusiCuan = async function(total) {
         if (total <= 0) return;
         
-        const result = await Swal.fire({
-            title: 'Yakin Eksekusi?',
-            text: `Data cuan ${isSuperAdmin() ? rupiah(total) : 'Shift Ini'} akan masuk ke Laporan A.`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#00ffcc',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Ya, Eksekusi!',
-            cancelButtonText: 'Batal',
-            background: '#0a1526',
-            color: '#e0f8f5'
-        });
-        
-        if (!result.isConfirmed) return;
+        // Menggunakan native confirm agar 100% jalan di semua browser/tanpa masalah CDN
+        if (!confirm(`Yakin ingin mengeksekusi Total Cuan ${isSuperAdmin() ? rupiah(total) : 'Shift Ini'}? Data akan masuk ke Laporan A tanggal hari ini.`)) {
+            return;
+        }
 
         const btn = document.getElementById('btn-eksekusi-cuan');
         if (btn) {
@@ -3536,6 +3526,8 @@ Beras Premium 1"></textarea>
         try {
             const payload = { amount: total, executionDate: today() };
             await gas("add", { collection: "cuan_reports", item: payload });
+            
+            // Reset cart
             window.expresCart = Array.from({length: 20}, () => ({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0}));
             
             if (btn) {
@@ -3544,8 +3536,13 @@ Beras Premium 1"></textarea>
                 btn.style.opacity = '1';
             }
             
+            // Toast tidak akan nge-block UI
             showToast("Sukses mengeksekusi cuan!", "success");
+            
+            // Render ulang segera supaya UI kembali normal (mengosongkan form)
             render();
+            
+            // Load data di background agar tidak menahan/mem-freeze UI
             load().catch(console.error);
             
         } catch (e) {
