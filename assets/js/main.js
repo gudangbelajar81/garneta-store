@@ -2123,25 +2123,26 @@ Minyak Goreng 3 45000"></textarea>
           }
           let device;
           try {
-            if (!window.globalBluetoothDevice) {
-                window.globalBluetoothDevice = await navigator.bluetooth.requestDevice({
-                  acceptAllDevices: true,
-                  optionalServices: KNOWN_PRINTER_UUIDS.map(u => u.svc)
-                });
-            }
-            device = window.globalBluetoothDevice;
+            device = await navigator.bluetooth.requestDevice({
+    acceptAllDevices: true,
+    optionalServices: KNOWN_PRINTER_UUIDS.map(u => u.svc)
+});
+window.globalBluetoothDevice = device;
 
             showToast("Menghubungkan ke printer...", "info");
             
             const connectGatt = async (retryCount = 3) => {
-                try {
-                  return await device.gatt.connect();
-                } catch (err) {
-                  if (retryCount <= 1) throw err;
-                  await new Promise(resolve => setTimeout(resolve, 500));
-                  return connectGatt(retryCount - 1);
-                }
-              };
+    try {
+        return await Promise.race([
+            device.gatt.connect(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout connect GATT")), 4000))
+        ]);
+    } catch (err) {
+        if (retryCount <= 1) throw err;
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return connectGatt(retryCount - 1);
+    }
+};
 
               let server;
               for (let attempt = 1; attempt <= 2; attempt++) {
