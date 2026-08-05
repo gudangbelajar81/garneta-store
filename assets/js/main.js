@@ -1694,9 +1694,14 @@ Minyak Goreng 3 45000"></textarea>
           data.push(0x1b, 0x61, 0x00); // Left align
         
         let buffer = new Uint8Array(data);
-        for (let i = 0; i < buffer.length; i += 512) {
-          await characteristic.writeValue(buffer.slice(i, i + 512));
-        }
+        for (let i = 0; i < buffer.length; i += 100) {
+            if (characteristic.properties && characteristic.properties.writeWithoutResponse) {
+                await characteristic.writeValueWithoutResponse(buffer.slice(i, i + 100));
+            } else {
+                await characteristic.writeValue(buffer.slice(i, i + 100));
+            }
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
         
         // Putuskan koneksi agar HP lain bisa gantian ngeprint
         if (device.gatt.connected) {
@@ -2205,10 +2210,14 @@ Minyak Goreng 3 45000"></textarea>
 
             let buffer = new Uint8Array(flatPayload);
             
-            for (let i = 0; i < buffer.length; i += 256) {
-              await characteristic.writeValue(buffer.slice(i, i + 256));
-              await new Promise(resolve => setTimeout(resolve, 50));
+            for (let i = 0; i < buffer.length; i += 100) {
+            if (characteristic.properties && characteristic.properties.writeWithoutResponse) {
+                await characteristic.writeValueWithoutResponse(buffer.slice(i, i + 100));
+            } else {
+                await characteristic.writeValue(buffer.slice(i, i + 100));
             }
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
             
             await new Promise(resolve => setTimeout(resolve, 500));
             showToast("Berhasil dicetak!", "success");
