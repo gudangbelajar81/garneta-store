@@ -606,12 +606,12 @@ async function listRows(collection, req = null) {
 
   if (collection === "ngitungSales") {
     const [rows] = await db.query(`SELECT * FROM ngitung_sales ORDER BY created_at DESC LIMIT 200`);
-    return rows.map(r => ({ ...r, items: JSON.parse(r.items || '[]'), installments: JSON.parse(r.installments || '[]') }));
+    return rows.map(r => ({ ...r, items: (typeof r.items === 'string' ? JSON.parse(r.items || '[]') : (r.items || [])), installments: (typeof r.installments === 'string' ? JSON.parse(r.installments || '[]') : (r.installments || [])) }));
   }
 
   if (collection === "orders") {
     const [rows] = await db.query(`SELECT id, data FROM orders ORDER BY created_at DESC LIMIT 500`);
-    return rows.map(r => ({ id: r.id, ...JSON.parse(r.data || '{}') }));
+    return rows.map(r => ({ id: r.id, ...(typeof r.data === 'string' ? JSON.parse(r.data || '{}') : (r.data || {})) }));
   }
 
   if (collection === "cuan_reports") {
