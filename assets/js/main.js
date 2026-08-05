@@ -2145,10 +2145,13 @@ Minyak Goreng 3 45000"></textarea>
 
               let server;
               for (let attempt = 1; attempt <= 2; attempt++) {
-                server = await connectGatt();
-                if (server) break;
-                if (device.gatt && device.gatt.connected) {
-                  device.gatt.disconnect();
+                try {
+                  server = await connectGatt();
+                  if (server) break;
+                } catch(e) {
+                  if (device.gatt && device.gatt.connected) {
+                    device.gatt.disconnect();
+                  }
                   await new Promise(resolve => setTimeout(resolve, 1000));
                 }
               }
@@ -2251,9 +2254,10 @@ Minyak Goreng 3 45000"></textarea>
   if(typeof window.playChaChing === 'function') window.playChaChing();
             
           } catch (error) {
-            console.error(error);
-            showToast("Gagal Cetak: " + error.message, "error");
-          } finally {
+              console.error(error);
+              window.globalBluetoothDevice = null;
+              showToast("Gagal Cetak: " + error.message, "error");
+            } finally {
             if (device && device.gatt && device.gatt.connected) {
               device.gatt.disconnect();
             }
