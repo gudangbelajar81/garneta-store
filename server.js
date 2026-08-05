@@ -21,6 +21,7 @@ const logger = require("./config/logger");
 const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
+app.set("trust proxy", 1); // [FIX] Coolify/Traefik reverse proxy — percayai X-Forwarded-For header
 const PORT = Number(process.env.PORT || 3000);
 const JWT_SECRET = process.env.JWT_SECRET || "GarnetaSystemSuperSecretKey2026_Static!";
 const JWT_EXPIRY = process.env.JWT_EXPIRY || "8h";
@@ -226,7 +227,7 @@ const PUBLIC_ACTIONS = new Set(["login", "verifySuperAdmin", "bootstrap", "dashb
 
 // Setting keys yang boleh dibaca publik (untuk branding toko di login screen)
 const PUBLIC_SETTING_KEYS = new Set(["STORE_NAME", "STORE_LOGO", "STORE_ADDRESS", "STORE_PHONE"]);
-const KASIR_COLLECTIONS = new Set(["products", "suppliers", "purchases", "sales", "priceHistory", "ngitungSales"]);
+const KASIR_COLLECTIONS = new Set(["products", "suppliers", "purchases", "sales", "priceHistory", "ngitungSales", "orders", "cuan_reports"]);
 
 function verifyToken(req, res, next) {
   const action = req.body?.action;
@@ -554,14 +555,14 @@ function actionNotFoundMessage(action) {
 }
 
 async function bootstrap() {
-  // Execute ALL queries concurrently in a single batch (0ms blocking between queries)
-  const [products, suppliers, purchases, sales, users, priceHistory, auditLogs, stats, employees, cashAdvances, payrolls, ngitungSales] = await Promise.all([
+  const [products, suppliers, purchases, sales, users, priceHistory, auditLogs, stats, employees, cashAdvances, payrolls, ngitungSales, orders, cuanReports] = await Promise.all([
     listRows("products"), listRows("suppliers"), listRows("purchases"), listRows("sales"),
     listRows("users"), listRows("priceHistory"), listRows("auditLogs"), dashboard(),
-    listRows("employees"), listRows("cashAdvances"), listRows("payrolls"), listRows("ngitungSales")
+    listRows("employees"), listRows("cashAdvances"), listRows("payrolls"), listRows("ngitungSales"),
+    listRows("orders").catch(()=>[]), listRows("cuan_reports").catch(()=>[])
   ]);
 
-  return { products, suppliers, purchases, sales, users, priceHistory, auditLogs, employees, cashAdvances, payrolls, ngitungSales, dashboard: stats };
+  return { products, suppliers, purchases, sales, users, priceHistory, auditLogs, employees, cashAdvances, payrolls, ngitungSales, orders, cuan_reports: cuanReports, dashboard: stats };
 }
 
 
@@ -606,6 +607,21 @@ async function listRows(collection, req = null) {
   if (collection === "ngitungSales") {
     const [rows] = await db.query(`SELECT * FROM ngitung_sales ORDER BY created_at DESC LIMIT 200`);
     return rows.map(r => ({ ...r, items: JSON.parse(r.items || '[]'), installments: JSON.parse(r.installments || '[]') }));
+  }
+
+  if (collection === "orders") {
+    const [rows] = await db.query(`SELECT id, data FROM orders ORDER BY created_at DESC LIMIT 500`);
+    return rows.map(r => ({ id: r.id, ...JSON.parse(r.data || '{}') }));
+  }
+
+  if (collection === "cuan_reports") {
+    const [rows] = await db.query(`SELECT id, execution_date, amount, created_at FROM cuan_reports ORDER BY execution_date DESC LIMIT 500`);
+    return rows.map(r => ({
+      id: r.id,
+      executionDate: r.execution_date ? new Date(r.execution_date).toISOString().split('T')[0] : null,
+      amount: Number(r.amount || 0),
+      createdAt: r.created_at
+    }));
   }
 
   if (collection === "products") {
@@ -734,6 +750,20 @@ async function addRow(collection, item = {}) {
       [item.date || new Date(), item.customerName || null, item.totalAmount || 0, item.paidAmount || 0, item.status || 'Lunas', JSON.stringify(item.items || []), JSON.stringify(item.installments || [])]
     );
     return findRow("ngitungSales", result.insertId);
+  }
+
+  if (collection === "orders") {
+    const dataStr = JSON.stringify(item);
+    await db.query(`INSERT INTO orders (id, data) VALUES (?, ?)`, [item.id, dataStr]);
+    return { id: item.id, ...item };
+  }
+
+  if (collection === "cuan_reports") {
+    const [result] = await db.query(
+      `INSERT INTO cuan_reports (execution_date, amount) VALUES (?, ?)`,
+      [item.executionDate || new Date().toISOString().split('T')[0], item.amount || 0]
+    );
+    return findRow("cuan_reports", result.insertId);
   }
 
   if (collection === "products") {
@@ -957,6 +987,12 @@ async function updateRow(collection, id, item = {}) {
       [item.date, item.customerName || null, item.totalAmount, item.paidAmount, item.status, JSON.stringify(item.items || []), JSON.stringify(item.installments || []), id]
     );
     return findRow("ngitungSales", id);
+  }
+
+  if (collection === "orders") {
+    const dataStr = JSON.stringify(item);
+    await db.query(`UPDATE orders SET data=? WHERE id=?`, [dataStr, id]);
+    return { id, ...item };
   }
 
   if (collection === "products") {
@@ -2020,7 +2056,7 @@ async function fetchWithTimeout(url, options, timeoutMs) {
 }
 
 function assertCollection(collection) {
-  if (!["products", "suppliers", "purchases", "sales", "users", "priceHistory", "auditLogs"].includes(collection) && !["employees", "cashAdvances", "payrolls", "ngitungSales"].includes(collection)) {
+  if (!["products", "suppliers", "purchases", "sales", "users", "priceHistory", "auditLogs"].includes(collection) && !["employees", "cashAdvances", "payrolls", "ngitungSales", "orders", "cuan_reports"].includes(collection)) {
     throw new Error("Collection tidak dikenal.");
   }
 }
@@ -2037,7 +2073,9 @@ function tableName(collection) {
     payrolls: "payrolls",
     priceHistory: "price_history",
     auditLogs: "activity_logs",
-    ngitungSales: "ngitung_sales"
+    ngitungSales: "ngitung_sales",
+    orders: "orders",
+    cuan_reports: "cuan_reports"
   };
   return tables[collection];
 }
