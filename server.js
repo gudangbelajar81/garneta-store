@@ -2079,7 +2079,17 @@ function formatDate(value) {
 
 ensureIndexes().catch(e => logger.warn("Index setup error:", e.message));
 
-server = app.listen(PORT, () => {
+server = 
+
+// === AUTO-UPDATE NOTIFIER ===
+// Simpan timestamp kapan server terakhir jalan (indikator build/deploy baru dari Coolify)
+const SERVER_START_TIME = Date.now().toString();
+
+app.get('/api/system/version', (req, res) => {
+  res.json({ version: SERVER_START_TIME });
+});
+
+app.listen(PORT, () => {
   logger.info(`Server berjalan di http://localhost:${PORT}`);
 });
 
@@ -2436,3 +2446,27 @@ async function verifyMagicLink(token) {
   return { token: jwtToken, name: user.name, role: displayRole(user.role), isSuperAdmin: user.role === "Super Admin" };
 }
 
+
+
+// === GARBAGE COLLECTION / ANTI-BLOAT ===
+// Menghapus log aktivitas yang umurnya lebih dari 30 hari agar database tidak bengkak
+setInterval(async () => {
+  try {
+    const [result] = await db.query("DELETE FROM activity_logs WHERE created_at < NOW() - INTERVAL 30 DAY");
+    if (result.affectedRows > 0) {
+      console.log(`[Garbage Collection] Menghapus ${result.affectedRows} log aktivitas lama (>30 hari)`);
+    }
+  } catch (err) {
+    console.error('[Garbage Collection Error]', err.message);
+  }
+}, 12 * 60 * 60 * 1000); // Jalan setiap 12 jam
+
+// Run once on startup
+setTimeout(async () => {
+  try {
+    const [result] = await db.query("DELETE FROM activity_logs WHERE created_at < NOW() - INTERVAL 30 DAY");
+    if (result.affectedRows > 0) {
+      console.log(`[Startup GC] Menghapus ${result.affectedRows} log aktivitas lama (>30 hari)`);
+    }
+  } catch(e) {}
+}, 5000);

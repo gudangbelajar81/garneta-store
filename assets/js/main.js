@@ -2134,17 +2134,26 @@ Minyak Goreng 3 45000"></textarea>
             showToast("Menghubungkan ke printer...", "info");
             
             const connectGatt = async (retryCount = 3) => {
-              try {
-                return await device.gatt.connect();
-              } catch (err) {
-                if (retryCount <= 1) throw err;
-                await new Promise(resolve => setTimeout(resolve, 500));
-                return connectGatt(retryCount - 1);
-              }
-            };
+                try {
+                  return await device.gatt.connect();
+                } catch (err) {
+                  if (retryCount <= 1) throw err;
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  return connectGatt(retryCount - 1);
+                }
+              };
 
-            const server = await connectGatt();
-            if (!server) throw new Error("Gagal connect ke GATT server.");
+              let server;
+              for (let attempt = 1; attempt <= 2; attempt++) {
+                server = await connectGatt();
+                if (server) break;
+                if (device.gatt && device.gatt.connected) {
+                  device.gatt.disconnect();
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+              }
+
+              if (!server) throw new Error("Gagal connect ke GATT server.");
 
             let service, characteristic;
             for (const pair of KNOWN_PRINTER_UUIDS) {
@@ -2239,6 +2248,7 @@ Minyak Goreng 3 45000"></textarea>
             
             await new Promise(resolve => setTimeout(resolve, 500));
             showToast("Berhasil dicetak!", "success");
+  if(typeof window.playChaChing === 'function') window.playChaChing();
             
           } catch (error) {
             console.error(error);
@@ -6855,3 +6865,145 @@ window.registerPasskey = async function() {
     showToast("Gagal mendaftarkan Sidik Jari: " + e.message, "danger");
   }
 };
+
+
+window.printReceiptPDF = function() {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    alert("Pop-up diblokir oleh browser. Izinkan pop-up untuk mencetak PDF.");
+    return;
+  }
+  
+  const dateStr = new Date().toLocaleString('id-ID');
+  
+  let itemsHtml = '';
+  Object.values(window.keranjang || {}).forEach(item => {
+    itemsHtml += `
+      <div class="item-row">
+        <span>${item.nama} x${item.qty}</span>
+        <span>Rp ${(item.harga * item.qty).toLocaleString('id-ID')}</span>
+      </div>
+    `;
+  });
+
+  const total = window.ngitungTotalRaw || 0;
+  const bayarEl = document.getElementById("ngitung-inline-bayar");
+  const bayar = bayarEl && bayarEl.value ? Number(bayarEl.value) : 0;
+  
+  let paymentDetails = '';
+  if (bayar >= total) {
+    paymentDetails = `
+      <div class="total-row font-normal"><span>Tunai</span><span>Rp ${bayar.toLocaleString('id-ID')}</span></div>
+      <div class="total-row font-normal"><span>Kembali</span><span>Rp ${(bayar - total).toLocaleString('id-ID')}</span></div>
+    `;
+  } else {
+    paymentDetails = `
+      <div class="total-row font-normal"><span>Status</span><span>KASBON (BELUM LUNAS)</span></div>
+      ${bayar > 0 ? `<div class="total-row font-normal"><span>Titip (DP)</span><span>Rp ${bayar.toLocaleString('id-ID')}</span></div>` : ''}
+      <div class="total-row font-normal"><span>Sisa Kurang</span><span>Rp ${(total - bayar).toLocaleString('id-ID')}</span></div>
+    `;
+  }
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Struk Pembayaran</title>
+        <style>
+          body { font-family: 'Courier New', Courier, monospace; width: 300px; margin: 0 auto; padding: 20px; color: #000; font-size: 14px; }
+          .header { text-align: center; margin-bottom: 20px; }
+          .header h2 { margin: 0; font-size: 20px; text-transform: uppercase; }
+          .header p { margin: 4px 0; font-size: 14px; }
+          .divider { border-top: 1px dashed #000; margin: 12px 0; }
+          .item-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+          .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; margin-top: 6px; }
+          .font-normal { font-weight: normal; font-size: 14px; }
+          .footer { text-align: center; margin-top: 24px; font-size: 12px; }
+          @media print {
+            body { width: 100%; margin: 0; padding: 10px; }
+            @page { margin: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>GARNETA STORE</h2>
+          <div class="divider"></div>
+          <p style="text-align: left; font-size: 12px;">Tgl: ${dateStr}</p>
+        </div>
+        <div class="divider"></div>
+        ${itemsHtml}
+        <div class="divider"></div>
+        <div class="total-row"><span>TOTAL</span><span>Rp ${total.toLocaleString('id-ID')}</span></div>
+        ${paymentDetails}
+        <div class="divider"></div>
+        <div class="footer">
+          <p>Terima Kasih</p>
+        </div>
+        <script>
+          window.onload = () => { 
+            setTimeout(() => { window.print(); }, 500);
+          }
+        </script>
+      </body>
+    </html>
+  `;
+
+  printWindow.document.write(html);
+  printWindow.document.close();
+};
+
+// === AUTO-UPDATE NOTIFIER ===
+(function() {
+  let initialVersion = null;
+  let updateNotified = false;
+
+  async function checkVersion() {
+    if (updateNotified) return;
+    try {
+      const res = await fetch('/api/system/version');
+      if (!res.ok) return;
+      const data = await res.json();
+      
+      if (!initialVersion) {
+        initialVersion = data.version;
+      } else if (initialVersion !== data.version) {
+        updateNotified = true;
+        
+        // Buat banner update di UI
+        const banner = document.createElement('div');
+        banner.style.position = 'fixed';
+        banner.style.bottom = '20px';
+        banner.style.left = '50%';
+        banner.style.transform = 'translateX(-50%)';
+        banner.style.backgroundColor = '#ff4757';
+        banner.style.color = '#fff';
+        banner.style.padding = '12px 24px';
+        banner.style.borderRadius = '30px';
+        banner.style.boxShadow = '0 10px 25px rgba(255, 71, 87, 0.4)';
+        banner.style.zIndex = '9999';
+        banner.style.cursor = 'pointer';
+        banner.style.fontWeight = 'bold';
+        banner.style.fontSize = '14px';
+        banner.style.display = 'flex';
+        banner.style.alignItems = 'center';
+        banner.style.gap = '10px';
+        banner.innerHTML = '<span>ðŸš€ Update sistem terbaru telah tersedia!</span> <span style="text-decoration: underline;">Klik untuk Memuat Ulang</span>';
+        
+        banner.onclick = () => {
+          window.location.reload(true);
+        };
+        
+        document.body.appendChild(banner);
+        
+        if(typeof window.playChaChing === 'function') window.playChaChing();
+      }
+    } catch(e) {}
+  }
+  
+  // Cek setiap 5 menit (300.000 ms)
+  setInterval(checkVersion, 300000);
+  
+  // Cek pertama kali setelah 5 detik
+  setTimeout(checkVersion, 5000);
+})();
