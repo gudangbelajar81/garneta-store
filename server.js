@@ -1186,7 +1186,7 @@ async function findRow(collection, id) {
     suppliers: mapSupplier,
     employees: mapEmployee,
     users: mapUser,
-    ngitungSales: (r) => ({ ...r, items: JSON.parse(r.items || '[]'), installments: JSON.parse(r.installments || '[]') }),
+    ngitungSales: (r) => ({ ...r, items: (typeof r.items === 'string' ? JSON.parse(r.items || '[]') : (r.items || [])), installments: (typeof r.installments === 'string' ? JSON.parse(r.installments || '[]') : (r.installments || [])) }),
   };
   const mapper = mappers[collection];
   return mapper ? mapper(rows[0]) : rows[0];
