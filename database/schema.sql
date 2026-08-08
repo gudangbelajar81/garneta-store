@@ -328,3 +328,43 @@ CREATE TABLE cashflow_logs (
     date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE ppob_products (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  buyer_sku_code VARCHAR(100) NOT NULL UNIQUE,
+  product_name VARCHAR(255) NOT NULL,
+  category VARCHAR(100) NOT NULL,
+  brand VARCHAR(100) NOT NULL,
+  type ENUM('Prabayar', 'Pascabayar') NOT NULL,
+  seller_name VARCHAR(255) NOT NULL,
+  price DECIMAL(14,2) NOT NULL DEFAULT 0,
+  buyer_product_status ENUM('normal', 'gangguan') NOT NULL DEFAULT 'normal',
+  seller_product_status ENUM('normal', 'gangguan') NOT NULL DEFAULT 'normal',
+  unlimited_stock BOOLEAN NOT NULL DEFAULT 1,
+  stock INT NOT NULL DEFAULT 0,
+  multi BOOLEAN NOT NULL DEFAULT 0,
+  start_cut_off VARCHAR(50),
+  end_cut_off VARCHAR(50),
+  desc_text TEXT,
+  markup_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+  sale_price DECIMAL(14,2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE ppob_transactions (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ref_id VARCHAR(100) NOT NULL UNIQUE,
+  customer_no VARCHAR(100) NOT NULL,
+  buyer_sku_code VARCHAR(100) NOT NULL,
+  product_name VARCHAR(255) NOT NULL,
+  type ENUM('Prabayar', 'Pascabayar') NOT NULL,
+  amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+  selling_price DECIMAL(14,2) NOT NULL DEFAULT 0,
+  profit DECIMAL(14,2) NOT NULL DEFAULT 0,
+  status VARCHAR(50) NOT NULL,
+  sn VARCHAR(255),
+  rc VARCHAR(50),
+  message TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;

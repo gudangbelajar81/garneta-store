@@ -431,10 +431,10 @@ async function handleAction(action, payload, req) {
     
     get_laporan_keuangan: async () => {
       const { startDate, endDate } = payload;
-      const [sales] = await db.query('SELECT * FROM sales WHERE DATE(date) >= ? AND DATE(date) <= ?', [startDate, endDate]);
+      const [sales] = await db.query('SELECT * FROM sales WHERE DATE(sold_at) >= ? AND DATE(sold_at) <= ?', [startDate, endDate]);
       const [ppob] = await db.query('SELECT * FROM ppob_transactions WHERE status = ? AND DATE(created_at) >= ? AND DATE(created_at) <= ?', ['Sukses', startDate, endDate]);
       const [cashflow] = await db.query('SELECT * FROM cashflow_logs WHERE date >= ? AND date <= ? ORDER BY date DESC, created_at DESC', [startDate, endDate]);
-      const [purchases] = await db.query('SELECT * FROM purchases WHERE date >= ? AND date <= ?', [startDate, endDate]);
+      const [purchases] = await db.query('SELECT * FROM purchases WHERE DATE(purchased_at) >= ? AND DATE(purchased_at) <= ?', [startDate, endDate]);
       const [cashAdvances] = await db.query('SELECT * FROM cash_advances WHERE date >= ? AND date <= ?', [startDate, endDate]);
       return { sales, ppob, cashflow, purchases, cashAdvances };
     },
