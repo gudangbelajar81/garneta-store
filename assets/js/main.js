@@ -6645,7 +6645,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
         if (!nameStr.includes('password') && !idStr.includes('password') &&
             !nameStr.includes('key') && !idStr.includes('key') &&
             !nameStr.includes('url') && !idStr.includes('url') &&
-            !nameStr.includes('api') && !idStr.includes('api') && !nameStr.includes('username') && !idStr.includes('username')) {
+            !nameStr.includes('api') && !idStr.includes('api') && !nameStr.includes('username') && !idStr.includes('username') && !idStr.includes('login') && !idStr.includes('email')) {
           e.target.value = e.target.value.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
           e.target.dispatchEvent(new Event('input', { bubbles: true }));
         }
