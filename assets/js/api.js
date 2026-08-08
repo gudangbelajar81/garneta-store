@@ -12,7 +12,8 @@ const endpoints = {
   priceHistory: "price-history",
   repacking: "repacking",
   users: "users",
-  activityLogs: "activity-logs"
+  activityLogs: "activity-logs",
+  cashflowLogs: "cashflow-logs"
 };
 
 const seedData = {
@@ -332,3 +333,23 @@ export async function getDashboardStats() {
     stockAlerts: products.filter((product) => product.stock <= product.minStock)
   };
 }
+
+
+window.fetchLaporanKeuangan = async function(startDate, endDate) {
+  try {
+    const res = await fetch(API_BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+      },
+      body: JSON.stringify({ action: 'get_laporan_keuangan', payload: { startDate, endDate } })
+    });
+    const result = await res.json();
+    if (!result.ok) throw new Error(result.message);
+    return result.data;
+  } catch (err) {
+    console.error("Error fetch laporan keuangan:", err);
+    throw err;
+  }
+};

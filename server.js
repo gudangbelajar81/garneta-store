@@ -19,6 +19,7 @@ let globalDataVersion = Date.now();
 const { databaseConfig } = require("./config/database");
 const logger = require("./config/logger");
 const errorHandler = require("./middleware/errorHandler");
+const ppob = require("./ppob");
 
 const app = express();
 app.set("trust proxy", 1); // [FIX] Coolify/Traefik reverse proxy — percayai X-Forwarded-For header
@@ -425,7 +426,29 @@ async function handleAction(action, payload, req) {
       modules: () => availableModules(), // [SECURITY] Sekarang butuh auth
     getSetting: () => getSetting(payload.key, payload.fallback),
     setSetting: async () => { await setSetting(payload.key, payload.value); return { ok: true }; },
+    ppob_sync: () => ppob.syncProducts(payload.cmd),
+    ppob_topup: () => ppob.topup(payload.buyer_sku_code, payload.customer_no),
+    
+    get_laporan_keuangan: async () => {
+      const { startDate, endDate } = payload;
+      const [sales] = await db.query('SELECT * FROM sales WHERE DATE(date) >= ? AND DATE(date) <= ?', [startDate, endDate]);
+      const [ppob] = await db.query('SELECT * FROM ppob_transactions WHERE status = ? AND DATE(created_at) >= ? AND DATE(created_at) <= ?', ['Sukses', startDate, endDate]);
+      const [cashflow] = await db.query('SELECT * FROM cashflow_logs WHERE date >= ? AND date <= ? ORDER BY date DESC, created_at DESC', [startDate, endDate]);
+      const [purchases] = await db.query('SELECT * FROM purchases WHERE date >= ? AND date <= ?', [startDate, endDate]);
+      const [cashAdvances] = await db.query('SELECT * FROM cash_advances WHERE date >= ? AND date <= ?', [startDate, endDate]);
+      return { sales, ppob, cashflow, purchases, cashAdvances };
+    },
+
+    ppob_history: async () => {
+      const limit = Math.min(Number(payload.limit) || 30, 100);
+      const [rows] = await db.query(
+        'SELECT * FROM ppob_transactions ORDER BY created_at DESC LIMIT ?',
+        [limit]
+      );
+      return rows;
+    },
     // [SECURITY] resetAdmin DIHAPUS dari sini — tidak boleh ada endpoint public reset password!
+
     // Gunakan: node scripts/reset-admin.js di server langsung jika darurat
   };
 
@@ -657,8 +680,7 @@ async function listRows(collection, req = null) {
       FROM purchases p
       LEFT JOIN purchase_details pd ON pd.purchase_id = p.id
       LEFT JOIN products pr ON pr.id = pd.product_id
-      ORDER BY p.id DESC
-    `);
+      ORDER BY p.id DESC LIMIT 500`);
     return rows.map(mapPurchase);
   }
 
@@ -668,8 +690,7 @@ async function listRows(collection, req = null) {
              sa.unit_content, sa.quantity_sold, sa.profit_per_unit, sa.profit
       FROM sales sa
       LEFT JOIN products pr ON pr.id = sa.product_id
-      ORDER BY sa.id DESC
-    `);
+      ORDER BY sa.id DESC LIMIT 500`);
     return rows.map(mapSale);
   }
 
@@ -725,6 +746,11 @@ async function listRows(collection, req = null) {
       LIMIT 300
     `);
     return rows.map(mapAuditLog);
+  }
+
+  if (collection === "ppob_products") {
+    const [rows] = await db.query("SELECT * FROM ppob_products ORDER BY id DESC");
+    return rows;
   }
 
   throw new Error("Collection belum dibuat handler list.");
@@ -2056,7 +2082,7 @@ async function fetchWithTimeout(url, options, timeoutMs) {
 }
 
 function assertCollection(collection) {
-  if (!["products", "suppliers", "purchases", "sales", "users", "priceHistory", "auditLogs"].includes(collection) && !["employees", "cashAdvances", "payrolls", "ngitungSales", "orders", "cuan_reports"].includes(collection)) {
+  if (!["products", "suppliers", "purchases", "sales", "users", "priceHistory", "auditLogs", "cashflowLogs"].includes(collection) && !["employees", "cashAdvances", "payrolls", "ngitungSales", "orders", "cuan_reports", "ppob_products"].includes(collection)) {
     throw new Error("Collection tidak dikenal.");
   }
 }
@@ -2075,7 +2101,9 @@ function tableName(collection) {
     auditLogs: "activity_logs",
     ngitungSales: "ngitung_sales",
     orders: "orders",
-    cuan_reports: "cuan_reports"
+    cuan_reports: "cuan_reports",
+    ppob_products: "ppob_products",
+    cashflowLogs: "cashflow_logs"
   };
   return tables[collection];
 }
