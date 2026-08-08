@@ -2150,7 +2150,7 @@ ensureIndexes().catch(e => logger.warn("Index setup error:", e.message));
 const SERVER_START_TIME = Date.now().toString();
 app.get('/api/system/version', (req, res) => { res.json({ version: SERVER_START_TIME }); });
 
-server = app.listen(PORT, () => {
+server = app.listen(PORT, '0.0.0.0', () => {
   logger.info(`Server berjalan di http://localhost:${PORT}`);
 });
 
