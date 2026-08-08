@@ -3268,7 +3268,7 @@ Beras Premium 1"></textarea>
                    <span id="expres-total" style="font-weight:bold; font-size:1rem; color:var(--garneta-cyan);">${rupiah(totalCuan)}</span>
                  </div>
                  ` : '<div></div>'}
-                 <button id="btn-eksekusi-cuan" class="btn" style="background:var(--garneta-cyan); color:#000; font-weight:bold; font-size:12px; padding:4px 12px; border-radius:4px; border:none; cursor:pointer; min-height: 32px;" onclick="window.eksekusiCuan(${totalCuan})" ${totalCuan <= 0 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>🚀 Eksekusi</button>
+                 <button id="btn-eksekusi-cuan" class="btn" style="background:var(--garneta-cyan); color:#000; font-weight:bold; font-size:12px; padding:4px 12px; border-radius:4px; border:none; cursor:pointer; min-height: 32px;" onclick="window.eksekusiCuan()" ${totalCuan <= 0 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>🚀 Eksekusi</button>
              </div>
          </div>`;
       } else if (activeTopWorkspace === 'orderan') {
@@ -3503,7 +3503,8 @@ Beras Premium 1"></textarea>
        render();
     };
 
-    window.eksekusiCuan = async function(total) {
+    window.eksekusiCuan = async function() {
+        const total = window.expresCart.reduce((sum, r) => sum + (r.profit || 0), 0);
         if (total <= 0) return;
         
         // Menggunakan native confirm agar 100% jalan di semua browser/tanpa masalah CDN
@@ -3584,6 +3585,18 @@ Beras Premium 1"></textarea>
        const totalEl = document.getElementById('expres-total');
        if (totalEl) {
            totalEl.innerText = rupiah(totalCuan);
+       }
+       const btnEksekusi = document.getElementById('btn-eksekusi-cuan');
+       if (btnEksekusi) {
+           if (totalCuan > 0) {
+               btnEksekusi.disabled = false;
+               btnEksekusi.style.opacity = '1';
+               btnEksekusi.style.cursor = 'pointer';
+           } else {
+               btnEksekusi.disabled = true;
+               btnEksekusi.style.opacity = '0.5';
+               btnEksekusi.style.cursor = 'not-allowed';
+           }
        }
     };
     
