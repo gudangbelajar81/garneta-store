@@ -3214,7 +3214,7 @@ Beras Premium 1"></textarea>
          
       } else if (activeTopWorkspace === 'expres') {
          if (!window.expresCart || window.expresCart.length !== 20) {
-             window.expresCart = Array.from({length: 20}, () => ({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0}));
+             window.expresCart = window.getInitialExpresCart();
          }
          const expresRows = window.expresCart;
          const totalCuan = expresRows.reduce((sum, r) => sum + (r.profit || 0), 0);
