@@ -4086,6 +4086,7 @@ Beras Premium 1"></textarea>
           ${tab === "ppob" ? `
           <div class="theme-panel">
             <div class="api-section-title">Konfigurasi Digiflazz (PPOB)</div>
+            <img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" onload="window.initDigiflazzSettings()" style="display:none;">
             <p class="muted">Masukkan Username dan API Key Production Digiflazz Anda untuk mulai berjualan PPOB.</p>
             <div style="display:flex; flex-direction:column; gap:12px; margin-top:15px; max-width: 400px;">
                 <label>Digiflazz Username
@@ -4141,7 +4142,7 @@ ${tab === "bluetooth" ? `
           }
       };
 
-      if (tab === "ppob") {
+      window.initDigiflazzSettings = function() {
           setTimeout(async () => {
              try {
                  const userRes = await gas("getSetting", { key: "DIGIFLAZZ_USERNAME" });
@@ -4151,7 +4152,7 @@ ${tab === "bluetooth" ? `
                  }
              } catch(e) {}
           }, 100);
-      }
+      };
 
       function settingsTabButton(key, label, active) {
       return `<button class="${key === active ? "active" : ""}" data-settings-tab="${key}" type="button">${label}</button>`;
