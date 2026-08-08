@@ -110,7 +110,7 @@ async function topup(buyer_sku_code, customer_no) {
 
   const ref_id = "GS-" + Date.now() + Math.random().toString(36).substring(2, 6).toUpperCase();
   const sign = md5(config.username + config.key + ref_id);
-  const testing = config.env !== 'production';
+  const testing = String(config.key).trim().startsWith('dev-');
 
   // === ERROR MESSAGE MAP (Digiflazz → Bahasa Indonesia) ===
   const errorMap = {
