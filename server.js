@@ -23,7 +23,7 @@ const ppob = require("./ppob");
 
 const app = express();
 app.set("trust proxy", 1); // [FIX] Coolify/Traefik reverse proxy — percayai X-Forwarded-For header
-const PORT = Number(process.env.PORT || 3000);
+const PORT = Number(process.env.PORT || 5001);
 const JWT_SECRET = process.env.JWT_SECRET || "GarnetaSystemSuperSecretKey2026_Static!";
 const JWT_EXPIRY = process.env.JWT_EXPIRY || "8h";
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS || 12);
@@ -651,18 +651,19 @@ async function listRows(collection, req = null) {
     if (isPublicAccess) {
       // [SECURITY] Akses publik — sembunyikan harga beli dan cost price
       const [rows] = await db.query(`
-        SELECT id, category, name, unit, unit_ecer, unit_content, sale_price, sale_price_ecer, stock, barcode
+        SELECT id, category, name, unit, unit_ecer, unit_content, sale_price, sale_price_ecer, stock, barcode, discount_type, discount_value, discount_min_qty
         FROM products ORDER BY id DESC
       `);
       return rows.map(r => ({
         id: r.id, category: r.category, name: r.name,
         unit: r.unit, unitEcer: r.unit_ecer, unitContent: Number(r.unit_content || 1),
         salePrice: Number(r.sale_price || 0), salePriceEcer: Number(r.sale_price_ecer || 0),
-        stock: Number(r.stock || 0), barcode: r.barcode || ""
+        stock: Number(r.stock || 0), barcode: r.barcode || "",
+        discountType: r.discount_type, discountValue: Number(r.discount_value || 0), discountMinQty: Number(r.discount_min_qty || 0)
       }));
     }
     const [rows] = await db.query(`
-      SELECT id, supplier_id, category, name, unit, unit_ecer, unit_content, base_price, base_price_ecer, cost_price, sale_price, sale_price_ecer, stock, barcode
+      SELECT id, supplier_id, category, name, unit, unit_ecer, unit_content, base_price, base_price_ecer, cost_price, sale_price, sale_price_ecer, stock, barcode, discount_type, discount_value, discount_min_qty
       FROM products
       ORDER BY id DESC
     `);
@@ -795,8 +796,8 @@ async function addRow(collection, item = {}) {
   if (collection === "products") {
     const payload = productPayload(item);
     const [result] = await db.query(`
-      INSERT INTO products (supplier_id, category, name, unit, unit_ecer, unit_content, base_price, base_price_ecer, sale_price, sale_price_ecer, stock, barcode)
-      VALUES (:supplierId, :category, :name, :unit, :unitEcer, :unitContent, :basePrice, :basePriceEcer, :salePrice, :salePriceEcer, :stock, :barcode)
+      INSERT INTO products (supplier_id, category, name, unit, unit_ecer, unit_content, base_price, base_price_ecer, sale_price, sale_price_ecer, stock, barcode, discount_type, discount_value, discount_min_qty)
+      VALUES (:supplierId, :category, :name, :unit, :unitEcer, :unitContent, :basePrice, :basePriceEcer, :salePrice, :salePriceEcer, :stock, :barcode, :discountType, :discountValue, :discountMinQty)
     `, payload);
     await recordPriceHistory(result.insertId, "barang");
     await recordAudit(`Tambah barang: ${payload.name}`);
@@ -1023,13 +1024,18 @@ async function updateRow(collection, id, item = {}) {
 
   if (collection === "products") {
     const before = await findRow("products", id);
-    const payload = productPayload({ ...before, ...item });
+    // [FIX] Strip undefined values from item agar nilai DB di `before` tidak tertimpa undefined
+    const safeItem = Object.fromEntries(
+      Object.entries(item).filter(([, v]) => v !== undefined && v !== '')
+    );
+    const payload = productPayload({ ...before, ...safeItem });
     await db.query(`
       UPDATE products 
       SET supplier_id = :supplierId, category = :category, name = :name, 
           unit = :unit, unit_ecer = :unitEcer, unit_content = :unitContent, base_price = :basePrice, 
           base_price_ecer = :basePriceEcer, sale_price = :salePrice, sale_price_ecer = :salePriceEcer,
-          stock = :stock, barcode = :barcode
+          stock = :stock, barcode = :barcode,
+          discount_type = :discountType, discount_value = :discountValue, discount_min_qty = :discountMinQty
       WHERE id = :id
     `, { ...payload, id });
     if (Number(before.basePrice) !== Number(payload.basePrice)) await recordPriceHistory(id, "barang");
@@ -1280,7 +1286,10 @@ function productPayload(item) {
     salePrice: number(item.salePrice),
     salePriceEcer: number(item.salePriceEcer),
     stock: number(item.stock),
-    barcode: item.barcode || null
+    barcode: item.barcode || null,
+    discountType: item.discountType === "%" ? "%" : "Rp",
+    discountValue: number(item.discountValue),
+    discountMinQty: number(item.discountMinQty)
   };
 }
 
@@ -1370,7 +1379,10 @@ function mapProduct(row) {
     salePrice: Number(row.sale_price || 0),
     salePriceEcer: Number(row.sale_price_ecer || 0),
     stock: Number(row.stock || 0),
-    barcode: row.barcode || ""
+    barcode: row.barcode || "",
+    discountType: row.discount_type,
+    discountValue: Number(row.discount_value || 0),
+    discountMinQty: Number(row.discount_min_qty || 0)
   };
 }
 
