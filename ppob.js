@@ -47,7 +47,7 @@ async function syncProducts(cmd = 'prepaid') {
       const products = response.data.data; // array of products
 
       // BULK INSERT OPTIMIZATION (Chunked)
-      const chunkSize = 200;
+      const chunkSize = 50; // Lebih aman untuk limit max_allowed_packet MySQL di VPS
       for (let i = 0; i < products.length; i += chunkSize) {
         const chunk = products.slice(i, i + chunkSize);
         
