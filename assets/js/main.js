@@ -7245,11 +7245,11 @@ window.printReceiptPDF = function() {
       return;
     }
     const catMap = {
-      'Pulsa': ['Pulsa','Masa Aktif','Aktivasi Perdana','Aktivasi Voucher'],
-      'Data': ['Data','Paket SMS & Telpon'],
-      'PLN': ['PLN','Gas'],
-      'Game': ['Games','Voucher','TV'],
-      'E-Money': ['E-Money'],
+      'Pulsa': ['Pulsa','Masa Aktif','Aktivasi Perdana','Aktivasi Voucher', 'Paket Lainnya'],
+      'Data': ['Data','Paket SMS & Telpon', 'WIFI ID'],
+      'PLN': ['PLN','Gas', 'Pertagas'],
+      'Game': ['Games','Voucher','TV', 'Streaming'],
+      'E-Money': ['E-Money', 'E-Toll'],
     };
     const cats = catMap[ppobActiveTab] || ['Pulsa'];
     const filtered = ppobProducts.filter(p => {
