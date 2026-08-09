@@ -73,7 +73,9 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
            if (!silentAuthError) {
                showToast("Sesi habis atau ditolak. Silakan login kembali.", "error");
                renderShell();
-               render();
+               el("content").innerHTML = `<div class="card" style="text-align:center; padding: 40px; margin-top:20px;"><h2>Sesi Kedaluwarsa</h2><p>Akses ditolak karena sesi tidak valid. Silakan login kembali.</p></div>`;
+               const loginBtn = el("super-login");
+               if(loginBtn) loginBtn.click();
            }
            throw new Error(result.message);
         }
