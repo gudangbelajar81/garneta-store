@@ -7490,7 +7490,37 @@ window.printReceiptPDF = function() {
       <div class="row"><span>Produk</span><span style="max-width:160px;text-align:right;">${productName}</span></div>
       <div class="row"><span>Nomor</span><span>${custNo}</span></div>
       <div class="row"><span>Status</span><span>${status}</span></div>
-      ${sn && sn !== '-' ? `<div class="divider"></div><div class="center" style="font-size:10px;margin-bottom:4px;">Token / SN</div><div class="sn">${sn}</div>` : ''}
+      ${(function(){
+        if (!sn || sn === '-') return '';
+        let htmlSnippet = `<div class="divider"></div><div class="center" style="font-size:10px;margin-bottom:4px;">Token / SN</div>`;
+        let isPln = false;
+        let mainToken = sn;
+        let tokenDetailsHTML = '';
+        if (sn.includes('/')) {
+            const parts = sn.split('/');
+            if (parts.length >= 3 && parts[0].replace(/-/g, '').length >= 16) {
+                isPln = true;
+                mainToken = parts[0].replace(/-/g, ' '); 
+                const name = parts[1] || '';
+                const daya = (parts[2] || '') + (parts[3] ? '/' + parts[3] : '');
+                const kwh = parts[4] || '';
+                tokenDetailsHTML = `
+                <div style="margin-top:8px;font-size:11px;">
+                    <div class="row"><span>Nama</span><span style="text-align:right;">${name}</span></div>
+                    <div class="row"><span>Tarif/Daya</span><span style="text-align:right;">${daya}</span></div>
+                    ${kwh ? `<div class="row"><span>KWH</span><span style="text-align:right;">${kwh}</span></div>` : ''}
+                </div>`;
+            }
+        }
+        if (isPln) {
+            htmlSnippet += `<div style="border:1px solid #000; border-radius:4px; padding:6px; margin:6px 0; text-align:center;">
+                <div style="font-size:18px; font-weight:900; letter-spacing:1px; line-height:1.2;">${mainToken}</div>
+            </div>${tokenDetailsHTML}`;
+        } else {
+            htmlSnippet += `<div class="sn">${sn}</div>`;
+        }
+        return htmlSnippet;
+      })()}
       <div class="divider"></div>
       <div class="row big"><span>TOTAL</span><span>${fmt(total)}</span></div>
       <div class="divider"></div>
@@ -7579,15 +7609,34 @@ window.printReceiptPDF = function() {
         receiptLines.push([0x1b, 0x61, 0x01]); // Center
         receiptLines.push(...encoder.encode("Token / SN\n"));
         
+        let isPln = false;
         if (sn.includes('/')) {
             const parts = sn.split('/');
-            const mainToken = parts[0];
-            const details = parts.slice(1).join('/');
-            
-            receiptLines.push([0x1b, 0x45, 0x01]); // Bold On
-            receiptLines.push(...encoder.encode(mainToken + "\n"));
-            receiptLines.push([0x1b, 0x45, 0x00]); // Bold Off
-            receiptLines.push(...encoder.encode(details + "\n"));
+            if (parts.length >= 3 && parts[0].replace(/-/g, '').length >= 16) {
+                isPln = true;
+                const mainToken = parts[0].replace(/-/g, ' ');
+                const name = parts[1] || '';
+                const daya = (parts[2] || '') + (parts[3] ? '/' + parts[3] : '');
+                const kwh = parts[4] || '';
+                
+                receiptLines.push([0x1b, 0x45, 0x01]); // Bold On
+                receiptLines.push([0x1d, 0x21, 0x11]); // Double Width & Height
+                receiptLines.push(...encoder.encode(mainToken + "\n"));
+                receiptLines.push([0x1d, 0x21, 0x00]); // Normal Size
+                receiptLines.push([0x1b, 0x45, 0x00]); // Bold Off
+                
+                receiptLines.push([0x1b, 0x61, 0x00]); // Left
+                receiptLines.push(...encoder.encode(padLR("Nama", name.substring(0, paperSize-6)) + "\n"));
+                receiptLines.push(...encoder.encode(padLR("Daya", daya.substring(0, paperSize-6)) + "\n"));
+                if(kwh) receiptLines.push(...encoder.encode(padLR("KWH", kwh.substring(0, paperSize-6)) + "\n"));
+            } else {
+                const mainToken = parts[0];
+                const details = parts.slice(1).join('/');
+                receiptLines.push([0x1b, 0x45, 0x01]); // Bold On
+                receiptLines.push(...encoder.encode(mainToken + "\n"));
+                receiptLines.push([0x1b, 0x45, 0x00]); // Bold Off
+                receiptLines.push(...encoder.encode(details + "\n"));
+            }
         } else {
             receiptLines.push([0x1b, 0x45, 0x01]); // Bold On
             receiptLines.push(...encoder.encode(sn + "\n"));
