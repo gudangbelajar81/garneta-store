@@ -2170,7 +2170,10 @@ window.globalBluetoothDevice = device;
             let encoder = new TextEncoder();
             
             // Format Struk (32 Karakter)
-            let storeName = "GARNETA STORE"; 
+            // Format Struk (32 Karakter)
+            let storeName = localStorage.getItem('storeName') || "GARNETA STORE";
+            let storeAddress = localStorage.getItem('storeAddress') || "";
+            let storeFooter = localStorage.getItem('storeFooter') || "Terima Kasih!";
             let receiptLines = [];
             
             // Header (Mahkota) - Max 16 chars for double size, otherwise normal
@@ -2181,6 +2184,10 @@ window.globalBluetoothDevice = device;
             } else {
                 receiptLines.push(...encoder.encode(storeName + "\n"));
             }
+            if (storeAddress) {
+                receiptLines.push(...encoder.encode(storeAddress + "\n"));
+            }
+
             
             let tOperator = data.operator || (window.state && window.state.user && window.state.user.username ? window.state.user.username : 'Kasir Utama');
             let tTotal = data.total !== undefined ? data.total : (data.grandTotal !== undefined ? data.grandTotal : (data.subtotal || 0));
@@ -2212,7 +2219,7 @@ window.globalBluetoothDevice = device;
             
             receiptLines.push(...encoder.encode("\n"));
             receiptLines.push([0x1b, 0x61, 0x01]); // Center
-            receiptLines.push(...encoder.encode("Terima kasih atas\nkunjungan Anda!\n\n\n\n")); // Rata tengah, penutup
+            receiptLines.push(...encoder.encode((storeFooter || "Terima Kasih") + "\n\n\n\n")); // Rata tengah, penutup
             receiptLines.push([0x1b, 0x61, 0x00]); // Kiri lagi
             
             let payload = [
@@ -4107,6 +4114,20 @@ Beras Premium 1"></textarea>
           ` : ""}
 ${tab === "bluetooth" ? `
           <div class="api-center-card" style="max-width: 100%;">
+            <div class="api-section-title">Identitas Toko (Struk)</div>
+            <p class="muted">Teks yang akan dicetak pada header dan footer struk Kasir & PPOB.</p>
+            <div class="form-group" style="margin-bottom:12px;">
+              <label>Nama Toko (Header Utama)</label>
+              <input type="text" id="store-name-setting" class="input" placeholder="GARNETA STORE" value="${localStorage.getItem('storeName') || 'GARNETA STORE'}" onblur="localStorage.setItem('storeName', this.value); showToast('Nama toko disimpan!', 'success')">
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+              <label>Alamat / Keterangan (Sub-Header)</label>
+              <input type="text" id="store-address-setting" class="input" placeholder="Misal: 085123871118" value="${localStorage.getItem('storeAddress') || ''}" onblur="localStorage.setItem('storeAddress', this.value); showToast('Alamat toko disimpan!', 'success')">
+            </div>
+            <div class="form-group" style="margin-bottom:24px;">
+              <label>Pesan Penutup (Footer)</label>
+              <input type="text" id="store-footer-setting" class="input" placeholder="Terima Kasih!" value="${localStorage.getItem('storeFooter') || 'Terima kasih atas kunjungan Anda!'}" onblur="localStorage.setItem('storeFooter', this.value); showToast('Footer disimpan!', 'success')">
+            </div>
             <div class="api-section-title">Pengaturan Ukuran Kertas</div>
             <p class="muted">Pilih ukuran kertas yang sesuai dengan printer Bluetooth Anda.</p>
             <div class="actions" style="margin-bottom: 20px;">
@@ -7031,7 +7052,8 @@ window.printReceiptPDF = function() {
       </head>
       <body>
         <div class="header">
-          <h2>GARNETA STORE</h2>
+          <h2>${localStorage.getItem('storeName') || 'GARNETA STORE'}</h2>
+          ${localStorage.getItem('storeAddress') ? `<p>${localStorage.getItem('storeAddress')}</p>` : ''}
           <div class="divider"></div>
           <p style="text-align: left; font-size: 12px;">Tgl: ${dateStr}</p>
         </div>
@@ -7042,7 +7064,7 @@ window.printReceiptPDF = function() {
         ${paymentDetails}
         <div class="divider"></div>
         <div class="footer">
-          <p>Terima Kasih</p>
+          <p>\</p>
         </div>
         <script>
           window.onload = () => { 
@@ -7459,7 +7481,9 @@ window.printReceiptPDF = function() {
     const dateStr = new Date().toLocaleString('id-ID');
     const fmt = n => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n).replace(/\u00A0/g, ' ');
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Struk PPOB</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Courier New',monospace;width:280px;padding:16px;font-size:12px;color:#000;}.center{text-align:center;}.divider{border:none;border-top:1px dashed #000;margin:8px 0;}.row{display:flex;justify-content:space-between;margin:3px 0;}.big{font-size:17px;font-weight:bold;}.sn{font-size:15px;font-weight:bold;letter-spacing:3px;word-break:break-all;text-align:center;}</style></head><body>
-      <div class="center big">GARNETA STORE</div><div class="center" style="margin-bottom:4px;">Struk Pembayaran PPOB</div>
+      <div class="center big">${localStorage.getItem('storeName') || 'GARNETA STORE'}</div>
+      ${localStorage.getItem('storeAddress') ? `<div class="center" style="font-size:10px;margin-top:2px;">${localStorage.getItem('storeAddress')}</div>` : ''}
+      <div class="center" style="margin-top:8px;margin-bottom:4px;">Struk Pembayaran PPOB</div>
       <div class="divider"></div>
       <div>${dateStr}</div>
       <div class="divider"></div>
@@ -7470,7 +7494,7 @@ window.printReceiptPDF = function() {
       <div class="divider"></div>
       <div class="row big"><span>TOTAL</span><span>${fmt(total)}</span></div>
       <div class="divider"></div>
-      <div class="center" style="margin-top:8px;font-size:11px;">Terima Kasih!</div>
+      <div class="center" style="margin-top:8px;font-size:11px;">${localStorage.getItem('storeFooter') || 'Terima Kasih!'}</div>
       <script>setTimeout(()=>{window.print();setTimeout(()=>{window.close();},1500);},400);</script>
     </body></html>`;
     const w = window.open('', '_blank', 'width=320,height=600');
@@ -7522,12 +7546,24 @@ window.printReceiptPDF = function() {
         if (l.length + r.length >= paperSize) return l.substring(0, paperSize - r.length - 1) + " " + r;
         return l + " ".repeat(paperSize - l.length - r.length) + r;
       };
+      
       const fmt = n => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n).replace(/\u00A0/g, ' ');
       
+      let storeName = localStorage.getItem('storeName') || "GARNETA STORE";
+      let storeAddress = localStorage.getItem('storeAddress') || "";
+      let storeFooter = localStorage.getItem('storeFooter') || "Terima Kasih!";
+      
       receiptLines.push([0x1b, 0x61, 0x01]); // Align Center
-      receiptLines.push([0x1d, 0x21, 0x11]); // Double Size
-      receiptLines.push(...encoder.encode("GARNETA STORE\n"));
-      receiptLines.push([0x1d, 0x21, 0x00]); // Normal Size
+      if (storeName.length <= 16) {
+          receiptLines.push([0x1d, 0x21, 0x11]); // Double Size
+          receiptLines.push(...encoder.encode(storeName + "\n"));
+          receiptLines.push([0x1d, 0x21, 0x00]); // Normal Size
+      } else {
+          receiptLines.push(...encoder.encode(storeName + "\n"));
+      }
+      if (storeAddress) {
+          receiptLines.push(...encoder.encode(storeAddress + "\n"));
+      }
       receiptLines.push(...encoder.encode("Struk Pembayaran PPOB\n"));
       receiptLines.push(...encoder.encode("-".repeat(paperSize) + "\n"));
       receiptLines.push(...encoder.encode(new Date().toLocaleString('id-ID') + "\n"));
@@ -7542,11 +7578,27 @@ window.printReceiptPDF = function() {
         receiptLines.push(...encoder.encode("-".repeat(paperSize) + "\n"));
         receiptLines.push([0x1b, 0x61, 0x01]); // Center
         receiptLines.push(...encoder.encode("Token / SN\n"));
-        receiptLines.push(...encoder.encode(sn + "\n"));
+        
+        if (sn.includes('/')) {
+            const parts = sn.split('/');
+            const mainToken = parts[0];
+            const details = parts.slice(1).join('/');
+            
+            receiptLines.push([0x1b, 0x45, 0x01]); // Bold On
+            receiptLines.push(...encoder.encode(mainToken + "\n"));
+            receiptLines.push([0x1b, 0x45, 0x00]); // Bold Off
+            receiptLines.push(...encoder.encode(details + "\n"));
+        } else {
+            receiptLines.push([0x1b, 0x45, 0x01]); // Bold On
+            receiptLines.push(...encoder.encode(sn + "\n"));
+            receiptLines.push([0x1b, 0x45, 0x00]); // Bold Off
+        }
+        
         receiptLines.push([0x1b, 0x61, 0x00]); // Left
       }
       
       receiptLines.push(...encoder.encode("-".repeat(paperSize) + "\n"));
+      receiptLines.push([0x1b, 0x61, 0x00]); // Align Left
       receiptLines.push(...encoder.encode(padLR("TOTAL", fmt(total)) + "\n"));
       receiptLines.push([0x1b, 0x61, 0x01]); // Align Center
       receiptLines.push(...encoder.encode("-".repeat(paperSize) + "\n"));
@@ -7889,7 +7941,7 @@ window.printReceiptPDF = function() {
         ${paymentDetails}
         <div class="divider"></div>
         <div class="footer">
-          <p>Terima Kasih</p>
+          <p>\</p>
         </div>
         <script>
           window.onload = () => { 
