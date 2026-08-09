@@ -7457,7 +7457,7 @@ window.printReceiptPDF = function() {
   // === Print Receipt ===
   window.printPpobReceipt = function(productName, custNo, sn, status, total) {
     const dateStr = new Date().toLocaleString('id-ID');
-    const fmt = n => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
+    const fmt = n => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n).replace(/\u00A0/g, ' ');
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Struk PPOB</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Courier New',monospace;width:280px;padding:16px;font-size:12px;color:#000;}.center{text-align:center;}.divider{border:none;border-top:1px dashed #000;margin:8px 0;}.row{display:flex;justify-content:space-between;margin:3px 0;}.big{font-size:17px;font-weight:bold;}.sn{font-size:15px;font-weight:bold;letter-spacing:3px;word-break:break-all;text-align:center;}</style></head><body>
       <div class="center big">GARNETA STORE</div><div class="center" style="margin-bottom:4px;">Struk Pembayaran PPOB</div>
       <div class="divider"></div>
@@ -7522,7 +7522,7 @@ window.printReceiptPDF = function() {
         if (l.length + r.length >= paperSize) return l.substring(0, paperSize - r.length - 1) + " " + r;
         return l + " ".repeat(paperSize - l.length - r.length) + r;
       };
-      const fmt = n => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
+      const fmt = n => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n).replace(/\u00A0/g, ' ');
       
       receiptLines.push([0x1b, 0x61, 0x01]); // Align Center
       receiptLines.push([0x1d, 0x21, 0x11]); // Double Size
@@ -7542,9 +7542,7 @@ window.printReceiptPDF = function() {
         receiptLines.push(...encoder.encode("-".repeat(paperSize) + "\n"));
         receiptLines.push([0x1b, 0x61, 0x01]); // Center
         receiptLines.push(...encoder.encode("Token / SN\n"));
-        receiptLines.push([0x1d, 0x21, 0x11]); // Double Size
         receiptLines.push(...encoder.encode(sn + "\n"));
-        receiptLines.push([0x1d, 0x21, 0x00]); // Normal Size
         receiptLines.push([0x1b, 0x61, 0x00]); // Left
       }
       
@@ -7640,7 +7638,10 @@ window.printReceiptPDF = function() {
                 <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${statusBg};color:${statusColor};">${r.status||'-'}</span>
                 ${r.status === 'Pending' ? `<br><button onclick="window.checkPPOBStatus('${r.ref_id}')" style="margin-top:4px;padding:3px 8px;background:#f59e0b;color:#fff;border:none;border-radius:4px;font-size:10px;cursor:pointer;">Cek Status</button>` : ''}
               </td>
-              <td style="padding:10px 12px;text-align:center;font-family:monospace;font-size:11px;">${r.sn ? `<span style="max-width:120px;display:inline-block;word-break:break-all;">${r.sn}</span> <button onclick="navigator.clipboard.writeText('${r.sn}').then(()=>showToast('Disalin!','success'))" style="padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:10px;">📋</button>` : '-'}</td>
+              <td style="padding:10px 12px;text-align:center;font-family:monospace;font-size:11px;">
+                ${r.sn ? `<span style="max-width:120px;display:inline-block;word-break:break-all;">${r.sn}</span> <button onclick="navigator.clipboard.writeText('${r.sn}').then(()=>showToast('Disalin!','success'))" style="padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:10px;">📋</button>` : '-'}
+                <button onclick="printPpobReceiptBluetooth('${(r.product_name||'').replace(/'/g,'\\u0027')}', '${r.customer_no}', '${r.sn||'-'}', '${r.status}', ${r.selling_price})" style="padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:10px;margin-left:4px;" title="Cetak Thermal">🖨️</button>
+              </td>
             </tr>`;
           }).join('')}
           </tbody>
