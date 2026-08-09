@@ -3955,8 +3955,7 @@ Beras Premium 1"></textarea>
         audit: ["Audit", "Catatan semua aktivitas penting yang terjadi di sistem."],
         gaji: ["Gaji & Kasbon", "Manajemen data gaji karyawan dan pinjaman (kasbon)."],
           bluetooth: ["Bluetooth Printer", "Pengaturan kertas cetak dan koneksi printer thermal Bluetooth."],
-          ppob: ["PPOB & Digiflazz", "Pengaturan API Digiflazz untuk fitur pulsa/tagihan."],
-          bluetooth: ["Bluetooth Printer", "Pengaturan kertas cetak dan koneksi printer thermal Bluetooth."]
+          ppob: ["PPOB & Digiflazz", "Pengaturan API Digiflazz untuk fitur pulsa/tagihan."]
       };
       const [title, description] = titles[tab] || titles.api;
       return `<section class="settings-page">
@@ -3969,7 +3968,6 @@ Beras Premium 1"></textarea>
           ${settingsTabButton("gaji", "GAJI & BON", tab)}
             ${settingsTabButton("bluetooth", "BLUETOOTH", tab)}
             ${settingsTabButton("ppob", "PPOB & DIGI", tab)}
-            ${settingsTabButton("bluetooth", "BLUETOOTH", tab)}
         </div>
 
         ${tab === "api" ? `
