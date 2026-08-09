@@ -31,7 +31,7 @@ async function syncProducts(cmd = 'prepaid') {
   const config = await getDigiConfig();
   if (!config.username || !config.key) throw new Error("Konfigurasi Digiflazz (Username/Key) belum diatur di menu Settings.");
 
-  const sign = md5(config.username + config.key + "depo");
+  const sign = md5(config.username + config.key + "pricelist");
   
   const cmds = cmd === 'all' ? ['prepaid', 'postpaid'] : [cmd];
   let totalSynced = 0;
