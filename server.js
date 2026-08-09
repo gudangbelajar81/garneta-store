@@ -428,6 +428,7 @@ async function handleAction(action, payload, req) {
     setSetting: async () => { await setSetting(payload.key, payload.value); return { ok: true }; },
     ppob_sync: () => ppob.syncProducts(payload.cmd),
     ppob_topup: () => ppob.topup(payload.buyer_sku_code, payload.customer_no),
+    ppob_checkStatus: () => ppob.checkStatus(payload.ref_id),
     
     get_laporan_keuangan: async () => {
       const { startDate, endDate } = payload;

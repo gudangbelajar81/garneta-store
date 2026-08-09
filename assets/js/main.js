@@ -7348,6 +7348,7 @@ window.printReceiptPDF = function() {
         const sn = res.data?.sn || '-';
         const status = res.data?.status || 'Sukses';
         const isPln = p.category === 'PLN';
+        const refId = res.data?.ref_id || '';
 
         // Success modal (with WA Share and Save Contact)
         const sm = document.createElement('div');
@@ -7363,8 +7364,15 @@ window.printReceiptPDF = function() {
             <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:16px;padding:14px;margin-bottom:16px;">
               <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span style="color:#666;">Produk</span><span style="font-weight:600;">${p.product_name}</span></div>
               <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span style="color:#666;">Nomor</span><span style="font-weight:600;">${custNo}</span></div>
-              <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span style="color:#666;">Status</span><span style="font-weight:600;color:#16a34a;">${status}</span></div>
-              ${isPln && sn !== '-' ? `<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #bbf7d0;"><div style="color:#666;font-size:11px;margin-bottom:6px;">Token PLN:</div><div style="display:flex;align-items:center;gap:8px;"><div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:18px;font-weight:bold;letter-spacing:3px;flex:1;text-align:center;">${sn}</div><button onclick="navigator.clipboard.writeText('${sn}').then(()=>showToast('Token disalin!','success'))" style="padding:10px 14px;background:#E3222B;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:13px;">📋 Salin</button></div></div>` : ''}
+              <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span style="color:#666;">Status</span><span id="modal-ppob-status" style="font-weight:600;color:${status==='Pending'?'#eab308':'#16a34a'};">${status} ${status==='Pending'?'<span style="font-size:10px;animation:pulse 1.5s infinite">⏳ mengecek...</span>':''}</span></div>
+              
+              <div id="modal-ppob-sn-container" style="display:${isPln && sn !== '-' ? 'block' : 'none'};margin-top:10px;padding-top:10px;border-top:1px dashed #bbf7d0;">
+                <div style="color:#666;font-size:11px;margin-bottom:6px;">Token PLN:</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div id="modal-ppob-sn" style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:18px;font-weight:bold;letter-spacing:3px;flex:1;text-align:center;">${sn}</div>
+                  <button onclick="navigator.clipboard.writeText(document.getElementById('modal-ppob-sn').innerText).then(()=>showToast('Token disalin!','success'))" style="padding:10px 14px;background:#E3222B;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:13px;">📋 Salin</button>
+                </div>
+              </div>
             </div>
 
             <div style="background:#fafafa; border-radius:10px; padding:12px; margin-bottom:16px; display:flex; gap:8px; align-items:center;">
@@ -7387,6 +7395,47 @@ window.printReceiptPDF = function() {
           </div>
         `;
         document.body.appendChild(sm);
+
+        // --- Active Polling Logic ---
+        if (status === 'Pending' && refId) {
+            let ppobCheckCount = 0;
+            const ppobCheckInterval = setInterval(async () => {
+                ppobCheckCount++;
+                try {
+                    const checkRes = await gas('ppob_checkStatus', { ref_id: refId });
+                    if (checkRes && checkRes.data) {
+                        const newStatus = checkRes.data.status;
+                        if (newStatus === 'Sukses' || newStatus === 'Gagal') {
+                            clearInterval(ppobCheckInterval);
+                            const statusEl = document.getElementById('modal-ppob-status');
+                            if (statusEl) {
+                                statusEl.innerHTML = newStatus;
+                                statusEl.style.color = newStatus === 'Sukses' ? '#16a34a' : '#E3222B';
+                            }
+                            if (isPln && checkRes.data.sn) {
+                                const snContainer = document.getElementById('modal-ppob-sn-container');
+                                const snEl = document.getElementById('modal-ppob-sn');
+                                if (snContainer && snEl) {
+                                    snContainer.style.display = 'block';
+                                    snEl.innerText = checkRes.data.sn;
+                                }
+                            }
+                        }
+                    }
+                } catch(e) {
+                    console.error("Gagal cek status otomatis", e);
+                }
+                if (ppobCheckCount > 15) clearInterval(ppobCheckInterval);
+            }, 5000);
+
+            sm.addEventListener('click', (e) => {
+                if(e.target === sm || e.target.closest('button')?.innerText === 'Tutup') {
+                    clearInterval(ppobCheckInterval);
+                }
+            });
+        }
+        // ----------------------------
+
 
         // Reset
         document.getElementById('ppob-customer-no').value = '';
@@ -7535,6 +7584,23 @@ window.printReceiptPDF = function() {
     }
   };
 
+  // === Check PPOB Status ===
+  window.checkPPOBStatus = async function(ref_id) {
+    try {
+      const res = await gas('ppob_checkStatus', { ref_id });
+      if (res && res.data) {
+        const status = res.data.status;
+        const sn = res.data.sn || '-';
+        showToast(`Status: ${status} | SN: ${sn}`, status === 'Sukses' ? 'success' : (status === 'Pending' ? 'warning' : 'error'));
+        if (status !== 'Pending') {
+          showPpobHistory(); // Reload table
+        }
+      }
+    } catch(err) {
+      showToast('Gagal cek status otomatis: ' + err.message, 'error');
+    }
+  };
+
   // === History ===
   window.showPpobHistory = async function() {
     if (ppobView !== 'history') {
@@ -7570,7 +7636,10 @@ window.printReceiptPDF = function() {
               <td style="padding:10px 12px;font-weight:500;">${r.product_name||'-'}</td>
               <td style="padding:10px 12px;">${r.customer_no||'-'}</td>
               <td style="padding:10px 12px;text-align:right;font-weight:600;color:#E3222B;">${new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Math.round(Number(r.selling_price||0)))}</td>
-              <td style="padding:10px 12px;text-align:center;"><span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${statusBg};color:${statusColor};">${r.status||'-'}</span></td>
+              <td style="padding:10px 12px;text-align:center;">
+                <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${statusBg};color:${statusColor};">${r.status||'-'}</span>
+                ${r.status === 'Pending' ? `<br><button onclick="window.checkPPOBStatus('${r.ref_id}')" style="margin-top:4px;padding:3px 8px;background:#f59e0b;color:#fff;border:none;border-radius:4px;font-size:10px;cursor:pointer;">Cek Status</button>` : ''}
+              </td>
               <td style="padding:10px 12px;text-align:center;font-family:monospace;font-size:11px;">${r.sn ? `<span style="max-width:120px;display:inline-block;word-break:break-all;">${r.sn}</span> <button onclick="navigator.clipboard.writeText('${r.sn}').then(()=>showToast('Disalin!','success'))" style="padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:10px;">📋</button>` : '-'}</td>
             </tr>`;
           }).join('')}
