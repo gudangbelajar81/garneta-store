@@ -145,7 +145,11 @@ async function topup(buyer_sku_code, customer_no) {
 
     return { ok: true, data: result, profit: Number(product.sale_price) - Number(result.price) };
   } catch (error) {
-    const rawMsg = error.response?.data?.data?.message || error.message || 'Transaksi gagal';
+    let rawMsg = error.response?.data?.data?.message || error.message || 'Transaksi gagal';
+    if (rawMsg.toLowerCase().includes('signature')) {
+       const keyPrefix = config.key ? config.key.substring(0, 5) : 'KOSONG';
+       rawMsg = rawMsg + " (Sistem Garneta saat ini menggunakan kunci yang berawalan: " + keyPrefix + "...)";
+    }
     // Map ke pesan yang lebih ramah
     let friendlyMsg = rawMsg;
     for (const [key, val] of Object.entries(errorMap)) {
