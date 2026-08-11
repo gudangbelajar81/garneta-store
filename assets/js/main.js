@@ -4894,42 +4894,37 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       const products = state.data.products || [];
       if (products.length === 0) return showToast("Tidak ada data barang untuk diekspor!", "error");
 
-      // Payload Array of Objects matching user's Apps Script doPost(e)
-      const payloadArray = products.map(p => ({
-         "Kategori": p.category || "Umum",
-         "Nama": p.name || "",
-         "Satuan": p.unit || "pcs",
-         "Isi Unit": p.unitContent || 1,
-         "Harga Beli": Number(p.basePrice || 0),
-         "Harga Jual": Number(p.salePrice || 0),
-         "Harga Ecer": Number(p.salePriceEcer || 0),
-         "Stok": Number(p.stock || 0),
-         "Barcode": p.barcode || ""
-      }));
-
       Swal.fire({ title: "Mengirim Data...", text: "Sedang mengirim data ke Google Sheets...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
       try {
+         // Preferred method: Proxy via Backend to bypass ALL browser CORS / redirect restrictions
+         const res = await gas("exportToGAS", { url, products });
+         Swal.fire({ title: "Berhasil!", text: `Data ${products.length} barang berhasil dikirim & terupdate di Google Sheets!`, icon: "success", confirmButtonColor: "#00ffcc" });
+      } catch (err) {
+         console.warn("Backend proxy export failed, trying client-side fallback...", err);
          try {
-            await fetch(url, {
-               method: "POST",
-               headers: { "Content-Type": "text/plain" },
-               body: JSON.stringify(payloadArray)
-            });
-         } catch (fetchErr) {
-            console.warn("Standard fetch failed, retrying with no-cors mode...", fetchErr);
+            const payloadArray = products.map(p => ({
+               "Kategori": p.category || "Umum",
+               "Nama": p.name || "",
+               "Satuan": p.unit || "pcs",
+               "Isi Unit": p.unitContent || 1,
+               "Harga Beli": Number(p.basePrice || 0),
+               "Harga Jual": Number(p.salePrice || 0),
+               "Harga Ecer": Number(p.salePriceEcer || 0),
+               "Stok": Number(p.stock || 0),
+               "Barcode": p.barcode || ""
+            }));
             await fetch(url, {
                method: "POST",
                mode: "no-cors",
                headers: { "Content-Type": "text/plain" },
                body: JSON.stringify(payloadArray)
             });
+            Swal.fire({ title: "Berhasil!", text: `Data ${products.length} barang berhasil dikirim ke Google Sheets!`, icon: "success", confirmButtonColor: "#00ffcc" });
+         } catch (clientErr) {
+            console.error(clientErr);
+            Swal.fire({ title: "Gagal Sync", text: err.message || "Gagal mengupdate Google Sheets. Pastikan URL Web App benar.", icon: "error" });
          }
-
-         Swal.fire({ title: "Berhasil!", text: `Data ${products.length} barang berhasil dikirim & terupdate di Google Sheets!`, icon: "success", confirmButtonColor: "#00ffcc" });
-      } catch (err) {
-         console.error(err);
-         Swal.fire({ title: "Gagal Sync", text: err.message || "Gagal mengupdate Google Sheets. Pastikan URL Web App benar dan akses 'Siapa saja' (Anyone).", icon: "error" });
       }
     };
 
@@ -4942,82 +4937,10 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       Swal.fire({ title: "Mengambil Data...", text: "Sedang membaca data dari Google Sheets...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
       try {
-         const resp = await fetch(url);
-         const resJson = await resp.json();
-         
-         let rawGrid = null;
-         if (Array.isArray(resJson)) {
-            rawGrid = resJson;
-         } else if (resJson && resJson.data) {
-            const sheetKey = Object.keys(resJson.data)[0];
-            if (sheetKey && Array.isArray(resJson.data[sheetKey])) {
-               rawGrid = resJson.data[sheetKey];
-            }
-         } else if (resJson && Array.isArray(resJson.grid)) {
-            rawGrid = resJson.grid;
-         }
-
-         if (!rawGrid || rawGrid.length === 0) {
-            throw new Error("Data Google Sheets kosong atau format tidak dikenali.");
-         }
-
-         let rows = [];
-         // Check if rawGrid is a 2D Array or array of objects
-         if (Array.isArray(rawGrid[0])) {
-            // 2D Array format: first row is headers, remaining rows are data
-            const headers = rawGrid[0].map(h => String(h).toLowerCase().trim());
-            const catIdx = headers.findIndex(h => h.includes("kategori") || h.includes("cat"));
-            const nameIdx = headers.findIndex(h => h.includes("nama") || h.includes("name"));
-            const unitIdx = headers.findIndex(h => h.includes("satuan") || (h.includes("unit") && !h.includes("isi")));
-            const isiIdx = headers.findIndex(h => h.includes("isi"));
-            const beliIdx = headers.findIndex(h => h.includes("beli") || h.includes("modal"));
-            const jualIdx = headers.findIndex(h => h.includes("jual") && !h.includes("ecer"));
-            const ecerIdx = headers.findIndex(h => h.includes("ecer"));
-            const stokIdx = headers.findIndex(h => h.includes("stok") || h.includes("stock"));
-            const barIdx = headers.findIndex(h => h.includes("barcode") || h.includes("kode"));
-
-            for (let i = 1; i < rawGrid.length; i++) {
-               const r = rawGrid[i];
-               if (!r || r.length === 0) continue;
-               const nameVal = nameIdx >= 0 ? r[nameIdx] : (r[1] || r[0]);
-               if (!nameVal || String(nameVal).trim() === "") continue;
-
-               rows.push({
-                  category: catIdx >= 0 ? String(r[catIdx] || "Umum") : "Umum",
-                  name: String(nameVal).trim(),
-                  unit: unitIdx >= 0 ? String(r[unitIdx] || "pcs") : "pcs",
-                  unitContent: isiIdx >= 0 ? plainNumber(r[isiIdx]) || 1 : 1,
-                  basePrice: beliIdx >= 0 ? plainNumber(r[beliIdx]) : 0,
-                  salePrice: jualIdx >= 0 ? plainNumber(r[jualIdx]) : 0,
-                  salePriceEcer: ecerIdx >= 0 ? plainNumber(r[ecerIdx]) : 0,
-                  stock: stokIdx >= 0 ? plainNumber(r[stokIdx]) : 0,
-                  barcode: barIdx >= 0 ? String(r[barIdx] || "") : ""
-               });
-            }
-         } else {
-            // Array of Objects
-            rows = rawGrid.map(r => ({
-               name: String(r.nama || r.Name || r.NAMA || r.nama_barang || r.name || "").trim(),
-               category: String(r.kategori || r.Kategori || r.CATEGORY || r.category || "Umum").trim(),
-               unit: String(r.satuan || r.Satuan || r.UNIT || r.unit || "pcs").trim(),
-               unitContent: plainNumber(r.isi_unit || r.isi || r.content || 1) || 1,
-               basePrice: plainNumber(r.harga_beli || r.beli || r.basePrice || 0),
-               salePrice: plainNumber(r.harga_jual || r.jual || r.salePrice || 0),
-               salePriceEcer: plainNumber(r.harga_jual_ecer || r.jual_ecer || r.salePriceEcer || 0),
-               stock: plainNumber(r.stok || r.stock || 0),
-               barcode: String(r.barcode || r.Barcode || "").trim()
-            })).filter(r => r.name);
-         }
-
-         if (rows.length === 0) throw new Error("Tidak ada baris data barang yang valid.");
-
-         let saved = 0;
-         for (const row of rows) {
-           await gas("add", { collection: "products", item: row });
-           saved++;
-         }
+         // Proxy via Backend to bypass browser CORS rules
+         const res = await gas("importFromGAS", { url });
          await load();
-         Swal.fire({ title: "Import Berhasil!", text: `${saved} barang berhasil diimpor dari Google Sheets!`, icon: "success", confirmButtonColor: "#00ffcc" });
+         Swal.fire({ title: "Import Berhasil!", text: `${res.count} barang berhasil diimpor dari Google Sheets!`, icon: "success", confirmButtonColor: "#00ffcc" });
       } catch (err) {
          console.error(err);
          Swal.fire({ title: "Gagal Import", text: err.message || "Gagal mengambil data dari Google Sheets.", icon: "error" });
