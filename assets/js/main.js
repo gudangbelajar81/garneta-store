@@ -4903,17 +4903,28 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       } catch (err) {
          console.warn("Backend proxy export failed, trying client-side fallback...", err);
          try {
-            const payloadArray = products.map(p => ({
-               "Kategori": p.category || "Umum",
-               "Nama": p.name || "",
-               "Satuan": p.unit || "pcs",
-               "Isi Unit": p.unitContent || 1,
-               "Harga Beli": Number(p.basePrice || 0),
-               "Harga Jual": Number(p.salePrice || 0),
-               "Harga Ecer": Number(p.salePriceEcer || 0),
-               "Stok": Number(p.stock || 0),
-               "Barcode": p.barcode || ""
-            }));
+            const payloadArray = products.map(p => {
+               let potText = "-";
+               if (Number(p.discountValue) > 0) {
+                  potText = p.discountType === '%' ? p.discountValue + '%' : Number(p.discountValue);
+               }
+               let minText = Number(p.discountMinQty) > 0 ? Number(p.discountMinQty) : "-";
+
+               return {
+                  "Kategori": p.category || "Umum",
+                  "Nama": p.name || "",
+                  "Satuan": p.unit || "pcs",
+                  "Isi Unit": Number(p.unitContent || 1),
+                  "Harga Beli": Number(p.basePrice || 0),
+                  "Harga Beli Ecer": Number(p.basePriceEcer || 0),
+                  "Harga Jual": Number(p.salePrice || 0),
+                  "Harga Jual Ecer": Number(p.salePriceEcer || 0),
+                  "Potongan": potText,
+                  "Min Qty": minText,
+                  "Stok": Number(p.stock || 0),
+                  "Barcode": p.barcode || ""
+               };
+            });
             await fetch(url, {
                method: "POST",
                mode: "no-cors",

@@ -437,17 +437,28 @@ async function handleAction(action, payload, req) {
       if (!url) throw new Error("URL Apps Script wajib diisi.");
       if (!Array.isArray(products) || products.length === 0) throw new Error("Data barang kosong.");
 
-      const payloadArray = products.map(p => ({
-        "Kategori": p.category || "Umum",
-        "Nama": p.name || "",
-        "Satuan": p.unit || "pcs",
-        "Isi Unit": p.unitContent || 1,
-        "Harga Beli": Number(p.basePrice || 0),
-        "Harga Jual": Number(p.salePrice || 0),
-        "Harga Ecer": Number(p.salePriceEcer || 0),
-        "Stok": Number(p.stock || 0),
-        "Barcode": p.barcode || ""
-      }));
+      const payloadArray = products.map(p => {
+        let potText = "-";
+        if (Number(p.discountValue) > 0) {
+          potText = p.discountType === '%' ? p.discountValue + '%' : Number(p.discountValue);
+        }
+        let minText = Number(p.discountMinQty) > 0 ? Number(p.discountMinQty) : "-";
+
+        return {
+          "Kategori": p.category || "Umum",
+          "Nama": p.name || "",
+          "Satuan": p.unit || "pcs",
+          "Isi Unit": Number(p.unitContent || 1),
+          "Harga Beli": Number(p.basePrice || 0),
+          "Harga Beli Ecer": Number(p.basePriceEcer || 0),
+          "Harga Jual": Number(p.salePrice || 0),
+          "Harga Jual Ecer": Number(p.salePriceEcer || 0),
+          "Potongan": potText,
+          "Min Qty": minText,
+          "Stok": Number(p.stock || 0),
+          "Barcode": p.barcode || ""
+        };
+      });
 
       const res = await fetch(url, {
         method: "POST",
@@ -501,9 +512,12 @@ async function handleAction(action, payload, req) {
         const nameIdx = headers.findIndex(h => h.includes("nama") || h.includes("name"));
         const unitIdx = headers.findIndex(h => h.includes("satuan") || (h.includes("unit") && !h.includes("isi")));
         const isiIdx = headers.findIndex(h => h.includes("isi"));
-        const beliIdx = headers.findIndex(h => h.includes("beli") || h.includes("modal"));
+        const beliIdx = headers.findIndex(h => h.includes("beli") && !h.includes("ecer"));
+        const beliEcerIdx = headers.findIndex(h => h.includes("b.ecer") || (h.includes("beli") && h.includes("ecer")));
         const jualIdx = headers.findIndex(h => h.includes("jual") && !h.includes("ecer"));
-        const ecerIdx = headers.findIndex(h => h.includes("ecer"));
+        const ecerIdx = headers.findIndex(h => h.includes("j.ecer") || (h.includes("jual") && h.includes("ecer")) || (h.includes("ecer") && !h.includes("beli")));
+        const potIdx = headers.findIndex(h => h.includes("pot") || h.includes("potongan") || h.includes("diskon"));
+        const minIdx = headers.findIndex(h => h.includes("min") || h.includes("minimal"));
         const stokIdx = headers.findIndex(h => h.includes("stok") || h.includes("stock"));
         const barIdx = headers.findIndex(h => h.includes("barcode") || h.includes("kode"));
 
@@ -513,30 +527,62 @@ async function handleAction(action, payload, req) {
           const nameVal = nameIdx >= 0 ? r[nameIdx] : (r[1] || r[0]);
           if (!nameVal || String(nameVal).trim() === "") continue;
 
+          let discType = "";
+          let discVal = 0;
+          const potRaw = potIdx >= 0 ? String(r[potIdx] || "").trim() : "";
+          if (potRaw.includes("%")) {
+            discType = "%";
+            discVal = plainNumber(potRaw);
+          } else if (potRaw && potRaw !== "-") {
+            discType = "rp";
+            discVal = plainNumber(potRaw);
+          }
+
           rows.push({
             category: catIdx >= 0 ? String(r[catIdx] || "Umum") : "Umum",
             name: String(nameVal).trim(),
             unit: unitIdx >= 0 ? String(r[unitIdx] || "pcs") : "pcs",
             unitContent: plainNumber(r[isiIdx]) || 1,
             basePrice: plainNumber(r[beliIdx]),
+            basePriceEcer: beliEcerIdx >= 0 ? plainNumber(r[beliEcerIdx]) : 0,
             salePrice: plainNumber(r[jualIdx]),
-            salePriceEcer: plainNumber(r[ecerIdx]),
+            salePriceEcer: ecerIdx >= 0 ? plainNumber(r[ecerIdx]) : 0,
+            discountType: discType,
+            discountValue: discVal,
+            discountMinQty: minIdx >= 0 ? plainNumber(r[minIdx]) : 0,
             stock: plainNumber(r[stokIdx]),
             barcode: barIdx >= 0 ? String(r[barIdx] || "") : ""
           });
         }
       } else {
-        rows = rawGrid.map(r => ({
-          name: String(r.Nama || r.nama || r.Name || r.NAMA || r.nama_barang || r.name || "").trim(),
-          category: String(r.Kategori || r.kategori || r.CATEGORY || r.category || "Umum").trim(),
-          unit: String(r.Satuan || r.satuan || r.UNIT || r.unit || "pcs").trim(),
-          unitContent: plainNumber(r["Isi Unit"] || r.isi_unit || r.isi || r.content || 1) || 1,
-          basePrice: plainNumber(r["Harga Beli"] || r.harga_beli || r.beli || r.basePrice || 0),
-          salePrice: plainNumber(r["Harga Jual"] || r.harga_jual || r.jual || r.salePrice || 0),
-          salePriceEcer: plainNumber(r["Harga Ecer"] || r["Harga Jual Ecer"] || r.harga_jual_ecer || r.jual_ecer || r.salePriceEcer || 0),
-          stock: plainNumber(r.Stok || r.stok || r.stock || 0),
-          barcode: String(r.Barcode || r.barcode || "").trim()
-        })).filter(r => r.name);
+        rows = rawGrid.map(r => {
+          let discType = "";
+          let discVal = 0;
+          const potRaw = String(r["Potongan"] || r["POT"] || r.potongan || r.pot || "").trim();
+          if (potRaw.includes("%")) {
+            discType = "%";
+            discVal = plainNumber(potRaw);
+          } else if (potRaw && potRaw !== "-") {
+            discType = "rp";
+            discVal = plainNumber(potRaw);
+          }
+
+          return {
+            name: String(r.Nama || r.nama || r.Name || r.NAMA || r.nama_barang || r.name || "").trim(),
+            category: String(r.Kategori || r.kategori || r.CATEGORY || r.category || "Umum").trim(),
+            unit: String(r.Satuan || r.satuan || r.UNIT || r.unit || "pcs").trim(),
+            unitContent: plainNumber(r["Isi Unit"] || r.isi_unit || r.isi || r.content || 1) || 1,
+            basePrice: plainNumber(r["Harga Beli"] || r.harga_beli || r.beli || r.basePrice || 0),
+            basePriceEcer: plainNumber(r["Harga Beli Ecer"] || r["B.ECER"] || r.base_price_ecer || r.basePriceEcer || 0),
+            salePrice: plainNumber(r["Harga Jual"] || r.harga_jual || r.jual || r.salePrice || 0),
+            salePriceEcer: plainNumber(r["Harga Ecer"] || r["Harga Jual Ecer"] || r["J.ECER"] || r.harga_jual_ecer || r.jual_ecer || r.salePriceEcer || 0),
+            discountType: discType,
+            discountValue: discVal,
+            discountMinQty: plainNumber(r["Min Qty"] || r["MIN"] || r.discount_min_qty || r.discountMinQty || 0),
+            stock: plainNumber(r.Stok || r.stok || r.stock || 0),
+            barcode: String(r.Barcode || r.barcode || "").trim()
+          };
+        }).filter(r => r.name);
       }
 
       if (rows.length === 0) throw new Error("Tidak ada baris data barang yang valid.");
