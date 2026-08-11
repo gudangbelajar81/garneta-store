@@ -1285,6 +1285,29 @@ async function removeRow(collection, id) {
 
   if (collection === "users") await validateUserDelete(id);
 
+  if (collection === "products") {
+    // Bersihkan relasi anak sebelum menghapus barang untuk mencegah Foreign Key Constraint error
+    await db.query(`DELETE FROM price_history WHERE product_id = ?`, [id]).catch(() => {});
+    await db.query(`DELETE FROM purchase_details WHERE product_id = ?`, [id]).catch(() => {});
+    await db.query(`DELETE FROM sales WHERE product_id = ?`, [id]).catch(() => {});
+    await db.query(`DELETE FROM repacking WHERE source_product_id = ? OR target_product_id = ?`, [id, id]).catch(() => {});
+  }
+
+  if (collection === "suppliers") {
+    await db.query(`UPDATE products SET supplier_id = NULL WHERE supplier_id = ?`, [id]).catch(() => {});
+    await db.query(`UPDATE purchases SET supplier_id = NULL WHERE supplier_id = ?`, [id]).catch(() => {});
+  }
+
+  if (collection === "purchases") {
+    await db.query(`DELETE FROM price_history WHERE purchase_id = ?`, [id]).catch(() => {});
+    await db.query(`DELETE FROM purchase_details WHERE purchase_id = ?`, [id]).catch(() => {});
+  }
+
+  if (collection === "employees") {
+    await db.query(`DELETE FROM cash_advances WHERE employee_id = ?`, [id]).catch(() => {});
+    await db.query(`DELETE FROM payrolls WHERE employee_id = ?`, [id]).catch(() => {});
+  }
+
   const table = tableName(collection);
   const [result] = await db.query(`DELETE FROM ${table} WHERE id = ?`, [id]);
   if (result.affectedRows === 0) throw new Error("Data tidak ditemukan.");
