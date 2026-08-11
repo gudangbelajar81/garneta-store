@@ -13,38 +13,36 @@
     results: [],
     isOpen: false
   };
+  let eventsBound = false;
 
   // Initialize Smart Search
   window.initSmartSearch = function() {
     const container = document.getElementById('smart-search-container');
     if (!container) return;
 
-    // Prevent duplicate rendering
-    if (document.getElementById('smart-search-input')) return;
-
-    // Clear container first
-    container.innerHTML = '';
-
-    // Create wrapper
-    const wrapper = document.createElement('div');
-    wrapper.className = 'smart-search-wrapper';
-    wrapper.innerHTML = 
-      '<div class="smart-search-input-box">' +
-        '<span class="smart-search-icon">🔍</span>' +
-        '<input type="text" id="smart-search-input" class="smart-search-input" placeholder="Cari barang, supplier, barcode..." autocomplete="off">' +
-        '<span class="smart-search-shortcut">Ctrl+K</span>' +
-      '</div>' +
-      '<div id="smart-search-dropdown" class="smart-search-dropdown hidden">' +
-        '<div id="smart-search-results" class="smart-search-results"></div>' +
-      '</div>';
-    
-    container.appendChild(wrapper);
+    let input = document.getElementById('smart-search-input');
+    if (!input) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'smart-search-wrapper';
+      wrapper.innerHTML = 
+        '<div class="smart-search-input-box">' +
+          '<span class="smart-search-icon">🔍</span>' +
+          '<input type="text" id="smart-search-input" class="smart-search-input" placeholder="Cari barang, supplier, barcode..." autocomplete="off">' +
+          '<span class="smart-search-shortcut">Ctrl+K</span>' +
+        '</div>' +
+        '<div id="smart-search-dropdown" class="smart-search-dropdown hidden">' +
+          '<div id="smart-search-results" class="smart-search-results"></div>' +
+        '</div>';
+      container.appendChild(wrapper);
+    }
     bindEvents();
   };
 
   function bindEvents() {
+    if (eventsBound) return;
     const input = document.getElementById('smart-search-input');
     if (!input) return;
+    eventsBound = true;
 
     // Keyboard shortcut Ctrl+K
     document.addEventListener('keydown', function(e) {

@@ -489,7 +489,16 @@
         <!-- Smart Search - diperluas mengisi ruang -->
         <div class="actions" style="display:flex; align-items:center; gap:8px; flex:1; padding: 0 8px;">
           <div id="smart-search-container" style="position:relative; flex:1; min-width:0;">
-            <!-- Smart Search akan di-render ke sini oleh smart-search.js -->
+            <div class="smart-search-wrapper">
+              <div class="smart-search-input-box">
+                <span class="smart-search-icon">🔍</span>
+                <input type="text" id="smart-search-input" class="smart-search-input" placeholder="Cari barang, supplier, barcode..." autocomplete="off">
+                <span class="smart-search-shortcut">Ctrl+K</span>
+              </div>
+              <div id="smart-search-dropdown" class="smart-search-dropdown hidden">
+                <div id="smart-search-results" class="smart-search-results"></div>
+              </div>
+            </div>
           </div>
           <span id="role-label" class="muted" style="display:none;">Admin</span>
           <button class="btn soft" id="super-login" style="flex: 0 0 auto;">👑 Super Admin</button>
