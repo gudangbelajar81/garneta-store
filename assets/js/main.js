@@ -7091,7 +7091,8 @@ window.printReceiptPDF = function() {
   
   // --- PPOB SHOPEE LOGIC ---
   let ppobProducts = [];
-  let ppobActiveTab = 'Pulsa';
+  let ppobActiveTab = 'Pulsa';       // Tab prabayar aktif
+  let ppobMainType  = 'prabayar';   // 'prabayar' | 'pascabayar'
   let ppobBrand = '';
   let ppobSelectedSku = '';
   let ppobIsProcessing = false;
@@ -7131,23 +7132,48 @@ window.printReceiptPDF = function() {
     renderBrandFilters();
   }
 
+  // === Main Type Switch (Prabayar / Pascabayar) ===
+  window.switchPpobMainType = function(type) {
+    ppobMainType  = type;
+    ppobActiveTab = type === 'prabayar' ? 'Pulsa' : 'PLN Pascabayar';
+    ppobBrand     = '';
+    ppobSelectedSku = '';
+    const inp = document.getElementById('ppob-customer-no');
+    if (inp) inp.value = '';
+    updatePpobFooter();
+    // Type pill buttons
+    document.querySelectorAll('.ppob-type-btn').forEach(b => {
+      b.classList.toggle('ppob-type-active', b.dataset.type === type);
+    });
+    // Show/hide category grids
+    const praC  = document.getElementById('ppob-pra-cats');
+    const pasC  = document.getElementById('ppob-pas-cats');
+    const pasInfo = document.getElementById('ppob-pasca-info');
+    if (praC)   praC.style.display   = type === 'prabayar'   ? 'grid' : 'none';
+    if (pasC)   pasC.style.display   = type === 'pascabayar' ? 'grid' : 'none';
+    if (pasInfo) pasInfo.style.display = type === 'pascabayar' ? 'block' : 'none';
+    // Activate first cat of new type
+    document.querySelectorAll('.ppob-cat').forEach(el => el.classList.remove('ppob-cat-active'));
+    const firstCat = document.querySelector(`.ppob-cat[data-tab="${ppobActiveTab}"]`);
+    if (firstCat) firstCat.classList.add('ppob-cat-active');
+    renderBrandFilters();
+    renderRecentNumbers('');
+    renderPpobGrid();
+  };
+
   // === Tab Switch ===
   window.switchPpobTab = function(tab, event) {
     ppobActiveTab = tab;
     ppobBrand = tab === 'PLN' ? 'PLN' : '';
     ppobSelectedSku = '';
-    document.querySelectorAll('.ppob-tab').forEach(el => {
-      el.style.borderBottom = 'none'; el.style.color = '#666'; el.style.fontWeight = 'normal';
-    });
-    if (event && event.currentTarget) {
-      event.currentTarget.style.borderBottom = '3px solid #E3222B';
-      event.currentTarget.style.color = '#E3222B';
-      event.currentTarget.style.fontWeight = 'bold';
-    }
+    document.querySelectorAll('.ppob-cat').forEach(el => el.classList.remove('ppob-cat-active'));
+    if (event && event.currentTarget) event.currentTarget.classList.add('ppob-cat-active');
     const inp = document.getElementById('ppob-customer-no');
     if (inp) inp.value = '';
     const bi = document.getElementById('ppob-brand-info');
     if (bi) bi.innerHTML = '';
+    const errEl = document.getElementById('ppob-input-error');
+    if (errEl) errEl.textContent = '';
     updatePpobFooter();
     renderBrandFilters();
     renderRecentNumbers('');
@@ -7159,22 +7185,32 @@ window.printReceiptPDF = function() {
     const c = document.getElementById('ppob-brand-filters');
     if (!c) return;
     const catMap = {
-      'Pulsa': ['Pulsa','Masa Aktif','Aktivasi Perdana','Aktivasi Voucher'],
-      'Data': ['Data','Paket SMS & Telpon', 'WIFI ID'],
-      'PLN': ['PLN','Gas','Pertagas'],
-      'Game': ['Games','Voucher','TV','Streaming'],
-      'E-Money': ['E-Money','E-Toll']
+      // Prabayar
+      'Pulsa':         ['Pulsa','Masa Aktif','Aktivasi Perdana','Aktivasi Voucher','Paket Lainnya','Bundling'],
+      'Data':          ['Data','Paket SMS & Telpon','WIFI ID'],
+      'PLN':           ['PLN','Gas','Pertagas'],
+      'Game':          ['Games','Voucher'],
+      'E-Money':       ['E-Money','E-Toll'],
+      'TV Streaming':  ['TV','Streaming','Media Sosial'],
+      'Voucher':       ['Voucher','eSIM'],
+      'Internasional': ['Malaysia TOPUP','China TOPUP','Vietnam Topup','Thailand TOPUP','Singapore TOPUP','Philippines TOPUP'],
+      // Pascabayar
+      'PLN Pascabayar':      ['PLN Pascabayar'],
+      'PDAM':                ['PDAM'],
+      'HP Pascabayar':       ['HP Pascabayar'],
+      'Internet Pascabayar': ['Internet Pascabayar'],
+      'BPJS':                ['BPJS Kesehatan'],
+      'Multifinance':        ['Multifinance'],
     };
     const cats = catMap[ppobActiveTab] || [];
-    const brands = [...new Set(ppobProducts
-      .filter(p => p && p.brand && p.category && cats.some(cat => p.category.toLowerCase() === cat.toLowerCase()))
-      .map(p => p.brand)
-    )].sort();
-    
+    const brands = [...new Set(ppobProducts.filter(p => {
+      const category = p.category || '';
+      return cats.some(cat => category.toLowerCase() === cat.toLowerCase());
+    }).map(p => p.brand || ''))].filter(Boolean).sort();
+
     if (brands.length === 0) { c.innerHTML = ''; return; }
 
     c.innerHTML = `<button onclick="setPpobBrand('')" class="ppob-chip ${!ppobBrand ? 'active' : ''}">Semua</button>` + brands.map(b => {
-      if (!b) return '';
       const active = ppobBrand.toUpperCase() === b.toUpperCase();
       return `<button onclick="setPpobBrand('${b}')" class="ppob-chip ${active ? 'active' : ''}">${b}</button>`;
     }).join('');
@@ -7265,20 +7301,30 @@ window.printReceiptPDF = function() {
       return;
     }
     const catMap = {
-      'Pulsa': ['Pulsa','Masa Aktif','Aktivasi Perdana','Aktivasi Voucher', 'Paket Lainnya'],
-      'Data': ['Data','Paket SMS & Telpon', 'WIFI ID'],
-      'PLN': ['PLN','Gas', 'Pertagas'],
-      'Game': ['Games','Voucher','TV', 'Streaming'],
-      'E-Money': ['E-Money', 'E-Toll'],
+      // Prabayar
+      'Pulsa':         ['Pulsa','Masa Aktif','Aktivasi Perdana','Aktivasi Voucher','Paket Lainnya','Bundling'],
+      'Data':          ['Data','Paket SMS & Telpon','WIFI ID'],
+      'PLN':           ['PLN','Gas','Pertagas'],
+      'Game':          ['Games','Voucher'],
+      'E-Money':       ['E-Money','E-Toll'],
+      'TV Streaming':  ['TV','Streaming','Media Sosial'],
+      'Voucher':       ['Voucher','eSIM'],
+      'Internasional': ['Malaysia TOPUP','China TOPUP','Vietnam Topup','Thailand TOPUP','Singapore TOPUP','Philippines TOPUP'],
+      // Pascabayar
+      'PLN Pascabayar':      ['PLN Pascabayar'],
+      'PDAM':                ['PDAM'],
+      'HP Pascabayar':       ['HP Pascabayar'],
+      'Internet Pascabayar': ['Internet Pascabayar'],
+      'BPJS':                ['BPJS Kesehatan'],
+      'Multifinance':        ['Multifinance'],
     };
     const cats = catMap[ppobActiveTab] || ['Pulsa'];
     const filtered = ppobProducts.filter(p => {
-      if (!p) return false;
       const brand = p.brand || '';
       const category = p.category || '';
       if (ppobBrand && brand.toUpperCase() !== ppobBrand.toUpperCase()) return false;
       return cats.some(cat => category.toLowerCase() === cat.toLowerCase());
-    }).sort((a,b) => Number(a.sale_price || 0) - Number(b.sale_price || 0));
+    }).sort((a,b) => Number(a.sale_price) - Number(b.sale_price));
 
     if (filtered.length === 0) {
       grid.innerHTML = `
@@ -7290,21 +7336,15 @@ window.printReceiptPDF = function() {
     }
 
     grid.innerHTML = filtered.map(p => {
-      if (!p) return '';
-      const brand = p.brand || '';
-      const productName = p.product_name || '';
-      const salePrice = p.sale_price || 0;
-      const status = p.buyer_product_status || '';
-      const sku = p.buyer_sku_code || '';
-      const gangguan = status === 'gangguan';
-      const selected = sku === ppobSelectedSku;
+      const gangguan = p.buyer_product_status === 'gangguan';
+      const selected = p.buyer_sku_code === ppobSelectedSku;
       return `
-        <div class="ppob-card ${selected ? 'selected' : ''} ${gangguan ? 'gangguan' : ''}" id="card-${sku}"
-          onclick="${gangguan ? '' : `selectPpobProduct('${sku}')`}"
+        <div class="ppob-card ${selected ? 'selected' : ''} ${gangguan ? 'gangguan' : ''}" id="card-${p.buyer_sku_code}"
+          onclick="${gangguan ? '' : `selectPpobProduct('${p.buyer_sku_code}')`}"
           title="${gangguan ? 'Produk sedang gangguan' : ''}">
-          <div class="ppob-brand-name">${brand}</div>
-          <div class="ppob-product-name">${productName}</div>
-          <div class="ppob-price">${rupiah(Math.round(Number(salePrice)))}</div>
+          <div class="ppob-brand-name">${p.brand}</div>
+          <div class="ppob-product-name">${p.product_name}</div>
+          <div class="ppob-price">${rupiah(Math.round(Number(p.sale_price)))}</div>
           ${gangguan ? '<div class="ppob-badge gangguan">GANGGUAN</div>' : ''}
           ${selected ? '<div class="ppob-selected-mark">✅</div>' : ''}
         </div>
@@ -7824,7 +7864,6 @@ window.printReceiptPDF = function() {
 
   // === Main Render ===
   function ppob() {
-    // Schedule init after render
     setTimeout(() => {
       if (ppobView === 'history') { showPpobHistory(); return; }
       if (ppobProducts.length === 0) {
@@ -7835,77 +7874,119 @@ window.printReceiptPDF = function() {
         renderRecentNumbers('');
       }
       if (ppobActiveTab === 'PLN') { ppobBrand = 'PLN'; renderPpobGrid(); }
-      // Restore active tab style
-      const tabs = document.querySelectorAll('.ppob-tab');
-      const order = ['Pulsa','Data','PLN','Game','E-Money'];
-      const ai = order.indexOf(ppobActiveTab);
-      tabs.forEach((t, i) => {
-        if (i === ai) { t.style.borderBottom='3px solid #E3222B'; t.style.color='#E3222B'; t.style.fontWeight='bold'; }
-        else { t.style.borderBottom='none'; t.style.color='#666'; t.style.fontWeight='normal'; }
-      });
     }, 80);
 
     const isHistory = ppobView === 'history';
+
+    // Helper: build cat icon
+    const catIcon = (tab, ico, bg, label) => {
+      const isPra = ['Pulsa','Data','PLN','Game','E-Money','TV Streaming','Voucher','Internasional'].includes(tab);
+      const isPas = !isPra;
+      const activeNow = ppobActiveTab === tab && (
+        (isPra && ppobMainType === 'prabayar') ||
+        (isPas && ppobMainType === 'pascabayar')
+      );
+      return `<div class="ppob-cat${activeNow ? ' ppob-cat-active' : ''}" data-tab="${tab}" onclick="switchPpobTab('${tab}',event)">
+        <div class="ppob-cat-ico" style="background:${bg};">${ico}</div>
+        <span>${label}</span>
+      </div>`;
+    };
+
+    const skel = (n) => Array(n).fill(0).map(() =>
+      `<div class="ppob-skel"><div class="ppob-skel-b" style="width:50%;height:8px;"></div><div class="ppob-skel-b" style="height:13px;margin:6px 0;"></div><div class="ppob-skel-b" style="width:65%;height:10px;"></div></div>`
+    ).join('');
 
     return `
       <style>
         @keyframes ppobPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
         @keyframes ppobModalIn { from{opacity:0;transform:scale(0.95) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
-        .ppob-card:hover { transform:translateY(-2px); box-shadow:0 4px 14px rgba(245,61,45,0.1) !important; }
       </style>
+      <section class="ppob-shell">
+        <div class="ppob-panel">
 
-      <header class="header ppob-page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-        <h1 style="margin:0;">📱 PPOB</h1>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <button onclick="${isHistory ? 'showPpobMain()' : 'showPpobHistory()'}" style="padding:8px 16px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;cursor:pointer;font-size:13px;font-weight:600;">
-            ${isHistory ? '← Kembali Transaksi' : '📋 Riwayat'}
-          </button>
-          ${!isHistory ? '<button onclick="syncPpobProducts()" style="padding:8px 16px;border-radius:8px;border:1px solid #E3222B;background:#fff;color:#E3222B;cursor:pointer;font-size:13px;font-weight:600;">🔄 Update Katalog</button>' : ''}
-        </div>
-      </header>
-
-      <section class="ppob-shell" style="max-width:980px;margin:0 auto;padding-top:6px;">
-        <div class="ppob-panel" style="background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);overflow:hidden;">
+          <!-- ═ HEADER (inside panel, no dark sticky) ═ -->
+          <div class="ppob-inner-hdr">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:15px;font-weight:900;color:#E3222B;">📱 PPOB</span>
+              <span class="ppob-digi-badge">DIGIFLAZZ</span>
+            </div>
+            <div style="display:flex;gap:6px;">
+              ${!isHistory ? `<button onclick="syncPpobProducts()" class="ppob-hdr-btn ppob-hdr-btn-outline">🔄 Update</button>` : ''}
+              <button onclick="${isHistory ? 'showPpobMain()' : 'showPpobHistory()'}" class="ppob-hdr-btn ppob-hdr-btn-ghost">
+                ${isHistory ? '← Back' : '📋 Riwayat'}
+              </button>
+            </div>
+          </div>
 
           ${isHistory ? `
-            <div style="padding:16px 24px;border-bottom:1px solid #eee;font-weight:600;color:#333;font-size:15px;">📋 Riwayat Transaksi PPOB</div>
-            <div id="ppob-history-area" style="min-height:400px;"><div style="padding:60px;text-align:center;color:#aaa;">⏳ Memuat riwayat...</div></div>
+            <div style="padding:10px 12px;font-weight:700;font-size:13px;color:#333;border-bottom:1px solid #f5f5f5;">📋 Riwayat PPOB</div>
+            <div id="ppob-history-area" style="min-height:340px;"><div style="padding:40px;text-align:center;color:#aaa;">⏳ Memuat...</div></div>
           ` : `
-            <div class="ppob-tabs" style="display:flex;border-bottom:1px solid #eee;overflow-x:auto;scrollbar-width:none;">
-              <div class="ppob-tab" onclick="switchPpobTab('Pulsa',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;font-weight:bold;color:#E3222B;border-bottom:3px solid #E3222B;white-space:nowrap;">📱 Pulsa</div>
-              <div class="ppob-tab" onclick="switchPpobTab('Data',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;color:#666;white-space:nowrap;">📶 Data</div>
-              <div class="ppob-tab" onclick="switchPpobTab('PLN',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;color:#666;white-space:nowrap;">💡 PLN</div>
-              <div class="ppob-tab" onclick="switchPpobTab('Game',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;color:#666;white-space:nowrap;">🎮 Game</div>
-              <div class="ppob-tab" onclick="switchPpobTab('E-Money',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;color:#666;white-space:nowrap;">💸 E-Wallet</div>
+
+            <!-- ═ PRABAYAR / PASCABAYAR PILL TOGGLE ═ -->
+            <div id="ppob-main-tabs" style="display:flex;padding:8px 10px;gap:8px;background:#fff;border-bottom:1px solid #f0f0f0;">
+              <button class="ppob-type-btn${ppobMainType === 'prabayar' ? ' ppob-type-active' : ''}" data-type="prabayar" onclick="switchPpobMainType('prabayar')">📲 Prabayar</button>
+              <button class="ppob-type-btn${ppobMainType === 'pascabayar' ? ' ppob-type-active' : ''}" data-type="pascabayar" onclick="switchPpobMainType('pascabayar')">🧾 Pascabayar</button>
             </div>
 
-            <div class="ppob-body" style="padding:22px 28px;min-height:420px;">
-              <div style="margin-bottom:14px;">
-                <label style="display:block;margin-bottom:7px;font-weight:600;color:#444;font-size:13px;">📋 No. Meter / ID Pelanggan / No. HP</label>
-                <div style="position:relative;">
-                  <input type="text" id="ppob-customer-no" autocomplete="off" inputmode="numeric"
-                    oninput="detectPpobBrand()" placeholder="Ketik nomor tujuan..." maxlength="30"
-                    style="width:100%;font-size:20px;padding:14px 45px 14px 15px;border:2px solid #e5e5e5;border-radius:16px;outline:none;transition:border-color 0.2s;box-sizing:border-box;"
-                    onfocus="this.style.borderColor='#E3222B'" onblur="this.style.borderColor='#e5e5e5'">
-                  <div style="position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:22px; cursor:pointer; color:#E3222B; transition:transform 0.2s;" title="Buku Telepon" onclick="alert('Fitur Buku Telepon Lengkap segera hadir!')" onmouseover="this.style.transform='translateY(-50%) scale(1.1)'" onmouseout="this.style.transform='translateY(-50%) scale(1)'">📖</div>
-                </div>
-                <div id="ppob-input-error" style="color:#E3222B;font-size:12px;margin-top:4px;min-height:14px;"></div>
-                <div id="ppob-brand-info" style="margin-top:6px;"></div>
+            <!-- ═ CATEGORY ICON GRID — PRABAYAR ═ -->
+            <div id="ppob-pra-cats" class="ppob-cat-grid" style="display:${ppobMainType === 'prabayar' ? 'grid' : 'none'};">
+              ${catIcon('Pulsa','📱','#FFECE8','Pulsa')}
+              ${catIcon('Data','📶','#E8F4FF','Data')}
+              ${catIcon('PLN','💡','#FFFBE8','PLN')}
+              ${catIcon('Game','🎮','#EDE8FF','Game')}
+              ${catIcon('E-Money','💸','#E8FFF4','E-Wallet')}
+              ${catIcon('TV Streaming','📺','#FFE8F0','TV/Stream')}
+              ${catIcon('Voucher','🎟️','#FFF3E8','Voucher')}
+              ${catIcon('Internasional','🌏','#E8F0FF','Intl')}
+            </div>
+
+            <!-- ═ CATEGORY ICON GRID — PASCABAYAR ═ -->
+            <div id="ppob-pas-cats" class="ppob-cat-grid" style="display:${ppobMainType === 'pascabayar' ? 'grid' : 'none'};grid-template-columns:repeat(3,1fr);">
+              ${catIcon('PLN Pascabayar','💡','#FFFBE8','PLN')}
+              ${catIcon('PDAM','💧','#E8F4FF','PDAM')}
+              ${catIcon('HP Pascabayar','📱','#FFECE8','HP Pasca')}
+              ${catIcon('Internet Pascabayar','🌐','#E8FFF4','Internet')}
+              ${catIcon('BPJS','🏥','#FFE8F0','BPJS')}
+              ${catIcon('Multifinance','💳','#FFF3E8','Angsuran')}
+            </div>
+
+            <!-- ═ PASCA WARNING ═ -->
+            <div id="ppob-pasca-info" style="display:${ppobMainType === 'pascabayar' ? 'block' : 'none'};padding:6px 12px;background:#FFF8E1;border-bottom:1px solid #FFE082;">
+              <span style="font-size:10px;color:#7C5C00;">⚠️ Masukkan ID Pelanggan / No. Meter sesuai jenis tagihan</span>
+            </div>
+
+            <!-- ═ SHARED: INPUT ═ -->
+            <div style="padding:9px 10px 5px;background:#fff;">
+              <div style="position:relative;">
+                <input type="text" id="ppob-customer-no" autocomplete="off" inputmode="numeric"
+                  oninput="detectPpobBrand()" placeholder="Nomor HP / ID Pelanggan..." maxlength="30"
+                  style="width:100%;font-size:15px;padding:10px 38px 10px 12px;border:1.5px solid #e5e5e5;border-radius:12px;outline:none;box-sizing:border-box;transition:border-color 0.18s;color:#222;font-weight:600;"
+                  onfocus="this.style.borderColor='#E3222B'" onblur="this.style.borderColor='#e5e5e5'">
+                <div style="position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:17px;cursor:pointer;color:#E3222B;" onclick="alert('Fitur Buku Kontak segera hadir!')">📖</div>
               </div>
+              <div id="ppob-input-error" style="color:#E3222B;font-size:10px;margin-top:2px;min-height:12px;"></div>
+              <div id="ppob-brand-info" style="margin-top:3px;"></div>
+            </div>
 
-              <div id="ppob-recent-numbers" style="margin-bottom:12px;"></div>
-              <div id="ppob-brand-filters" style="margin-bottom:14px;display:flex;flex-wrap:wrap;"></div>
+            <!-- ═ SHARED: RECENT ═ -->
+            <div id="ppob-recent-numbers" style="padding:0 10px;"></div>
 
-              <div id="ppob-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:11px;">
-                ${Array(6).fill(0).map(() => `<div style="border:1px solid #eee;border-radius:16px;padding:20px;background:#f9f9f9;animation:ppobPulse 1.5s ease-in-out infinite;"><div style="height:10px;background:#e5e5e5;border-radius:4px;margin-bottom:10px;width:50%;"></div><div style="height:18px;background:#e0e0e0;border-radius:4px;margin-bottom:8px;"></div><div style="height:14px;background:#e8e8e8;border-radius:4px;width:60%;margin:0 auto;"></div></div>`).join('')}
+            <!-- ═ SHARED: BRAND CHIPS ═ -->
+            <div id="ppob-brand-filters" style="padding:4px 10px 6px;display:flex;flex-wrap:nowrap;overflow-x:auto;gap:5px;scrollbar-width:none;-webkit-overflow-scrolling:touch;"></div>
+
+            <!-- ═ SHARED: PRODUCT GRID ═ -->
+            <div style="padding:0 8px 10px;">
+              <div id="ppob-grid" class="ppob-product-grid">
+                ${skel(6)}
               </div>
             </div>
 
-            <div id="ppob-footer" style="display:none;padding:14px 28px;background:#fff;border-top:1px solid #eee;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
-              <div id="ppob-total-text" style="font-size:15px;color:#555;">Total: <b style="color:#E3222B;font-size:20px;">Rp0</b></div>
+            <!-- ═ SHARED: FOOTER BAYAR ═ -->
+            <div id="ppob-footer" style="display:none;padding:10px 12px;background:#fff;border-top:1px solid #f0f0f0;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+              <div id="ppob-total-text" style="font-size:13px;color:#444;">Total: <b style="color:#E3222B;font-size:17px;">Rp0</b></div>
               <button id="btn-ppob-checkout" onclick="processPpobCheckout()"
-                style="background:linear-gradient(135deg,#E3222B,#ED4B53);color:#fff;border:none;padding:13px 32px;font-size:15px;border-radius:16px;cursor:pointer;font-weight:bold;box-shadow:0 4px 12px rgba(245,61,45,0.3);transition:all 0.2s;"
-                onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                style="background:linear-gradient(135deg,#E3222B,#ED4B53);color:#fff;border:none;padding:10px 22px;font-size:13px;border-radius:12px;cursor:pointer;font-weight:900;box-shadow:0 3px 12px rgba(227,34,43,0.35);">
                 💳 Bayar Sekarang
               </button>
             </div>
