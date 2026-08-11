@@ -7442,7 +7442,16 @@ window.printReceiptPDF = function() {
         const sm = document.createElement('div');
         sm.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
         
-        const receiptText = encodeURIComponent(`*STRUK PEMBAYARAN PPOB*\n\nProduk: ${p.product_name}\nNomor: ${custNo}\nStatus: ${status}\n${sn !== '-' ? 'SN/Token: ' + sn + '\n' : ''}\n*Total: ${rupiah(total)}*\n\nTerima kasih telah berbelanja di Garneta Store!`);
+        sm._ppobData = {
+          productName: p.product_name,
+          custNo: custNo,
+          sn: sn,
+          status: status,
+          total: total
+        };
+
+        const validSnInitial = sn && sn !== '-' && sn !== 'null' && sn !== 'undefined';
+        const receiptText = encodeURIComponent(`*STRUK PEMBAYARAN PPOB*\n\nProduk: ${p.product_name}\nNomor: ${custNo}\nStatus: ${status}\n${validSnInitial ? 'SN/Token: ' + sn + '\n' : ''}\n*Total: ${rupiah(total)}*\n\nTerima kasih telah berbelanja di Garneta Store!`);
         const waLink = `https://wa.me/?text=${receiptText}`;
 
         sm.innerHTML = `
@@ -7454,11 +7463,11 @@ window.printReceiptPDF = function() {
               <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span style="color:#666;">Nomor</span><span style="font-weight:600;">${custNo}</span></div>
               <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span style="color:#666;">Status</span><span id="modal-ppob-status" style="font-weight:600;color:${status==='Pending'?'#eab308':'#16a34a'};">${status} ${status==='Pending'?'<span style="font-size:10px;animation:pulse 1.5s infinite">⏳ mengecek...</span>':''}</span></div>
               
-              <div id="modal-ppob-sn-container" style="display:${isPln && sn !== '-' ? 'block' : 'none'};margin-top:10px;padding-top:10px;border-top:1px dashed #bbf7d0;">
-                <div style="color:#666;font-size:11px;margin-bottom:6px;">Token PLN:</div>
+              <div id="modal-ppob-sn-container" style="display:${validSnInitial ? 'block' : 'none'};margin-top:10px;padding-top:10px;border-top:1px dashed #bbf7d0;">
+                <div style="color:#666;font-size:11px;margin-bottom:6px;">SN / Kode Token:</div>
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <div id="modal-ppob-sn" style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:18px;font-weight:bold;letter-spacing:3px;flex:1;text-align:center;">${sn}</div>
-                  <button onclick="navigator.clipboard.writeText(document.getElementById('modal-ppob-sn').innerText).then(()=>showToast('Token disalin!','success'))" style="padding:10px 14px;background:#E3222B;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:13px;">📋 Salin</button>
+                  <div id="modal-ppob-sn" style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:15px;font-weight:bold;letter-spacing:1.5px;flex:1;text-align:center;word-break:break-all;">${sn}</div>
+                  <button onclick="navigator.clipboard.writeText(document.getElementById('modal-ppob-sn').innerText).then(()=>showToast('SN disalin!','success'))" style="padding:10px 14px;background:#E3222B;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:13px;">📋 Salin</button>
                 </div>
               </div>
             </div>
@@ -7477,12 +7486,20 @@ window.printReceiptPDF = function() {
             <div style="display:flex;gap:10px;">
               <button onclick="this.closest('div[style*=fixed]').remove();" style="flex:1;padding:12px;border:1px solid #ddd;border-radius:16px;background:#fff;color:#555;font-size:14px;cursor:pointer;font-weight:600;">Tutup</button>
               <button onclick="window.open('${waLink}', '_blank');" style="flex:1;padding:12px;background:#25D366;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Kirim WA</button>
-              <button onclick="printPpobReceipt('${p.product_name.replace(/'/g,'\\u0027')}','${custNo}','${sn}','${status}',${total});this.closest('div[style*=fixed]').remove();" style="flex:1;padding:12px;background:#333;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;" title="Print ke PDF / Printer Biasa">🖨️ PDF</button>
-              <button onclick="printPpobReceiptBluetooth('${p.product_name.replace(/'/g,'\\u0027')}','${custNo}','${sn}','${status}',${total});" style="flex:1;padding:12px;background:#0ea5e9;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;" title="Print ke Printer Bluetooth Thermal">🖨️ Thermal</button>
+              <button id="btn-modal-print-pdf" style="flex:1;padding:12px;background:#333;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;" title="Print ke PDF / Printer Biasa">🖨️ PDF</button>
+              <button id="btn-modal-print-thermal" style="flex:1;padding:12px;background:#0ea5e9;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;" title="Print ke Printer Bluetooth Thermal">🖨️ Thermal</button>
             </div>
           </div>
         `;
         document.body.appendChild(sm);
+
+        // Bind dynamic print handlers using live modal state
+        sm.querySelector('#btn-modal-print-pdf').onclick = () => {
+          printPpobReceipt(sm._ppobData.productName, sm._ppobData.custNo, sm._ppobData.sn, sm._ppobData.status, sm._ppobData.total);
+        };
+        sm.querySelector('#btn-modal-print-thermal').onclick = () => {
+          printPpobReceiptBluetooth(sm._ppobData.productName, sm._ppobData.custNo, sm._ppobData.sn, sm._ppobData.status, sm._ppobData.total);
+        };
 
         // --- Active Polling Logic ---
         if (status === 'Pending' && refId) {
@@ -7493,21 +7510,26 @@ window.printReceiptPDF = function() {
                     const checkRes = await gas('ppob_checkStatus', { ref_id: refId });
                     if (checkRes && checkRes.data) {
                         const newStatus = checkRes.data.status;
+                        const newSn = checkRes.data.sn;
+                        if (newStatus) {
+                          sm._ppobData.status = newStatus;
+                          const statusEl = document.getElementById('modal-ppob-status');
+                          if (statusEl) {
+                              statusEl.innerHTML = newStatus;
+                              statusEl.style.color = newStatus === 'Sukses' ? '#16a34a' : (newStatus === 'Pending' ? '#eab308' : '#E3222B');
+                          }
+                        }
+                        if (newSn && newSn !== '-') {
+                          sm._ppobData.sn = newSn;
+                          const snContainer = document.getElementById('modal-ppob-sn-container');
+                          const snEl = document.getElementById('modal-ppob-sn');
+                          if (snContainer && snEl) {
+                              snContainer.style.display = 'block';
+                              snEl.innerText = newSn;
+                          }
+                        }
                         if (newStatus === 'Sukses' || newStatus === 'Gagal') {
                             clearInterval(ppobCheckInterval);
-                            const statusEl = document.getElementById('modal-ppob-status');
-                            if (statusEl) {
-                                statusEl.innerHTML = newStatus;
-                                statusEl.style.color = newStatus === 'Sukses' ? '#16a34a' : '#E3222B';
-                            }
-                            if (isPln && checkRes.data.sn) {
-                                const snContainer = document.getElementById('modal-ppob-sn-container');
-                                const snEl = document.getElementById('modal-ppob-sn');
-                                if (snContainer && snEl) {
-                                    snContainer.style.display = 'block';
-                                    snEl.innerText = checkRes.data.sn;
-                                }
-                            }
                         }
                     }
                 } catch(e) {
@@ -7670,25 +7692,24 @@ window.printReceiptPDF = function() {
       receiptLines.push(...encoder.encode(padLR("Nomor", custNo) + "\n"));
       receiptLines.push(...encoder.encode(padLR("Status", status) + "\n"));
       
-      if (sn && sn !== '-') {
+      const isSnValid = (s) => s && s !== '-' && s !== 'null' && s !== 'undefined' && String(s).trim() !== '';
+      
+      if (isSnValid(sn)) {
         receiptLines.push(...encoder.encode("-".repeat(paperSize) + "\n"));
         receiptLines.push([0x1b, 0x61, 0x01]); // Center
-        receiptLines.push(...encoder.encode("Token / SN\n"));
+        receiptLines.push(...encoder.encode("SN / KODE TOKEN / VOUCHER\n"));
         
-        let isPln = false;
-        if (sn.includes('/')) {
-            const parts = sn.split('/');
+        const cleanSn = String(sn).trim();
+        if (cleanSn.includes('/')) {
+            const parts = cleanSn.split('/');
             if (parts.length >= 3 && parts[0].replace(/-/g, '').length >= 16) {
-                isPln = true;
                 const mainToken = parts[0].replace(/-/g, ' ');
                 const name = parts[1] || '';
                 const daya = (parts[2] || '') + (parts[3] ? '/' + parts[3] : '');
                 const kwh = parts[4] || '';
                 
                 receiptLines.push([0x1b, 0x45, 0x01]); // Bold On
-                receiptLines.push([0x1d, 0x21, 0x11]); // Double Width & Height
                 receiptLines.push(...encoder.encode(mainToken + "\n"));
-                receiptLines.push([0x1d, 0x21, 0x00]); // Normal Size
                 receiptLines.push([0x1b, 0x45, 0x00]); // Bold Off
                 
                 receiptLines.push([0x1b, 0x61, 0x00]); // Left
@@ -7705,7 +7726,7 @@ window.printReceiptPDF = function() {
             }
         } else {
             receiptLines.push([0x1b, 0x45, 0x01]); // Bold On
-            receiptLines.push(...encoder.encode(sn + "\n"));
+            receiptLines.push(...encoder.encode(cleanSn + "\n"));
             receiptLines.push([0x1b, 0x45, 0x00]); // Bold Off
         }
         
