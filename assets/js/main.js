@@ -142,12 +142,14 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
       startSyncPolling();
       renderShell();
       render();
+      if (window.initSmartSearch) setTimeout(window.initSmartSearch, 50);
     }
 
     window.showPage = function(route) {
       state.route = route;
       renderShell();
       render();
+      if (window.initSmartSearch && !document.getElementById('smart-search-input')) setTimeout(window.initSmartSearch, 50);
     };
 
     function employees() { return state.data.employees || []; }

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * GARNETA SMART SEARCH + QUICK ACTION
  * Pusat pencarian aplikasi - Compact First, Expand When Needed
  * Tidak mengubah backend, database, API, atau modul yang sudah ada
@@ -327,6 +327,15 @@
         }
       }
     }, 100);
-  };
+  // Auto-start initialization loop
+  if (typeof window !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() { if (window.initSmartSearch) window.initSmartSearch(); }, 150);
+      });
+    } else {
+      setTimeout(function() { if (window.initSmartSearch) window.initSmartSearch(); }, 150);
+    }
+  }
 
 })();
