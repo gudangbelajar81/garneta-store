@@ -5050,7 +5050,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
 
       if (typeof XLSX === "undefined") {
         const script = document.createElement("script");
-        script.src = "https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js";
+        script.src = "/assets/js/vendor/xlsx.full.min.js";
         script.onload = doExport;
         script.onerror = () => downloadProductsCSV();
         document.body.appendChild(script);
