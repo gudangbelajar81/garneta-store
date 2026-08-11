@@ -7158,13 +7158,25 @@ window.printReceiptPDF = function() {
   window.renderBrandFilters = function() {
     const c = document.getElementById('ppob-brand-filters');
     if (!c) return;
-    if (!['Pulsa','Data'].includes(ppobActiveTab)) { c.innerHTML = ''; return; }
-    const catMap = { 'Pulsa': ['Pulsa','Masa Aktif','Aktivasi Perdana','Aktivasi Voucher'], 'Data': ['Data','Paket SMS & Telpon'] };
+    const catMap = {
+      'Pulsa': ['Pulsa','Masa Aktif','Aktivasi Perdana','Aktivasi Voucher'],
+      'Data': ['Data','Paket SMS & Telpon', 'WIFI ID'],
+      'PLN': ['PLN','Gas','Pertagas'],
+      'Game': ['Games','Voucher','TV','Streaming'],
+      'E-Money': ['E-Money','E-Toll']
+    };
     const cats = catMap[ppobActiveTab] || [];
-    const brands = [...new Set(ppobProducts.filter(p => cats.some(cat => p.category.toLowerCase() === cat.toLowerCase())).map(p => p.brand))].sort();
-    c.innerHTML = brands.map(b => {
-      const active = ppobBrand === b;
-      return `<button onclick="setPpobBrand('${b}')" style="padding:6px 14px; border-radius:20px; font-size:13px; cursor:pointer; margin:0 6px 8px 0; border:1px solid ${active?'#E3222B':'#ddd'}; background:${active?'#FDE9EA':'#fff'}; color:${active?'#E3222B':'#555'}; font-weight:${active?'bold':'normal'}; transition:all 0.15s;">${b}</button>`;
+    const brands = [...new Set(ppobProducts
+      .filter(p => p && p.brand && p.category && cats.some(cat => p.category.toLowerCase() === cat.toLowerCase()))
+      .map(p => p.brand)
+    )].sort();
+    
+    if (brands.length === 0) { c.innerHTML = ''; return; }
+
+    c.innerHTML = `<button onclick="setPpobBrand('')" class="ppob-chip ${!ppobBrand ? 'active' : ''}">Semua</button>` + brands.map(b => {
+      if (!b) return '';
+      const active = ppobBrand.toUpperCase() === b.toUpperCase();
+      return `<button onclick="setPpobBrand('${b}')" class="ppob-chip ${active ? 'active' : ''}">${b}</button>`;
     }).join('');
   };
 
@@ -7243,7 +7255,13 @@ window.printReceiptPDF = function() {
     const grid = document.getElementById('ppob-grid');
     if (!grid) return;
     if (ppobProducts.length === 0) {
-      grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:#bbb;"><div style="font-size:52px; margin-bottom:12px;">📱</div><div style="font-size:15px;">Ketik nomor tujuan untuk melihat produk</div><div style="font-size:12px; margin-top:6px;">atau klik "Update Katalog" jika baru pertama kali</div></div>`;
+      grid.innerHTML = `
+        <div style="grid-column:1/-1; text-align:center; padding:32px 16px; background:rgba(255,255,255,0.03); border:1px dashed rgba(0,255,204,0.3); border-radius:16px;">
+          <div style="font-size:42px; margin-bottom:8px;">📱</div>
+          <div style="font-size:14px; font-weight:bold; color:var(--text, #e0f8f5);">Katalog PPOB Masih Kosong</div>
+          <div style="font-size:12px; color:var(--soft-text, #94a3b8); margin-top:4px; margin-bottom:16px;">Klik tombol di bawah untuk mengunduh produk terbaru dari Digiflazz</div>
+          <button onclick="syncPpobProducts()" class="btn primary" style="padding:10px 20px; font-size:13px;">🔄 Sinkronkan Katalog Digiflazz Sekarang</button>
+        </div>`;
       return;
     }
     const catMap = {
@@ -7255,32 +7273,40 @@ window.printReceiptPDF = function() {
     };
     const cats = catMap[ppobActiveTab] || ['Pulsa'];
     const filtered = ppobProducts.filter(p => {
-      if (ppobBrand && p.brand.toUpperCase() !== ppobBrand.toUpperCase()) return false;
-      return cats.some(cat => p.category.toLowerCase() === cat.toLowerCase());
-    }).sort((a,b) => Number(a.sale_price) - Number(b.sale_price));
+      if (!p) return false;
+      const brand = p.brand || '';
+      const category = p.category || '';
+      if (ppobBrand && brand.toUpperCase() !== ppobBrand.toUpperCase()) return false;
+      return cats.some(cat => category.toLowerCase() === cat.toLowerCase());
+    }).sort((a,b) => Number(a.sale_price || 0) - Number(b.sale_price || 0));
 
     if (filtered.length === 0) {
-      if (!ppobBrand && ppobActiveTab !== 'PLN') {
-        grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:#bbb;"><div style="font-size:52px; margin-bottom:12px;">📱</div><div style="font-size:15px;">Ketik nomor tujuan atau pilih provider di atas</div></div>`;
-      } else {
-        grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:#bbb;"><div style="font-size:52px; margin-bottom:12px;">🔍</div><div style="font-size:15px;">Tidak ada produk untuk provider ini</div></div>`;
-      }
+      grid.innerHTML = `
+        <div style="grid-column:1/-1; text-align:center; padding:40px 16px; color:var(--soft-text, #888);">
+          <div style="font-size:40px; margin-bottom:8px;">🔍</div>
+          <div style="font-size:13px; font-weight:600;">Tidak ada produk untuk kategori/provider ini</div>
+        </div>`;
       return;
     }
 
     grid.innerHTML = filtered.map(p => {
-      const gangguan = p.buyer_product_status === 'gangguan';
-      const selected = p.buyer_sku_code === ppobSelectedSku;
+      if (!p) return '';
+      const brand = p.brand || '';
+      const productName = p.product_name || '';
+      const salePrice = p.sale_price || 0;
+      const status = p.buyer_product_status || '';
+      const sku = p.buyer_sku_code || '';
+      const gangguan = status === 'gangguan';
+      const selected = sku === ppobSelectedSku;
       return `
-        <div class="ppob-card" id="card-${p.buyer_sku_code}"
-          onclick="${gangguan ? '' : `selectPpobProduct('${p.buyer_sku_code}')`}"
-          title="${gangguan ? 'Produk sedang gangguan, tidak bisa dipesan' : ''}"
-          style="border:${selected ? '2px solid #E3222B' : '1px solid #eee'}; border-radius:16px; padding:18px 14px; text-align:center; position:relative; transition:all 0.15s; background:${gangguan ? '#fafafa' : selected ? '#fff8f7' : '#fff'}; cursor:${gangguan ? 'not-allowed' : 'pointer'}; opacity:${gangguan ? '0.55' : '1'}; box-shadow:${selected ? '0 0 0 3px rgba(245,61,45,0.1)' : '0 1px 4px rgba(0,0,0,0.04)'};pointer-events:${gangguan ? 'none' : 'auto'};">
-          <div style="font-size:11px; color:#bbb; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">${p.brand}</div>
-          <div style="font-size:15px; font-weight:bold; margin-bottom:10px; color:${gangguan ? '#bbb' : '#222'}; line-height:1.4;">${p.product_name}</div>
-          <div style="color:${gangguan ? '#ccc' : '#E3222B'}; font-weight:bold; font-size:18px;">${rupiah(Math.round(Number(p.sale_price)))}</div>
-          ${gangguan ? '<div style="position:absolute;top:6px;right:6px;background:#ff9800;color:#fff;padding:2px 7px;font-size:10px;border-radius:20px;font-weight:bold;">GANGGUAN</div>' : ''}
-          ${selected ? '<div style="position:absolute;top:6px;left:6px;font-size:14px;">✅</div>' : ''}
+        <div class="ppob-card ${selected ? 'selected' : ''} ${gangguan ? 'gangguan' : ''}" id="card-${sku}"
+          onclick="${gangguan ? '' : `selectPpobProduct('${sku}')`}"
+          title="${gangguan ? 'Produk sedang gangguan' : ''}">
+          <div class="ppob-brand-name">${brand}</div>
+          <div class="ppob-product-name">${productName}</div>
+          <div class="ppob-price">${rupiah(Math.round(Number(salePrice)))}</div>
+          ${gangguan ? '<div class="ppob-badge gangguan">GANGGUAN</div>' : ''}
+          ${selected ? '<div class="ppob-selected-mark">✅</div>' : ''}
         </div>
       `;
     }).join('');
@@ -7717,36 +7743,74 @@ window.printReceiptPDF = function() {
           area.innerHTML = '<div style="padding:60px;text-align:center;color:#bbb;"><div style="font-size:48px;margin-bottom:12px;">📋</div><div>Belum ada riwayat transaksi</div></div>';
           return;
         }
-        area.innerHTML = `<div style="overflow-x:auto;padding:16px;"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;">
-          <thead><tr style="background:#fafafa;border-bottom:2px solid #eee;">
-            <th style="padding:10px 12px;text-align:left;color:#888;font-weight:600;">Waktu</th>
-            <th style="padding:10px 12px;text-align:left;color:#888;font-weight:600;">Produk</th>
-            <th style="padding:10px 12px;text-align:left;color:#888;font-weight:600;">Nomor</th>
-            <th style="padding:10px 12px;text-align:right;color:#888;font-weight:600;">Total</th>
-            <th style="padding:10px 12px;text-align:center;color:#888;font-weight:600;">Status</th>
-            <th style="padding:10px 12px;text-align:center;color:#888;font-weight:600;">SN/Token</th>
-          </tr></thead>
-          <tbody>
-          ${rows.map(r => {
-            const statusColor = r.status === 'Sukses' ? '#16a34a' : r.status === 'Pending' ? '#ca8a04' : '#dc2626';
-            const statusBg = r.status === 'Sukses' ? '#dcfce7' : r.status === 'Pending' ? '#fef9c3' : '#fee2e2';
-            return `<tr style="border-bottom:1px solid #f5f5f5;">
-              <td style="padding:10px 12px;color:#888;font-size:11px;">${r.created_at ? new Date(r.created_at).toLocaleString('id-ID') : '-'}</td>
-              <td style="padding:10px 12px;font-weight:500;">${r.product_name||'-'}</td>
-              <td style="padding:10px 12px;">${r.customer_no||'-'}</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:600;color:#E3222B;">${new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Math.round(Number(r.selling_price||0)))}</td>
-              <td style="padding:10px 12px;text-align:center;">
-                <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${statusBg};color:${statusColor};">${r.status||'-'}</span>
-                ${r.status === 'Pending' ? `<br><button onclick="window.checkPPOBStatus('${r.ref_id}')" style="margin-top:4px;padding:3px 8px;background:#f59e0b;color:#fff;border:none;border-radius:4px;font-size:10px;cursor:pointer;">Cek Status</button>` : ''}
-              </td>
-              <td style="padding:10px 12px;text-align:center;font-family:monospace;font-size:11px;">
-                ${r.sn ? `<span style="max-width:120px;display:inline-block;word-break:break-all;">${r.sn}</span> <button onclick="navigator.clipboard.writeText('${r.sn}').then(()=>showToast('Disalin!','success'))" style="padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:10px;">📋</button>` : '-'}
-                <button onclick="printPpobReceiptBluetooth('${(r.product_name||'').replace(/'/g,'\\u0027')}', '${r.customer_no}', '${r.sn||'-'}', '${r.status}', ${r.selling_price})" style="padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:10px;margin-left:4px;" title="Cetak Thermal">🖨️</button>
-              </td>
-            </tr>`;
-          }).join('')}
-          </tbody>
-        </table></div>`;
+        area.innerHTML = `
+          <div class="ppob-history-wrap">
+            <div class="ppob-history-table" style="overflow-x:auto;padding:12px;">
+              <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;">
+                <thead><tr style="background:#fafafa;border-bottom:2px solid #eee;">
+                  <th style="padding:10px 12px;text-align:left;color:#888;font-weight:600;">Waktu</th>
+                  <th style="padding:10px 12px;text-align:left;color:#888;font-weight:600;">Produk</th>
+                  <th style="padding:10px 12px;text-align:left;color:#888;font-weight:600;">Nomor</th>
+                  <th style="padding:10px 12px;text-align:right;color:#888;font-weight:600;">Total</th>
+                  <th style="padding:10px 12px;text-align:center;color:#888;font-weight:600;">Status</th>
+                  <th style="padding:10px 12px;text-align:center;color:#888;font-weight:600;">SN/Token</th>
+                </tr></thead>
+                <tbody>
+                ${rows.map(r => {
+                  const statusColor = r.status === 'Sukses' ? '#16a34a' : r.status === 'Pending' ? '#ca8a04' : '#dc2626';
+                  const statusBg = r.status === 'Sukses' ? '#dcfce7' : r.status === 'Pending' ? '#fef9c3' : '#fee2e2';
+                  return `<tr style="border-bottom:1px solid #f5f5f5;">
+                    <td style="padding:10px 12px;color:#888;font-size:11px;">${r.created_at ? new Date(r.created_at).toLocaleString('id-ID') : '-'}</td>
+                    <td style="padding:10px 12px;font-weight:500;">${r.product_name||'-'}</td>
+                    <td style="padding:10px 12px;">${r.customer_no||'-'}</td>
+                    <td style="padding:10px 12px;text-align:right;font-weight:600;color:#E3222B;">${new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Math.round(Number(r.selling_price||0)))}</td>
+                    <td style="padding:10px 12px;text-align:center;">
+                      <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${statusBg};color:${statusColor};">${r.status||'-'}</span>
+                      ${r.status === 'Pending' ? `<br><button onclick="window.checkPPOBStatus('${r.ref_id}')" style="margin-top:4px;padding:3px 8px;background:#f59e0b;color:#fff;border:none;border-radius:4px;font-size:10px;cursor:pointer;">Cek Status</button>` : ''}
+                    </td>
+                    <td style="padding:10px 12px;text-align:center;font-family:monospace;font-size:11px;">
+                      ${r.sn ? `<span style="max-width:120px;display:inline-block;word-break:break-all;">${r.sn}</span> <button onclick="navigator.clipboard.writeText('${r.sn}').then(()=>showToast('Disalin!','success'))" style="padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:10px;">📋</button>` : '-'}
+                      <button onclick="printPpobReceiptBluetooth('${(r.product_name||'').replace(/'/g,'\\u0027')}', '${r.customer_no}', '${r.sn||'-'}', '${r.status}', ${r.selling_price})" style="padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:10px;margin-left:4px;" title="Cetak Thermal">🖨️</button>
+                    </td>
+                  </tr>`;
+                }).join('')}
+                </tbody>
+              </table>
+            </div>
+            <div class="ppob-history-mobile">
+              ${rows.map(r => {
+                const statusColor = r.status === 'Sukses' ? '#15803d' : r.status === 'Pending' ? '#a16207' : '#b91c1c';
+                const statusBg = r.status === 'Sukses' ? '#dcfce7' : r.status === 'Pending' ? '#fef3c7' : '#fee2e2';
+                const totalText = new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Math.round(Number(r.selling_price||0)));
+                return `
+                  <article class="ppob-history-card">
+                    <div class="ppob-history-topline">
+                      <span class="ppob-history-time">${r.created_at ? new Date(r.created_at).toLocaleString('id-ID') : '-'}</span>
+                      <span class="ppob-history-status" style="background:${statusBg};color:${statusColor};">${r.status||'-'}</span>
+                    </div>
+                    <div class="ppob-history-product">${r.product_name || '-'}</div>
+                    <div class="ppob-history-row">
+                      <span class="ppob-history-label">Nomor</span>
+                      <span class="ppob-history-value">${r.customer_no || '-'}</span>
+                    </div>
+                    <div class="ppob-history-row">
+                      <span class="ppob-history-label">Total</span>
+                      <span class="ppob-history-price">${totalText}</span>
+                    </div>
+                    <div class="ppob-history-row">
+                      <span class="ppob-history-label">SN/Token</span>
+                      <span class="ppob-history-token">${r.sn || '-'}</span>
+                    </div>
+                    <div class="ppob-history-actions">
+                      ${r.status === 'Pending' ? `<button class="ppob-mini-btn warning" onclick="window.checkPPOBStatus('${r.ref_id}')">Cek Status</button>` : ''}
+                      ${r.sn ? `<button class="ppob-mini-btn" onclick="navigator.clipboard.writeText('${r.sn}').then(()=>showToast('Disalin!','success'))">📋 Salin</button>` : ''}
+                      <button class="ppob-mini-btn" onclick="printPpobReceiptBluetooth('${(r.product_name||'').replace(/'/g,'\\u0027')}', '${r.customer_no}', '${r.sn||'-'}', '${r.status}', ${r.selling_price})">🖨️ Cetak</button>
+                    </div>
+                  </article>
+                `;
+              }).join('')}
+            </div>
+          </div>`;
       } catch(err) {
         area.innerHTML = `<div style="padding:40px;text-align:center;color:#E3222B;">Gagal: ${err.message}</div>`;
       }
@@ -7790,7 +7854,7 @@ window.printReceiptPDF = function() {
         .ppob-card:hover { transform:translateY(-2px); box-shadow:0 4px 14px rgba(245,61,45,0.1) !important; }
       </style>
 
-      <header class="header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <header class="header ppob-page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <h1 style="margin:0;">📱 PPOB</h1>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <button onclick="${isHistory ? 'showPpobMain()' : 'showPpobHistory()'}" style="padding:8px 16px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;cursor:pointer;font-size:13px;font-weight:600;">
@@ -7800,14 +7864,14 @@ window.printReceiptPDF = function() {
         </div>
       </header>
 
-      <section class="content" style="max-width:980px;margin:0 auto;padding-top:14px;">
-        <div style="background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);overflow:hidden;">
+      <section class="ppob-shell" style="max-width:980px;margin:0 auto;padding-top:6px;">
+        <div class="ppob-panel" style="background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);overflow:hidden;">
 
           ${isHistory ? `
             <div style="padding:16px 24px;border-bottom:1px solid #eee;font-weight:600;color:#333;font-size:15px;">📋 Riwayat Transaksi PPOB</div>
             <div id="ppob-history-area" style="min-height:400px;"><div style="padding:60px;text-align:center;color:#aaa;">⏳ Memuat riwayat...</div></div>
           ` : `
-            <div style="display:flex;border-bottom:1px solid #eee;overflow-x:auto;scrollbar-width:none;">
+            <div class="ppob-tabs" style="display:flex;border-bottom:1px solid #eee;overflow-x:auto;scrollbar-width:none;">
               <div class="ppob-tab" onclick="switchPpobTab('Pulsa',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;font-weight:bold;color:#E3222B;border-bottom:3px solid #E3222B;white-space:nowrap;">📱 Pulsa</div>
               <div class="ppob-tab" onclick="switchPpobTab('Data',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;color:#666;white-space:nowrap;">📶 Data</div>
               <div class="ppob-tab" onclick="switchPpobTab('PLN',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;color:#666;white-space:nowrap;">💡 PLN</div>
@@ -7815,7 +7879,7 @@ window.printReceiptPDF = function() {
               <div class="ppob-tab" onclick="switchPpobTab('E-Money',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;color:#666;white-space:nowrap;">💸 E-Wallet</div>
             </div>
 
-            <div style="padding:22px 28px;min-height:420px;">
+            <div class="ppob-body" style="padding:22px 28px;min-height:420px;">
               <div style="margin-bottom:14px;">
                 <label style="display:block;margin-bottom:7px;font-weight:600;color:#444;font-size:13px;">📋 No. Meter / ID Pelanggan / No. HP</label>
                 <div style="position:relative;">

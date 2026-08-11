@@ -112,10 +112,12 @@ app.use(compression());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public", { maxAge: "1h" }));
-// [CACHE] JS/CSS no-cache agar update langsung terasa, gambar cache 1 hari
-app.use("/assets/js", express.static(path.join(__dirname, "assets/js"), { maxAge: 0, etag: true, lastModified: true }));
-app.use("/assets/css", express.static(path.join(__dirname, "assets/css"), { maxAge: 0, etag: true, lastModified: true }));
-app.use("/assets", express.static(path.join(__dirname, "assets"), { maxAge: "1d" }));
+// [PERF] Cache pintar untuk aset versi: URL JS/CSS sudah memakai ?v=..., jadi aman dicache lebih lama.
+// Browser tidak perlu download ulang file besar setiap refresh, tapi update tetap masuk saat query version dinaikkan.
+const staticVersionedCache = { maxAge: "7d", etag: true, lastModified: true, immutable: true };
+app.use("/assets/js", express.static(path.join(__dirname, "assets/js"), staticVersionedCache));
+app.use("/assets/css", express.static(path.join(__dirname, "assets/css"), staticVersionedCache));
+app.use("/assets", express.static(path.join(__dirname, "assets"), { maxAge: "7d", etag: true, lastModified: true }));
 
 // [SECURITY] Rate limiting global — 120 request per menit per IP
 const apiLimiter = rateLimit({
