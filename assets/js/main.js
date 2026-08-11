@@ -5101,8 +5101,10 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
 
     window.showGASCodeTutorial = function() {
       const gasCode = `function doGet(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var data = sheet.getDataRange().getValues();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = ss.getSheets();
+  var mainSheet = ss.getSheetByName("Semua Barang") || sheets[0];
+  var data = mainSheet.getDataRange().getValues();
   if (data.length <= 1) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
   var headers = data[0];
   var result = [];
@@ -5117,16 +5119,42 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
 }
 
 function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   var json = JSON.parse(e.postData.contents);
-  sheet.clear();
-  if (json.length > 0) {
+  if (Array.isArray(json) && json.length > 0) {
     var headers = Object.keys(json[0]);
-    sheet.appendRow(headers);
+    var categories = {};
+    json.forEach(function(row) {
+      var cat = (row["Kategori"] || "Umum").toString().trim();
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(row);
+    });
+    
+    // 1. Tab Utama "Semua Barang"
+    var allSheet = ss.getSheetByName("Semua Barang") || ss.getSheets()[0];
+    allSheet.setName("Semua Barang");
+    allSheet.clear();
+    allSheet.appendRow(headers);
     json.forEach(function(row) {
       var arr = [];
       headers.forEach(function(h) { arr.push(row[h] !== undefined ? row[h] : ""); });
-      sheet.appendRow(arr);
+      allSheet.appendRow(arr);
+    });
+    
+    // 2. Tab Per-Kategori (Mie, Bumbu, Kecap, Tepung, Beras, dll)
+    Object.keys(categories).sort().forEach(function(catName) {
+      var safeName = catName.replace(/[\\/?*:[\\]]/g, "").substring(0, 30).trim() || "Kategori";
+      var catSheet = ss.getSheetByName(safeName);
+      if (!catSheet) {
+        catSheet = ss.insertSheet(safeName);
+      }
+      catSheet.clear();
+      catSheet.appendRow(headers);
+      categories[catName].forEach(function(row) {
+        var arr = [];
+        headers.forEach(function(h) { arr.push(row[h] !== undefined ? row[h] : ""); });
+        catSheet.appendRow(arr);
+      });
     });
   }
   return ContentService.createTextOutput(JSON.stringify({status: "success", count: json.length})).setMimeType(ContentService.MimeType.JSON);
