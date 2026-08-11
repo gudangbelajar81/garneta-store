@@ -4836,14 +4836,15 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
                 <button class="btn primary" onclick="window.syncExportToGAS()" style="width:100%; padding:6px; font-size:0.8rem; cursor:pointer;">🚀 Sync Otomatis Ke Google Sheets</button>
              </div>
 
-             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                <button class="btn soft" onclick="window.copyProductsToClipboardTSV()" style="padding:8px; font-size:0.75rem; cursor:pointer;">📋 Salin Tabel (Ctrl+V)</button>
-                <button class="btn soft" onclick="window.downloadProductsCSV()" style="padding:8px; font-size:0.75rem; cursor:pointer;">📥 Download CSV File</button>
-             </div>
+             <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;">
+                 <button class="btn primary" onclick="window.downloadProductsExcel()" style="padding:8px 4px; font-size:0.75rem; cursor:pointer; background:linear-gradient(135deg, #107c41, #1f9a55); color:#fff; border:0;" title="Download File Excel (.xlsx)">📥 Download Excel (.xlsx)</button>
+                 <button class="btn soft" onclick="window.downloadProductsCSV()" style="padding:8px 4px; font-size:0.75rem; cursor:pointer;" title="Download CSV">📄 Download CSV</button>
+                 <button class="btn soft" onclick="window.copyProductsToClipboardTSV()" style="padding:8px 4px; font-size:0.75rem; cursor:pointer;" title="Salin Tabel">📋 Salin Tabel</button>
+              </div>
 
-             <div style="text-align:center; margin-top:4px;">
-                <a href="#" onclick="window.showGASCodeTutorial(); return false;" style="color:#00ffcc; text-decoration:underline; font-size:0.75rem;">📜 Cara Buat Web App URL Google Apps Script (Tutorial)</a>
-             </div>
+              <div style="text-align:center; margin-top:4px;">
+                 <a href="#" onclick="window.showGASCodeTutorial(); return false;" style="color:#00ffcc; text-decoration:underline; font-size:0.75rem;">📜 Cara Buat Web App URL Google Apps Script (Tutorial)</a>
+              </div>
           </div>
         `,
         showConfirmButton: false,
@@ -4962,25 +4963,90 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       const products = state.data.products || [];
       if (products.length === 0) return showToast("Tidak ada barang untuk disalin!", "error");
 
-      let tsv = "Kategori\tNama\tSatuan\tIsi\tHarga Beli\tHarga Jual\tHarga Ecer\tStok\tBarcode\n";
+      let tsv = "Kategori\tNama\tSatuan\tIsi Unit\tHarga Beli\tHarga Beli Ecer\tHarga Jual\tHarga Jual Ecer\tPotongan\tMin Qty\tStok\tBarcode\n";
       products.forEach(p => {
-         tsv += `${p.category || 'Umum'}\t${p.name}\t${p.unit || 'pcs'}\t${p.unitContent || 1}\t${p.basePrice || 0}\t${p.salePrice || 0}\t${p.salePriceEcer || 0}\t${p.stock || 0}\t${p.barcode || ''}\n`;
+         let potText = "-";
+         if (Number(p.discountValue) > 0) {
+            potText = p.discountType === '%' ? p.discountValue + '%' : Number(p.discountValue);
+         }
+         let minText = Number(p.discountMinQty) > 0 ? Number(p.discountMinQty) : "-";
+
+         tsv += `${p.category || 'Umum'}\t${p.name}\t${p.unit || 'pcs'}\t${p.unitContent || 1}\t${p.basePrice || 0}\t${p.basePriceEcer || 0}\t${p.salePrice || 0}\t${p.salePriceEcer || 0}\t${potText}\t${minText}\t${p.stock || 0}\t${p.barcode || ''}\n`;
       });
 
       navigator.clipboard.writeText(tsv).then(() => {
-         showToast("Copied! Buka Google Sheets & tekan Ctrl + V.", "success");
+         showToast("Copied! Buka Excel / Google Sheets & tekan Ctrl + V.", "success");
       }).catch(() => {
-         alert("Gagal menyalin otomatis. Silakan gunakan tombol Download CSV.");
+         alert("Gagal menyalin otomatis. Silakan gunakan tombol Download Excel.");
       });
+    };
+
+    window.downloadProductsExcel = function() {
+      const products = state.data.products || [];
+      if (products.length === 0) return showToast("Tidak ada barang untuk diunduh!", "error");
+
+      const data = products.map(p => {
+        let potText = "-";
+        if (Number(p.discountValue) > 0) {
+          potText = p.discountType === '%' ? p.discountValue + '%' : Number(p.discountValue);
+        }
+        let minText = Number(p.discountMinQty) > 0 ? Number(p.discountMinQty) : "-";
+
+        return {
+          "Kategori": p.category || "Umum",
+          "Nama": p.name || "",
+          "Satuan": p.unit || "pcs",
+          "Isi Unit": Number(p.unitContent || 1),
+          "Harga Beli": Number(p.basePrice || 0),
+          "Harga Beli Ecer": Number(p.basePriceEcer || 0),
+          "Harga Jual": Number(p.salePrice || 0),
+          "Harga Jual Ecer": Number(p.salePriceEcer || 0),
+          "Potongan": potText,
+          "Min Qty": minText,
+          "Stok": Number(p.stock || 0),
+          "Barcode": p.barcode || ""
+        };
+      });
+
+      const doExport = () => {
+        if (typeof XLSX !== "undefined") {
+          const ws = XLSX.utils.json_to_sheet(data);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "Daftar Barang");
+          XLSX.writeFile(wb, `daftar-barang-${today()}.xlsx`);
+          showToast("File Excel (.xlsx) berhasil diunduh!", "success");
+        } else {
+          downloadProductsCSV();
+        }
+      };
+
+      if (typeof XLSX === "undefined") {
+        const script = document.createElement("script");
+        script.src = "https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js";
+        script.onload = doExport;
+        script.onerror = () => downloadProductsCSV();
+        document.body.appendChild(script);
+      } else {
+        doExport();
+      }
     };
 
     window.downloadProductsCSV = function() {
       const products = state.data.products || [];
-      let csv = "Kategori,Nama,Satuan,Isi,Harga Beli,Harga Jual,Harga Ecer,Stok,Barcode\n";
+      if (products.length === 0) return showToast("Tidak ada barang untuk diunduh!", "error");
+
+      let csv = "Kategori,Nama,Satuan,Isi Unit,Harga Beli,Harga Beli Ecer,Harga Jual,Harga Jual Ecer,Potongan,Min Qty,Stok,Barcode\n";
       products.forEach(p => {
-         csv += `"${(p.category||'Umum').replace(/"/g, '""')}","${(p.name||'').replace(/"/g, '""')}","${p.unit||'pcs'}",${p.unitContent||1},${p.basePrice||0},${p.salePrice||0},${p.salePriceEcer||0},${p.stock||0},"${p.barcode||''}"\n`;
+         let potText = "-";
+         if (Number(p.discountValue) > 0) {
+            potText = p.discountType === '%' ? p.discountValue + '%' : Number(p.discountValue);
+         }
+         let minText = Number(p.discountMinQty) > 0 ? Number(p.discountMinQty) : "-";
+
+         csv += `"${(p.category||'Umum').replace(/"/g, '""')}","${(p.name||'').replace(/"/g, '""')}","${p.unit||'pcs'}",${p.unitContent||1},${p.basePrice||0},${p.basePriceEcer||0},${p.salePrice||0},${p.salePriceEcer||0},"${potText}","${minText}",${p.stock||0},"${p.barcode||''}"\n`;
       });
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+
+      const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.setAttribute("download", `daftar-barang-${today()}.csv`);
