@@ -17,26 +17,10 @@
   // Initialize Smart Search
   window.initSmartSearch = function() {
     const container = document.getElementById('smart-search-container');
-    if (!container) {
-      console.log('Smart Search: container not found');
-      return;
-    }
+    if (!container) return;
 
-    // Check if data is loaded
-    if (!window.state || !window.state.data) {
-      console.log('Smart Search: data not loaded yet, retrying...');
-      setTimeout(window.initSmartSearch, 500);
-      return;
-    }
-
-    // Check if products array exists (even if empty)
-    if (!Array.isArray(window.state.data.products)) {
-      console.log('Smart Search: products not ready, retrying...');
-      setTimeout(window.initSmartSearch, 500);
-      return;
-    }
-
-    console.log('Smart Search: initializing with', window.state.data.products.length, 'products');
+    // Prevent duplicate rendering
+    if (document.getElementById('smart-search-input')) return;
 
     // Clear container first
     container.innerHTML = '';
@@ -56,7 +40,6 @@
     
     container.appendChild(wrapper);
     bindEvents();
-    console.log('Smart Search: initialized successfully');
   };
 
   function bindEvents() {
