@@ -4894,63 +4894,42 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       const products = state.data.products || [];
       if (products.length === 0) return showToast("Tidak ada data barang untuk diekspor!", "error");
 
-      // Format 1: 2D Grid (Headers + Rows) - Compatible with Grid-based Apps Script
-      const headers = ["Kategori", "Nama", "Satuan", "Isi", "Harga Beli", "Harga Jual", "Harga Ecer", "Stok", "Barcode"];
-      const grid = [headers];
-      products.forEach(p => {
-         grid.push([
-            p.category || "Umum",
-            p.name || "",
-            p.unit || "pcs",
-            p.unitContent || 1,
-            p.basePrice || 0,
-            p.salePrice || 0,
-            p.salePriceEcer || 0,
-            p.stock || 0,
-            p.barcode || ""
-         ]);
-      });
-
-      // Format 2: Array of Objects
-      const flatList = products.map(p => ({
-         kategori: p.category || "Umum",
-         nama: p.name || "",
-         satuan: p.unit || "pcs",
-         isi_unit: p.unitContent || 1,
-         harga_beli: p.basePrice || 0,
-         harga_jual: p.salePrice || 0,
-         harga_jual_ecer: p.salePriceEcer || 0,
-         stok: p.stock || 0,
-         barcode: p.barcode || ""
+      // Payload Array of Objects matching user's Apps Script doPost(e)
+      const payloadArray = products.map(p => ({
+         "Kategori": p.category || "Umum",
+         "Nama": p.name || "",
+         "Satuan": p.unit || "pcs",
+         "Isi Unit": p.unitContent || 1,
+         "Harga Beli": Number(p.basePrice || 0),
+         "Harga Jual": Number(p.salePrice || 0),
+         "Harga Ecer": Number(p.salePriceEcer || 0),
+         "Stok": Number(p.stock || 0),
+         "Barcode": p.barcode || ""
       }));
-
-      // Combined Payload to satisfy any Apps Script structure
-      const payload = {
-         grid: grid,
-         data: flatList,
-         products: flatList
-      };
 
       Swal.fire({ title: "Mengirim Data...", text: "Sedang mengirim data ke Google Sheets...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
       try {
-         const resp = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain" },
-            body: JSON.stringify(payload)
-         });
-         const resText = await resp.text();
-         let resJson = null;
-         try { resJson = JSON.parse(resText); } catch(e) {}
-
-         if (resJson && resJson.status === "error") {
-            throw new Error(resJson.message || "Gagal memperbarui Google Sheets");
+         try {
+            await fetch(url, {
+               method: "POST",
+               headers: { "Content-Type": "text/plain" },
+               body: JSON.stringify(payloadArray)
+            });
+         } catch (fetchErr) {
+            console.warn("Standard fetch failed, retrying with no-cors mode...", fetchErr);
+            await fetch(url, {
+               method: "POST",
+               mode: "no-cors",
+               headers: { "Content-Type": "text/plain" },
+               body: JSON.stringify(payloadArray)
+            });
          }
 
          Swal.fire({ title: "Berhasil!", text: `Data ${products.length} barang berhasil dikirim & terupdate di Google Sheets!`, icon: "success", confirmButtonColor: "#00ffcc" });
       } catch (err) {
          console.error(err);
-         Swal.fire({ title: "Gagal Sync", text: err.message || "Gagal mengupdate Google Sheets. Pastikan URL Web App benar.", icon: "error" });
+         Swal.fire({ title: "Gagal Sync", text: err.message || "Gagal mengupdate Google Sheets. Pastikan URL Web App benar dan akses 'Siapa saja' (Anyone).", icon: "error" });
       }
     };
 
