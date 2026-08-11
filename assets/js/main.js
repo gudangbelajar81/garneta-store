@@ -1232,7 +1232,17 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
         default:
           workspaceContent = `<div class="workspace-content">
             <div class="card">
-              <h3>📋 Daftar Barang (${state.data.products?.length || 0})</h3>
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                <h3 style="margin:0;">📋 Daftar Barang (${state.data.products?.length || 0})</h3>
+                <div style="display:flex; gap:4px; opacity:0.75;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'">
+                  <button class="btn soft" onclick="window.openAppsScriptExportModal()" style="font-size:0.68rem; padding:2px 8px; font-weight:600; border-radius:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.85);" title="Export Spreadsheet">
+                    Export
+                  </button>
+                  <button class="btn soft" onclick="window.openAppsScriptImportModal()" style="font-size:0.68rem; padding:2px 8px; font-weight:600; border-radius:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.85);" title="Import Spreadsheet">
+                    Import
+                  </button>
+                </div>
+              </div>
               ${productRows()}
             </div>
           </div>`;
@@ -1393,6 +1403,12 @@ Minyak Goreng 3 45000"></textarea>
       });
     }
 
+    function isExcludedNgitungCategory(p) {
+      if (!p || !p.category) return false;
+      const cat = String(p.category).toLowerCase();
+      return cat.includes("buah") || cat.includes("sayur") || cat.includes("bumbu");
+    }
+
     window.ngitungPopulateDatalist = function() {
       const datalist = document.getElementById("ngitung-history-list");
       if (!datalist) return;
@@ -1400,9 +1416,9 @@ Minyak Goreng 3 45000"></textarea>
       if (window.state && window.state.data && window.state.data.products) {
           options += window.state.data.products.map(p => {
               const harga = p.salePriceEcer || p.salePrice || p.basePrice || 0;
-              const isSayur = (p.category || "").toLowerCase().includes("sayur");
+              const isExcluded = isExcludedNgitungCategory(p);
               
-              if (isSayur) {
+              if (isExcluded) {
                   return `<option value="${escapeAttr(p.name)}">`;
               } else {
                   return `<option value="${escapeAttr(p.name)} ${harga}">`;
@@ -1485,7 +1501,7 @@ Minyak Goreng 3 45000"></textarea>
              // If product found and number is small (e.g. < 1000), it's likely a Qty
              if (prod && numVal < 1000) {
                 name = parsedName;
-                price = prod.salePriceEcer || prod.salePrice || prod.basePrice || 0;
+                price = isExcludedNgitungCategory(prod) ? 0 : (prod.salePriceEcer || prod.salePrice || prod.basePrice || 0);
                 qty = numVal;
              } else {
                 // Otherwise treat as Price override
@@ -1498,7 +1514,7 @@ Minyak Goreng 3 45000"></textarea>
              name = cleanVal;
              prod = findProd(name);
              if (prod) {
-                price = prod.salePriceEcer || prod.salePrice || prod.basePrice || 0;
+                price = isExcludedNgitungCategory(prod) ? 0 : (prod.salePriceEcer || prod.salePrice || prod.basePrice || 0);
              }
            }
          }
@@ -1957,10 +1973,10 @@ Minyak Goreng 3 45000"></textarea>
                localStorage.setItem("hutang", JSON.stringify(hutangs));
             }
             
-            // Clear Cart ONLY AFTER action succeeds
-            window.ngitungClearAll();
-            if(bayarEl) bayarEl.value = "";
-            window.ngitungHandleBayarInput();
+            // Clear Cart AFTER action succeeds (Disabled: biarkan form tetap ada setelah print)
+            // window.ngitungClearAll();
+            // if(bayarEl) bayarEl.value = "";
+            // window.ngitungHandleBayarInput();
 
         } catch (error) {
             console.error("Checkout Error:", error);
@@ -2196,7 +2212,7 @@ window.globalBluetoothDevice = device;
             let tBayar = data.bayar !== undefined ? data.bayar : (data.dp !== undefined ? data.dp : tTotal);
             let tKembali = data.kembalian !== undefined ? data.kembalian : (tBayar > tTotal ? tBayar - tTotal : 0);
             
-            receiptLines.push(...encoder.encode("Struk Belanja - " + data.date + "\n"));
+            receiptLines.push(...encoder.encode(data.date + "\n"));
             receiptLines.push(...encoder.encode("Kasir: " + tOperator + "\n"));
             receiptLines.push(...encoder.encode("Pelanggan: " + data.customer + "\n"));
             receiptLines.push(...encoder.encode("-".repeat(parseInt(localStorage.getItem('printerPaperSize') || '32')) + "\n"));
@@ -2215,7 +2231,21 @@ window.globalBluetoothDevice = device;
             });
             
             receiptLines.push(...encoder.encode("-".repeat(parseInt(localStorage.getItem('printerPaperSize') || '32')) + "\n"));
-            receiptLines.push(...encoder.encode(padLR("TOTAL", "Rp " + new Intl.NumberFormat("id-ID").format(tTotal)) + "\n"));
+
+            let totalFormatted = "Rp " + new Intl.NumberFormat("id-ID").format(tTotal);
+            let totalLineRaw = "TOTAL " + totalFormatted;
+            receiptLines.push([0x1b, 0x45, 0x01]); // Bold ON
+            if (totalLineRaw.length <= 16) {
+                receiptLines.push([0x1d, 0x21, 0x11]); // Double Size (Besar & Tebal)
+                receiptLines.push(...encoder.encode(padLR("TOTAL", totalFormatted, 16) + "\n"));
+                receiptLines.push([0x1d, 0x21, 0x00]); // Reset Size
+            } else {
+                receiptLines.push([0x1d, 0x21, 0x01]); // Double Height (Tinggi & Tebal)
+                receiptLines.push(...encoder.encode(padLR("TOTAL", totalFormatted) + "\n"));
+                receiptLines.push([0x1d, 0x21, 0x00]); // Reset Size
+            }
+            receiptLines.push([0x1b, 0x45, 0x00]); // Bold OFF
+
             receiptLines.push(...encoder.encode(padLR("BAYAR", "Rp " + new Intl.NumberFormat("id-ID").format(tBayar)) + "\n"));
             receiptLines.push(...encoder.encode(padLR("KEMBALI", "Rp " + new Intl.NumberFormat("id-ID").format(tKembali)) + "\n"));
             
@@ -4783,6 +4813,343 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       await load();
       alert(`${saved} barang berhasil diimport.`);
     }
+
+    // --- GOOGLE APPS SCRIPT (SPREADSHEET) EXPORT & IMPORT MODULE ---
+    window.openAppsScriptExportModal = function() {
+      const savedUrl = localStorage.getItem("apps_script_url") || "";
+      const products = state.data.products || [];
+
+      if (typeof Swal === "undefined") {
+         alert("Export Spreadsheet membutuhkan library Swal.");
+         return;
+      }
+
+      Swal.fire({
+        title: "📊 Export ke Google Spreadsheet",
+        html: `
+          <div style="text-align:left; font-size:0.85rem; display:flex; flex-direction:column; gap:12px; font-family:sans-serif;">
+             <p style="margin:0; color:rgba(255,255,255,0.7);">Ekspor <strong>${products.length} barang</strong> secara otomatis via Google Apps Script atau salin format tabel.</p>
+
+             <div style="background:rgba(0,255,204,0.05); padding:10px; border-radius:8px; border:1px solid rgba(0,255,204,0.2);">
+                <label style="font-weight:bold; display:block; margin-bottom:4px; font-size:0.8rem; color:#00ffcc;">1. Sync Otomatis via Web App URL (Apps Script)</label>
+                <input type="text" id="swal-gas-url" value="${escapeAttr(savedUrl)}" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%; padding:6px; font-size:0.8rem; border-radius:6px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; margin-bottom:6px; box-sizing:border-box;">
+                <button class="btn primary" onclick="window.syncExportToGAS()" style="width:100%; padding:6px; font-size:0.8rem; cursor:pointer;">🚀 Sync Otomatis Ke Google Sheets</button>
+             </div>
+
+             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <button class="btn soft" onclick="window.copyProductsToClipboardTSV()" style="padding:8px; font-size:0.75rem; cursor:pointer;">📋 Salin Tabel (Ctrl+V)</button>
+                <button class="btn soft" onclick="window.downloadProductsCSV()" style="padding:8px; font-size:0.75rem; cursor:pointer;">📥 Download CSV File</button>
+             </div>
+
+             <div style="text-align:center; margin-top:4px;">
+                <a href="#" onclick="window.showGASCodeTutorial(); return false;" style="color:#00ffcc; text-decoration:underline; font-size:0.75rem;">📜 Cara Buat Web App URL Google Apps Script (Tutorial)</a>
+             </div>
+          </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true,
+        width: "500px"
+      });
+    };
+
+    window.openAppsScriptImportModal = function() {
+      const savedUrl = localStorage.getItem("apps_script_url") || "";
+
+      if (typeof Swal === "undefined") {
+         alert("Import Spreadsheet membutuhkan library Swal.");
+         return;
+      }
+
+      Swal.fire({
+        title: "📊 Import dari Google Spreadsheet",
+        html: `
+          <div style="text-align:left; font-size:0.85rem; display:flex; flex-direction:column; gap:12px; font-family:sans-serif;">
+             <p style="margin:0; color:rgba(255,255,255,0.7);">Tarik data barang dari Google Sheets atau tempel teks dari kolom Spreadsheet.</p>
+
+             <div style="background:rgba(0,255,204,0.05); padding:10px; border-radius:8px; border:1px solid rgba(0,255,204,0.2);">
+                <label style="font-weight:bold; display:block; margin-bottom:4px; font-size:0.8rem; color:#00ffcc;">1. Tarik Langsung via Web App URL (Apps Script)</label>
+                <input type="text" id="swal-gas-import-url" value="${escapeAttr(savedUrl)}" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%; padding:6px; font-size:0.8rem; border-radius:6px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; margin-bottom:6px; box-sizing:border-box;">
+                <button class="btn primary" onclick="window.syncImportFromGAS()" style="width:100%; padding:6px; font-size:0.8rem; cursor:pointer;">🔄 Tarik Data Dari Google Sheets</button>
+             </div>
+
+             <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
+                <label style="font-weight:bold; display:block; margin-bottom:4px; font-size:0.8rem; color:#fff;">2. Tempel Teks Salinan Spreadsheet (TSV/CSV)</label>
+                <textarea id="swal-gas-import-text" rows="4" placeholder="Copy-paste sel/tabel dari Google Sheets / Excel di sini...&#10;Kolom: Nama | Kategori | Satuan | Isi | Harga Beli | Harga Jual | Stok" style="width:100%; padding:6px; font-size:0.75rem; border-radius:6px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; margin-bottom:6px; box-sizing:border-box;"></textarea>
+                <button class="btn soft" onclick="window.processTextImportGAS()" style="width:100%; padding:6px; font-size:0.8rem; cursor:pointer;">📥 Impor Data Teks Di Atas</button>
+             </div>
+          </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true,
+        width: "520px"
+      });
+    };
+
+    window.syncExportToGAS = async function() {
+      const input = document.getElementById("swal-gas-url");
+      const url = input ? input.value.trim() : "";
+      if (!url) return showToast("Masukkan Web App URL Google Apps Script!", "error");
+      localStorage.setItem("apps_script_url", url);
+
+      const products = state.data.products || [];
+      if (products.length === 0) return showToast("Tidak ada data barang untuk diekspor!", "error");
+
+      // Format 1: 2D Grid (Headers + Rows) - Compatible with Grid-based Apps Script
+      const headers = ["Kategori", "Nama", "Satuan", "Isi", "Harga Beli", "Harga Jual", "Harga Ecer", "Stok", "Barcode"];
+      const grid = [headers];
+      products.forEach(p => {
+         grid.push([
+            p.category || "Umum",
+            p.name || "",
+            p.unit || "pcs",
+            p.unitContent || 1,
+            p.basePrice || 0,
+            p.salePrice || 0,
+            p.salePriceEcer || 0,
+            p.stock || 0,
+            p.barcode || ""
+         ]);
+      });
+
+      // Format 2: Array of Objects
+      const flatList = products.map(p => ({
+         kategori: p.category || "Umum",
+         nama: p.name || "",
+         satuan: p.unit || "pcs",
+         isi_unit: p.unitContent || 1,
+         harga_beli: p.basePrice || 0,
+         harga_jual: p.salePrice || 0,
+         harga_jual_ecer: p.salePriceEcer || 0,
+         stok: p.stock || 0,
+         barcode: p.barcode || ""
+      }));
+
+      // Combined Payload to satisfy any Apps Script structure
+      const payload = {
+         grid: grid,
+         data: flatList,
+         products: flatList
+      };
+
+      Swal.fire({ title: "Mengirim Data...", text: "Sedang mengirim data ke Google Sheets...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+      try {
+         const resp = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify(payload)
+         });
+         const resText = await resp.text();
+         let resJson = null;
+         try { resJson = JSON.parse(resText); } catch(e) {}
+
+         if (resJson && resJson.status === "error") {
+            throw new Error(resJson.message || "Gagal memperbarui Google Sheets");
+         }
+
+         Swal.fire({ title: "Berhasil!", text: `Data ${products.length} barang berhasil dikirim & terupdate di Google Sheets!`, icon: "success", confirmButtonColor: "#00ffcc" });
+      } catch (err) {
+         console.error(err);
+         Swal.fire({ title: "Gagal Sync", text: err.message || "Gagal mengupdate Google Sheets. Pastikan URL Web App benar.", icon: "error" });
+      }
+    };
+
+    window.syncImportFromGAS = async function() {
+      const input = document.getElementById("swal-gas-import-url");
+      const url = input ? input.value.trim() : "";
+      if (!url) return showToast("Masukkan Web App URL Google Apps Script!", "error");
+      localStorage.setItem("apps_script_url", url);
+
+      Swal.fire({ title: "Mengambil Data...", text: "Sedang membaca data dari Google Sheets...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+      try {
+         const resp = await fetch(url);
+         const resJson = await resp.json();
+         
+         let rawGrid = null;
+         if (Array.isArray(resJson)) {
+            rawGrid = resJson;
+         } else if (resJson && resJson.data) {
+            const sheetKey = Object.keys(resJson.data)[0];
+            if (sheetKey && Array.isArray(resJson.data[sheetKey])) {
+               rawGrid = resJson.data[sheetKey];
+            }
+         } else if (resJson && Array.isArray(resJson.grid)) {
+            rawGrid = resJson.grid;
+         }
+
+         if (!rawGrid || rawGrid.length === 0) {
+            throw new Error("Data Google Sheets kosong atau format tidak dikenali.");
+         }
+
+         let rows = [];
+         // Check if rawGrid is a 2D Array or array of objects
+         if (Array.isArray(rawGrid[0])) {
+            // 2D Array format: first row is headers, remaining rows are data
+            const headers = rawGrid[0].map(h => String(h).toLowerCase().trim());
+            const catIdx = headers.findIndex(h => h.includes("kategori") || h.includes("cat"));
+            const nameIdx = headers.findIndex(h => h.includes("nama") || h.includes("name"));
+            const unitIdx = headers.findIndex(h => h.includes("satuan") || (h.includes("unit") && !h.includes("isi")));
+            const isiIdx = headers.findIndex(h => h.includes("isi"));
+            const beliIdx = headers.findIndex(h => h.includes("beli") || h.includes("modal"));
+            const jualIdx = headers.findIndex(h => h.includes("jual") && !h.includes("ecer"));
+            const ecerIdx = headers.findIndex(h => h.includes("ecer"));
+            const stokIdx = headers.findIndex(h => h.includes("stok") || h.includes("stock"));
+            const barIdx = headers.findIndex(h => h.includes("barcode") || h.includes("kode"));
+
+            for (let i = 1; i < rawGrid.length; i++) {
+               const r = rawGrid[i];
+               if (!r || r.length === 0) continue;
+               const nameVal = nameIdx >= 0 ? r[nameIdx] : (r[1] || r[0]);
+               if (!nameVal || String(nameVal).trim() === "") continue;
+
+               rows.push({
+                  category: catIdx >= 0 ? String(r[catIdx] || "Umum") : "Umum",
+                  name: String(nameVal).trim(),
+                  unit: unitIdx >= 0 ? String(r[unitIdx] || "pcs") : "pcs",
+                  unitContent: isiIdx >= 0 ? plainNumber(r[isiIdx]) || 1 : 1,
+                  basePrice: beliIdx >= 0 ? plainNumber(r[beliIdx]) : 0,
+                  salePrice: jualIdx >= 0 ? plainNumber(r[jualIdx]) : 0,
+                  salePriceEcer: ecerIdx >= 0 ? plainNumber(r[ecerIdx]) : 0,
+                  stock: stokIdx >= 0 ? plainNumber(r[stokIdx]) : 0,
+                  barcode: barIdx >= 0 ? String(r[barIdx] || "") : ""
+               });
+            }
+         } else {
+            // Array of Objects
+            rows = rawGrid.map(r => ({
+               name: String(r.nama || r.Name || r.NAMA || r.nama_barang || r.name || "").trim(),
+               category: String(r.kategori || r.Kategori || r.CATEGORY || r.category || "Umum").trim(),
+               unit: String(r.satuan || r.Satuan || r.UNIT || r.unit || "pcs").trim(),
+               unitContent: plainNumber(r.isi_unit || r.isi || r.content || 1) || 1,
+               basePrice: plainNumber(r.harga_beli || r.beli || r.basePrice || 0),
+               salePrice: plainNumber(r.harga_jual || r.jual || r.salePrice || 0),
+               salePriceEcer: plainNumber(r.harga_jual_ecer || r.jual_ecer || r.salePriceEcer || 0),
+               stock: plainNumber(r.stok || r.stock || 0),
+               barcode: String(r.barcode || r.Barcode || "").trim()
+            })).filter(r => r.name);
+         }
+
+         if (rows.length === 0) throw new Error("Tidak ada baris data barang yang valid.");
+
+         let saved = 0;
+         for (const row of rows) {
+           await gas("add", { collection: "products", item: row });
+           saved++;
+         }
+         await load();
+         Swal.fire({ title: "Import Berhasil!", text: `${saved} barang berhasil diimpor dari Google Sheets!`, icon: "success", confirmButtonColor: "#00ffcc" });
+      } catch (err) {
+         console.error(err);
+         Swal.fire({ title: "Gagal Import", text: err.message || "Gagal mengambil data dari Google Sheets.", icon: "error" });
+      }
+    };
+
+    window.copyProductsToClipboardTSV = function() {
+      const products = state.data.products || [];
+      if (products.length === 0) return showToast("Tidak ada barang untuk disalin!", "error");
+
+      let tsv = "Kategori\tNama\tSatuan\tIsi\tHarga Beli\tHarga Jual\tHarga Ecer\tStok\tBarcode\n";
+      products.forEach(p => {
+         tsv += `${p.category || 'Umum'}\t${p.name}\t${p.unit || 'pcs'}\t${p.unitContent || 1}\t${p.basePrice || 0}\t${p.salePrice || 0}\t${p.salePriceEcer || 0}\t${p.stock || 0}\t${p.barcode || ''}\n`;
+      });
+
+      navigator.clipboard.writeText(tsv).then(() => {
+         showToast("Copied! Buka Google Sheets & tekan Ctrl + V.", "success");
+      }).catch(() => {
+         alert("Gagal menyalin otomatis. Silakan gunakan tombol Download CSV.");
+      });
+    };
+
+    window.downloadProductsCSV = function() {
+      const products = state.data.products || [];
+      let csv = "Kategori,Nama,Satuan,Isi,Harga Beli,Harga Jual,Harga Ecer,Stok,Barcode\n";
+      products.forEach(p => {
+         csv += `"${(p.category||'Umum').replace(/"/g, '""')}","${(p.name||'').replace(/"/g, '""')}","${p.unit||'pcs'}",${p.unitContent||1},${p.basePrice||0},${p.salePrice||0},${p.salePriceEcer||0},${p.stock||0},"${p.barcode||''}"\n`;
+      });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", `daftar-barang-${today()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    window.processTextImportGAS = async function() {
+      const textarea = document.getElementById("swal-gas-import-text");
+      const text = textarea ? textarea.value : "";
+      if (!text.trim()) return showToast("Masukkan teks salinan tabel!", "error");
+
+      const rows = parseProductText(text);
+      if (!rows || rows.length === 0) return showToast("Tidak ada data barang valid yang ditemukan dalam teks!", "error");
+
+      Swal.fire({ title: "Mengimpor...", text: `Sedang memasukkan ${rows.length} barang...`, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+      try {
+         await importProducts(rows);
+         Swal.fire({ title: "Import Berhasil!", text: `${rows.length} barang berhasil diimpor ke database.`, icon: "success", confirmButtonColor: "#00ffcc" });
+      } catch (err) {
+         Swal.fire({ title: "Gagal Import", text: err.message, icon: "error" });
+      }
+    };
+
+    window.showGASCodeTutorial = function() {
+      const gasCode = `function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
+  var headers = data[0];
+  var result = [];
+  for (var i = 1; i < data.length; i++) {
+    var obj = {};
+    for (var j = 0; j < headers.length; j++) {
+      obj[headers[j]] = data[i][j];
+    }
+    result.push(obj);
+  }
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var json = JSON.parse(e.postData.contents);
+  sheet.clear();
+  if (json.length > 0) {
+    var headers = Object.keys(json[0]);
+    sheet.appendRow(headers);
+    json.forEach(function(row) {
+      var arr = [];
+      headers.forEach(function(h) { arr.push(row[h] !== undefined ? row[h] : ""); });
+      sheet.appendRow(arr);
+    });
+  }
+  return ContentService.createTextOutput(JSON.stringify({status: "success", count: json.length})).setMimeType(ContentService.MimeType.JSON);
+}`;
+
+      Swal.fire({
+        title: "📜 Kode Google Apps Script (GAS)",
+        html: `
+          <div style="text-align:left; font-size:0.8rem; font-family:sans-serif;">
+             <ol style="padding-left:16px; margin-bottom:8px; line-height:1.4; color:rgba(255,255,255,0.85);">
+                <li>Buka Google Sheets baru di browser Anda.</li>
+                <li>Klik menu <strong>Ekstensi (Extensions) &rarr; Apps Script</strong>.</li>
+                <li>Hapus kode bawaan, lalu <strong>Paste</strong> kode di bawah ini:</li>
+             </ol>
+             <textarea id="swal-gas-code" readonly rows="8" style="width:100%; font-family:monospace; font-size:0.7rem; padding:6px; background:#111; color:#00ffcc; border-radius:6px; border:1px solid #333; box-sizing:border-box;">${escapeHtml(gasCode)}</textarea>
+             <button class="btn primary" onclick="navigator.clipboard.writeText(document.getElementById('swal-gas-code').value); showToast('Kode Apps Script Berhasil Disalin!', 'success');" style="width:100%; margin-top:8px; padding:6px; cursor:pointer;">📋 Copy Kode Apps Script</button>
+             <ol start="4" style="padding-left:16px; margin-top:8px; line-height:1.4; color:rgba(255,255,255,0.85);">
+                <li>Klik <strong>Deploy &rarr; New deployment</strong>.</li>
+                <li>Pilih type: <strong>Web App</strong>.</li>
+                <li>Set "Who has access" &rarr; <strong>Anyone</strong> (Penting!).</li>
+                <li>Klik Deploy & Salin Web App URL-nya untuk di-paste di aplikasi Garneta Store!</li>
+             </ol>
+          </div>
+        `,
+        width: "550px",
+        showCloseButton: true
+      });
+    };
 
     function invoiceItemsToProducts(invoice) {
       if (invoice.error) {
