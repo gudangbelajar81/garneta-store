@@ -4982,10 +4982,10 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
     };
 
     window.downloadProductsExcel = function() {
-      const products = state.data.products || [];
-      if (products.length === 0) return showToast("Tidak ada barang untuk diunduh!", "error");
+      const allProducts = state.data.products || [];
+      if (allProducts.length === 0) return showToast("Tidak ada barang untuk diunduh!", "error");
 
-      const data = products.map(p => {
+      const formatProduct = p => {
         let potText = "-";
         if (Number(p.discountValue) > 0) {
           potText = p.discountType === '%' ? p.discountValue + '%' : Number(p.discountValue);
@@ -5006,15 +5006,41 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
           "Stok": Number(p.stock || 0),
           "Barcode": p.barcode || ""
         };
-      });
+      };
 
       const doExport = () => {
         if (typeof XLSX !== "undefined") {
-          const ws = XLSX.utils.json_to_sheet(data);
           const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, "Daftar Barang");
-          XLSX.writeFile(wb, `daftar-barang-${today()}.xlsx`);
-          showToast("File Excel (.xlsx) berhasil diunduh!", "success");
+
+          // 1. Sheet Utama: "Semua Barang"
+          const allData = allProducts.map(formatProduct);
+          const wsAll = XLSX.utils.json_to_sheet(allData);
+          XLSX.utils.book_append_sheet(wb, wsAll, "Semua Barang");
+
+          // 2. Grouping Per Kategori ke Sheet terpisah (Tepung, Sayur, Beras, Minuman, dll)
+          const categories = {};
+          allProducts.forEach(p => {
+             const cat = (p.category || "Umum").trim();
+             if (!categories[cat]) categories[cat] = [];
+             categories[cat].push(p);
+          });
+
+          Object.keys(categories).sort().forEach(catName => {
+             const catData = categories[catName].map(formatProduct);
+             const wsCat = XLSX.utils.json_to_sheet(catData);
+             
+             // Nama Sheet di Excel maks 30 karakter dan aman dari karakter khusus
+             let safeSheetName = catName.replace(/[\\/?*:[\]]/g, "").substring(0, 30).trim() || "Kategori";
+             let uniqueName = safeSheetName;
+             let counter = 1;
+             while (wb.SheetNames.includes(uniqueName)) {
+                uniqueName = `${safeSheetName.substring(0, 26)}_${counter++}`;
+             }
+             XLSX.utils.book_append_sheet(wb, wsCat, uniqueName);
+          });
+
+          XLSX.writeFile(wb, `daftar-barang-per-kategori-${today()}.xlsx`);
+          showToast(`File Excel (.xlsx) dengan ${Object.keys(categories).length + 1} Sheet per-kategori berhasil diunduh!`, "success");
         } else {
           downloadProductsCSV();
         }
