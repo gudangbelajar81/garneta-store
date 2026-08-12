@@ -5797,26 +5797,40 @@ function doPost(e) {
       const root = document.documentElement;
       const mode = resolveThemeMode(theme);
       const isLight = mode === "light";
-      const text = isLight ? "#132227" : "#e8fbff";
-      const muted = isLight ? "#52646a" : "#8fb4bd";
-      const panel = isLight ? "rgba(255,255,255,.88)" : "rgba(255,255,255,.055)";
-      const panel2 = isLight ? "rgba(255,255,255,.74)" : "rgba(255,255,255,.028)";
-      const field = isLight ? "rgba(255,255,255,.9)" : "rgba(6,19,24,.68)";
-      const topbar = isLight ? "rgba(255,255,255,.86)" : "rgba(9,28,34,.86)";
+      
+      const text = isLight ? "#0f172a" : "#e8fbff";
+      const muted = isLight ? "#64748b" : "#8fb4bd";
+      const panel = isLight ? "rgba(255, 255, 255, 0.95)" : "rgba(255,255,255,.055)";
+      const panel2 = isLight ? "rgba(248, 250, 252, 0.9)" : "rgba(255,255,255,.028)";
+      const field = isLight ? "rgba(241, 245, 249, 0.9)" : "rgba(6,19,24,.68)";
+      const topbar = isLight ? "rgba(255, 255, 255, 0.85)" : "rgba(9,28,34,.86)";
+      
       const sidebarDark = isReadableLight(theme.green) ? "#0b242a" : theme.green;
+      
       root.style.setProperty("--green", theme.green);
       root.style.setProperty("--orange", theme.orange);
-      root.style.setProperty("--page", theme.page);
+      
+      // Force luxurious background for light mode
+      const pageBg = isLight ? "#f4f7f9" : theme.page;
+      root.style.setProperty("--page", pageBg);
+      
       root.style.setProperty("--text", text);
       root.style.setProperty("--dark", text);
       root.style.setProperty("--soft-text", muted);
+      
+      // Add subtle shadow in light mode instead of flat gradient
+      const shadowStyle = isLight ? "0 10px 30px rgba(0,0,0,0.06)" : "0 22px 54px rgba(0,0,0,.4), inset 0 0 20px rgba(0,255,204,.05)";
+      root.style.setProperty("--card-shadow", shadowStyle);
       root.style.setProperty("--card-bg", `linear-gradient(145deg, ${panel}, ${panel2})`);
+      
       root.style.setProperty("--field-bg", field);
       root.style.setProperty("--topbar-bg", topbar);
-      root.style.setProperty("--sidebar-bg", `linear-gradient(180deg, ${sidebarDark}, #08181d)`);
-      root.style.setProperty("--nav-text", "#e8fbff");
+      
+      root.style.setProperty("--sidebar-bg", isLight ? "linear-gradient(180deg, #ffffff, #f8fafc)" : `linear-gradient(180deg, ${sidebarDark}, #08181d)`);
+      root.style.setProperty("--nav-text", isLight ? "#334155" : "#e8fbff");
+      
       root.style.setProperty("--mint", softenColor(theme.green, "#bbf7d0"));
-      root.style.setProperty("--line", softenColor(theme.green, "#dbe7dc"));
+      root.style.setProperty("--line", isLight ? "rgba(0, 0, 0, 0.08)" : softenColor(theme.green, "#dbe7dc"));
     }
 
     function bindThemeTools() {
@@ -5828,7 +5842,18 @@ function doPost(e) {
       el("theme-page").value = theme.page;
       updateThemePreview();
 
-      ["theme-mode", "theme-green", "theme-orange", "theme-page"].forEach((id) => {
+      el("theme-mode")?.addEventListener("input", (e) => {
+        if (e.target.value === "light") {
+          if (el("theme-page")) el("theme-page").value = "#f4f7f9";
+        } else if (e.target.value === "dark" || e.target.value === "auto") {
+          if (el("theme-page")) el("theme-page").value = "#050b14";
+        }
+        const next = readThemeInputs();
+        applyTheme(next);
+        updateThemePreview();
+      });
+
+      ["theme-green", "theme-orange", "theme-page"].forEach((id) => {
         el(id)?.addEventListener("input", () => {
           const next = readThemeInputs();
           applyTheme(next);
