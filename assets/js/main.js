@@ -7726,7 +7726,6 @@ window.printReceiptPDF = function() {
 
   // === Render Grid ===
   window.renderPpobGrid = function() {
-    try {
     const grid = document.getElementById('ppob-grid');
     if (!grid) return;
     if (ppobProducts.length === 0) {
