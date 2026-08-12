@@ -2,12 +2,12 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
 
     // --- GLOBAL ERROR BOUNDARY ---
     window.addEventListener('error', function(e) {
-      console.error("Global Error Caught:", e.error || e.message);
+      console.error("Global Error Caught:", e.error || e.message); if (typeof alert !== "undefined") alert("ERROR SILUMAN TERDETEKSI:\n" + (e.error || e.message));
       // Optional: Prevent default so it doesn't show in standard console (uncomment if desired)
       // e.preventDefault(); 
     });
     window.addEventListener('unhandledrejection', function(e) {
-      console.error("Unhandled Promise Rejection Caught:", e.reason);
+      console.error("Unhandled Promise Rejection Caught:", e.reason); if (typeof alert !== "undefined") alert("JANJI GAGAL (Promise Rejection):\n" + (e.reason && e.reason.message ? e.reason.message : e.reason));
     });
     // -----------------------------
     
