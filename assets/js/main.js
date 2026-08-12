@@ -4086,6 +4086,13 @@ Beras Premium 1"></textarea>
         
         ` : ""}
         ${tab === "users" ? `
+        <div class="theme-panel" style="margin-bottom: 16px; border-color: rgba(0, 255, 204, 0.4);">
+          <div class="api-section-title" style="color: #00ffcc;">Otentikasi Biometrik (Login Cepat)</div>
+          <p class="muted">Daftarkan Sidik Jari atau Face ID di perangkat ini agar Anda bisa login instan tanpa password.</p>
+          <button class="api-primary" onclick="window.registerPasskey()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-top: 12px; background: rgba(0, 255, 204, 0.1); border: 1px solid rgba(0, 255, 204, 0.4); color: #00ffcc;">
+            <span style="font-size:18px;">🛡️</span> DAFTARKAN PERANGKAT INI
+          </button>
+        </div>
         <div class="theme-panel">
           <div class="api-section-title">Manajemen Karyawan / Pengguna</div>
           <p class="muted">Tambah, edit, atau hapus akses untuk kasir dan bos.</p>
