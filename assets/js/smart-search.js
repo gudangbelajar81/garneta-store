@@ -36,6 +36,25 @@
       container.appendChild(wrapper);
     }
     bindEvents();
+    // Ensure that window.state.data is loaded before allowing searches.
+    // Some pages load data asynchronously after init, so we poll briefly.
+    const maxAttempts = 10;
+    let attempt = 0;
+    const checkDataReady = function() {
+      if (window.state && window.state.data && (window.state.data.products?.length || window.state.data.suppliers?.length)) {
+        // Data ready – if there is prefilled input, trigger search.
+        const input = document.getElementById('smart-search-input');
+        if (input && input.value.trim().length >= 1) {
+          performSearch(input.value.trim());
+        }
+        return; // stop polling
+      }
+      if (attempt < maxAttempts) {
+        attempt++;
+        setTimeout(checkDataReady, 300);
+      }
+    };
+    checkDataReady();
   };
 
   function bindEvents() {
@@ -316,6 +335,8 @@
         }
       }
     }, 100);
+  };
+
   // Auto-start initialization loop
   if (typeof window !== 'undefined') {
     if (document.readyState === 'loading') {
