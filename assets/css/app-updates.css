@@ -286,8 +286,8 @@ body { overflow-y: scroll !important; }
 .ppob-panel {
   width: 100%;
   max-width: 100%;
-  background: #ffffff !important;
-  color: #222222 !important;
+  background: var(--card-bg, #ffffff) !important;
+  color: var(--text, #222222) !important;
 }
 
 .ppob-tabs {
@@ -323,29 +323,27 @@ body { overflow-y: scroll !important; }
 }
 
 .ppob-card {
-  border: 1px solid #eee;
+  border: 1px solid var(--border-color, #eee);
   border-radius: 14px;
   padding: 12px 10px;
   text-align: left;
   position: relative;
   transition: all 0.15s ease;
-  background: #ffffff;
+  background: var(--card-bg, #ffffff);
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   min-width: 0 !important;
-  overflow: hidden !important;
-  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
 .ppob-card.selected {
   border: 2px solid #E3222B !important;
-  background: #fff8f7 !important;
+  background: rgba(227, 34, 43, 0.1) !important;
   box-shadow: 0 0 0 3px rgba(227, 34, 43, 0.15) !important;
 }
 
 .ppob-card.gangguan {
-  background: #fafafa !important;
+  background: var(--bg, #fafafa) !important;
   cursor: not-allowed !important;
   opacity: 0.55 !important;
   pointer-events: none !important;
@@ -363,7 +361,7 @@ body { overflow-y: scroll !important; }
   font-size: 13px;
   font-weight: bold;
   margin-bottom: 8px;
-  color: #222;
+  color: var(--text, #222);
   line-height: 1.3;
 }
 

@@ -20,6 +20,15 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
     window.appVersion = null;
     window.dataVersion = null;
     window.hasPendingUpdate = false;
+
+    // PPOB GLOBAL STATE (Initialized early to prevent TDZ on initial route render)
+    var ppobProducts = [];
+    var ppobActiveTab = 'Pulsa';       // Tab prabayar aktif
+    var ppobMainType  = 'prabayar';   // 'prabayar' | 'pascabayar'
+    var ppobBrand = '';
+    var ppobSelectedSku = '';
+    var ppobIsProcessing = false;
+    var ppobView = 'main';
     
     // Global listener untuk menutup dropdown menu saat klik di luar
     document.addEventListener("click", () => {
@@ -7524,13 +7533,6 @@ window.printReceiptPDF = function() {
   
   
   // --- PPOB SHOPEE LOGIC ---
-  let ppobProducts = [];
-  let ppobActiveTab = 'Pulsa';       // Tab prabayar aktif
-  let ppobMainType  = 'prabayar';   // 'prabayar' | 'pascabayar'
-  let ppobBrand = '';
-  let ppobSelectedSku = '';
-  let ppobIsProcessing = false;
-  let ppobView = 'main';
 
   // === Recent Numbers (Phonebook) ===
   function getPpobRecent() {
@@ -7549,10 +7551,10 @@ window.printReceiptPDF = function() {
     const grid = document.getElementById('ppob-grid');
     if (grid) {
       grid.innerHTML = Array(6).fill(0).map(() => `
-        <div style="border:1px solid #eee; border-radius:16px; padding:20px; background:#f9f9f9; animation:ppobPulse 1.5s ease-in-out infinite;">
-          <div style="height:10px; background:#e5e5e5; border-radius:4px; margin-bottom:10px; width:50%;"></div>
-          <div style="height:18px; background:#e0e0e0; border-radius:4px; margin-bottom:8px;"></div>
-          <div style="height:14px; background:#e8e8e8; border-radius:4px; width:60%; margin:0 auto;"></div>
+        <div style="border:1px solid var(--border-color, #eee); border-radius:16px; padding:20px; background:var(--card-bg, #f9f9f9); animation:ppobPulse 1.5s ease-in-out infinite;">
+          <div style="height:10px; background:var(--border-color, #e5e5e5); border-radius:4px; margin-bottom:10px; width:50%;"></div>
+          <div style="height:18px; background:var(--bg, #e0e0e0); border-radius:4px; margin-bottom:8px;"></div>
+          <div style="height:14px; background:var(--border-color, #e8e8e8); border-radius:4px; width:60%; margin:0 auto;"></div>
         </div>
       `).join('');
     }
@@ -7702,14 +7704,14 @@ window.printReceiptPDF = function() {
     const recent = getPpobRecent();
     if (recent.length === 0 || currentVal.length > 0) { c.innerHTML = ''; return; }
     c.innerHTML = `
-      <div style="font-size:12px; color:#aaa; margin-bottom:8px; display:flex; justify-content:space-between;">
+      <div style="font-size:12px; color:var(--soft-text, #aaa); margin-bottom:8px; display:flex; justify-content:space-between;">
         <span>📌 Pelanggan Tersimpan</span>
         <span onclick="alert('Fitur Buku Telepon Lengkap segera hadir!')" style="color:#E3222B;cursor:pointer;font-weight:600;">Lihat Semua</span>
       </div>
       <div style="display:flex; flex-wrap:wrap; gap:8px;">
-        ${recent.map(x => `<button onclick="fillPpobNumber('${x.no}')" style="padding:6px 14px; border:1px solid #eee; border-radius:20px; background:#fafafa; font-size:13px; cursor:pointer; color:#444; transition:all 0.15s; text-align:left;" onmouseover="this.style.borderColor='#E3222B';this.style.color='#E3222B';" onmouseout="this.style.borderColor='#eee';this.style.color='#444';">
+        ${recent.map(x => `<button onclick="fillPpobNumber('${x.no}')" style="padding:6px 14px; border:1px solid var(--border-color, #eee); border-radius:20px; background:var(--card-bg, #fafafa); font-size:13px; cursor:pointer; color:var(--text, #444); transition:all 0.15s; text-align:left;" onmouseover="this.style.borderColor='#E3222B';this.style.color='#E3222B';" onmouseout="this.style.borderColor='var(--border-color, #eee)';this.style.color='var(--text, #444)';">
           <div style="font-weight:${x.name ? 'bold' : 'normal'}">${x.name || x.no}</div>
-          ${x.name ? `<div style="font-size:10px; color:#888;">${x.no}</div>` : ''}
+          ${x.name ? `<div style="font-size:10px; color:var(--soft-text, #888);">${x.no}</div>` : ''}
         </button>`).join('')}
       </div>
     `;
@@ -7821,24 +7823,24 @@ window.printReceiptPDF = function() {
 
     el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
     el.innerHTML = `
-      <div style="background:#fff;border-radius:16px;padding:28px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:ppobModalIn 0.2s ease;">
-        <div style="text-align:center;margin-bottom:20px;"><div style="font-size:44px;margin-bottom:6px;">🧾</div><h3 style="margin:0;font-size:18px;color:#222;">Konfirmasi Pembayaran</h3></div>
+      <div style="background:var(--card-bg, #fff);border-radius:16px;padding:28px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:ppobModalIn 0.2s ease;">
+        <div style="text-align:center;margin-bottom:20px;"><div style="font-size:44px;margin-bottom:6px;">🧾</div><h3 style="margin:0;font-size:18px;color:var(--text, #222);">Konfirmasi Pembayaran</h3></div>
         
-        <div style="background:#fafafa;border-radius:16px;padding:16px;margin-bottom:18px;">
-          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;"><span style="color:#888;">Produk</span><span style="font-weight:600;text-align:right;max-width:180px;">${product.product_name}</span></div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;"><span style="color:#888;">Nomor Tujuan</span><span style="font-weight:600;">${custNo}</span></div>
+        <div style="background:var(--bg, #fafafa);border-radius:16px;padding:16px;margin-bottom:18px;">
+          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;"><span style="color:var(--soft-text, #888);">Produk</span><span style="font-weight:600;text-align:right;max-width:180px;color:var(--text, #222);">${product.product_name}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;"><span style="color:var(--soft-text, #888);">Nomor Tujuan</span><span style="font-weight:600;color:var(--text, #222);">${custNo}</span></div>
           
-          <div style="border-top:1px dashed #ddd; margin:10px 0; padding-top:10px;"></div>
+          <div style="border-top:1px dashed var(--border-color, #ddd); margin:10px 0; padding-top:10px;"></div>
           
-          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span style="color:#888;">Harga Dasar</span><span>${rupiah(basePrice)}</span></div>
-          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span style="color:#888;">Biaya Transaksi</span><span>${adminFee === 0 ? 'Gratis' : rupiah(adminFee)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span style="color:var(--soft-text, #888);">Harga Dasar</span><span style="color:var(--text, #222);">${rupiah(basePrice)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span style="color:var(--soft-text, #888);">Biaya Transaksi</span><span style="color:var(--text, #222);">${adminFee === 0 ? 'Gratis' : rupiah(adminFee)}</span></div>
           
-          <div style="display:flex;justify-content:space-between;padding-top:12px;margin-top:8px;border-top:1px solid #eee;font-size:14px;"><span style="color:#444;font-weight:600;">Total Bayar</span><span style="font-weight:bold;font-size:20px;color:#E3222B;">${rupiah(total)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding-top:12px;margin-top:8px;border-top:1px solid var(--border-color, #eee);font-size:14px;"><span style="color:var(--text, #444);font-weight:600;">Total Bayar</span><span style="font-weight:bold;font-size:20px;color:#E3222B;">${rupiah(total)}</span></div>
         </div>
         
-        <p style="color:#aaa;font-size:12px;text-align:center;margin-bottom:16px;">Pastikan uang sudah diterima dari pelanggan sebelum melanjutkan.</p>
+        <p style="color:var(--soft-text, #aaa);font-size:12px;text-align:center;margin-bottom:16px;">Pastikan uang sudah diterima dari pelanggan sebelum melanjutkan.</p>
         <div style="display:flex;gap:10px;">
-          <button onclick="document.getElementById('ppob-confirm-modal').remove();ppobIsProcessing=false;" style="flex:1;padding:13px;border:1px solid #ddd;border-radius:16px;background:#fff;color:#555;font-size:15px;cursor:pointer;font-weight:600;">Batal</button>
+          <button onclick="document.getElementById('ppob-confirm-modal').remove();ppobIsProcessing=false;" style="flex:1;padding:13px;border:1px solid var(--border-color, #ddd);border-radius:16px;background:var(--card-bg, #fff);color:var(--text, #555);font-size:15px;cursor:pointer;font-weight:600;">Batal</button>
           <button onclick="document.getElementById('ppob-confirm-modal').remove();window._ppobCb();" style="flex:2;padding:13px;border:none;border-radius:16px;background:#E3222B;color:#fff;font-size:15px;cursor:pointer;font-weight:bold;">✅ Proses Sekarang</button>
         </div>
       </div>
@@ -7869,7 +7871,7 @@ window.printReceiptPDF = function() {
         const total = Math.round(Number(p.sale_price));
         const sn = res.data?.sn || '-';
         const status = res.data?.status || 'Sukses';
-        const isPln = p.category === 'PLN';
+        const isSukses = status === 'Sukses';
         const refId = res.data?.ref_id || '';
 
         // Success modal (with WA Share and Save Contact)
@@ -7889,31 +7891,36 @@ window.printReceiptPDF = function() {
         const waLink = `https://wa.me/?text=${receiptText}`;
 
         sm.innerHTML = `
-          <div style="background:#fff;border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:ppobModalIn 0.2s ease;">
-            <div style="text-align:center;margin-bottom:18px;"><div style="font-size:52px;">✅</div><h3 style="margin:6px 0;color:#22c55e;font-size:18px;">Transaksi Berhasil!</h3></div>
+          <div style="background:var(--card-bg, #fff);border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:ppobModalIn 0.2s ease;">
+            <div style="text-align:center;margin-bottom:20px;">
+              <div style="font-size:50px;margin-bottom:12px;">${isSukses ? '✅' : '⏳'}</div>
+              <div style="font-size:20px;font-weight:900;color:var(--text, #222);">${isSukses ? 'Transaksi Sukses!' : 'Transaksi Diproses'}</div>
+              <div style="font-size:13px;color:var(--soft-text, #777);margin-top:4px;">${p.product_name}</div>
+            </div>
             
-            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:16px;padding:14px;margin-bottom:16px;">
-              <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span style="color:#666;">Produk</span><span style="font-weight:600;">${p.product_name}</span></div>
-              <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span style="color:#666;">Nomor</span><span style="font-weight:600;">${custNo}</span></div>
-              <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span style="color:#666;">Status</span><span id="modal-ppob-status" style="font-weight:600;color:${status==='Pending'?'#eab308':'#16a34a'};">${status} ${status==='Pending'?'<span style="font-size:10px;animation:pulse 1.5s infinite">⏳ mengecek...</span>':''}</span></div>
-              
-              <div id="modal-ppob-sn-container" style="display:${validSnInitial ? 'block' : 'none'};margin-top:10px;padding-top:10px;border-top:1px dashed #bbf7d0;">
-                <div style="color:#666;font-size:11px;margin-bottom:6px;">SN / Kode Token:</div>
+            <div style="background:var(--bg, #f8f9fa);border:1px solid var(--border-color, #eee);border-radius:12px;padding:16px;margin-bottom:20px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+                <span style="color:var(--soft-text, #666);font-size:13px;">No. Tujuan</span>
+                <span style="font-weight:bold;font-size:14px;color:var(--text, #222);">${custNo}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+                <span style="color:var(--soft-text, #666);font-size:13px;">Total</span>
+                <span style="font-weight:900;font-size:14px;color:var(--text, #222);">${rupiah(total)}</span>
+              </div>
+              <div id="modal-ppob-sn-container" style="display:${validSnInitial ? 'block' : 'none'};margin-top:16px;padding-top:16px;border-top:1px dashed var(--border-color, #ccc);">
+                <div style="font-size:11px;color:var(--soft-text, #666);margin-bottom:6px;text-align:center;text-transform:uppercase;letter-spacing:1px;">Serial Number (SN) / Token</div>
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <div id="modal-ppob-sn" style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:15px;font-weight:bold;letter-spacing:1.5px;flex:1;text-align:center;word-break:break-all;">${sn}</div>
+                  <div id="modal-ppob-sn" style="background:var(--card-bg, #fff);color:var(--text, #222);border:1px solid var(--border-color, #ddd);border-radius:8px;padding:10px;font-size:15px;font-weight:bold;letter-spacing:1.5px;flex:1;text-align:center;word-break:break-all;">${sn}</div>
                   <button onclick="navigator.clipboard.writeText(document.getElementById('modal-ppob-sn').innerText).then(()=>showToast('SN disalin!','success'))" style="padding:10px 14px;background:#E3222B;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:13px;">📋 Salin</button>
                 </div>
               </div>
             </div>
 
-            <div style="background:#fafafa; border-radius:10px; padding:12px; margin-bottom:16px; display:flex; gap:8px; align-items:center;">
-              <div style="font-size:24px;">📖</div>
-              <div style="flex:1;">
-                <div style="font-size:12px;color:#666;margin-bottom:4px;">Simpan nomor ini ke buku pelanggan?</div>
-                <div style="display:flex; gap:6px;">
-                  <input type="text" id="ppob-save-name" placeholder="Nama Pelanggan..." style="flex:1; padding:8px 12px; border:1px solid #ddd; border-radius:6px; font-size:13px; outline:none;" autocomplete="off">
-                  <button onclick="const nm=document.getElementById('ppob-save-name').value; if(nm){ savePpobRecent('${custNo}', nm); showToast('Kontak disimpan!','success'); this.disabled=true; this.innerText='Tersimpan'; }" style="padding:8px 12px; background:#444; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold;">Simpan</button>
-                </div>
+            <div style="text-align:center; margin-bottom:20px;">
+              <div style="font-size:12px; color:var(--soft-text, #666); margin-bottom:6px;">Simpan nomor ini ke Buku Telepon?</div>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="ppob-save-name" placeholder="Nama Pemilik (Maks 15 char)" maxlength="15" style="flex:1; padding:8px 12px; border:1px solid var(--border-color, #ddd); border-radius:6px; font-size:13px; outline:none; background:var(--bg, #f8f9fa); color:var(--text, #222);">
+                <button onclick="const nm=document.getElementById('ppob-save-name').value; if(nm){ savePpobRecent('${custNo}', nm); showToast('Kontak disimpan!','success'); this.disabled=true; this.innerText='Tersimpan'; }" style="padding:8px 12px; background:var(--text, #444); color:var(--card-bg, #fff); border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold;">Simpan</button>
               </div>
             </div>
 
@@ -8374,12 +8381,12 @@ window.printReceiptPDF = function() {
           </div>
 
           ${isHistory ? `
-            <div style="padding:10px 12px;font-weight:700;font-size:13px;color:#333;border-bottom:1px solid #f5f5f5;">📋 Riwayat PPOB</div>
-            <div id="ppob-history-area" style="min-height:340px;"><div style="padding:40px;text-align:center;color:#aaa;">⏳ Memuat...</div></div>
+            <div style="padding:10px 12px;font-weight:700;font-size:13px;color:var(--text, #333);border-bottom:1px solid var(--border-color, #f5f5f5);">📋 Riwayat PPOB</div>
+            <div id="ppob-history-area" style="min-height:340px;"><div style="padding:40px;text-align:center;color:var(--soft-text, #aaa);">⏳ Memuat...</div></div>
           ` : `
 
             <!-- ═ PRABAYAR / PASCABAYAR PILL TOGGLE ═ -->
-            <div id="ppob-main-tabs" style="display:flex;padding:8px 10px;gap:8px;background:#fff;border-bottom:1px solid #f0f0f0;">
+            <div id="ppob-main-tabs" style="display:flex;padding:8px 10px;gap:8px;background:var(--card-bg, #fff);border-bottom:1px solid var(--border-color, #f0f0f0);">
               <button class="ppob-type-btn${ppobMainType === 'prabayar' ? ' ppob-type-active' : ''}" data-type="prabayar" onclick="switchPpobMainType('prabayar')">📲 Prabayar</button>
               <button class="ppob-type-btn${ppobMainType === 'pascabayar' ? ' ppob-type-active' : ''}" data-type="pascabayar" onclick="switchPpobMainType('pascabayar')">🧾 Pascabayar</button>
             </div>
@@ -8412,12 +8419,12 @@ window.printReceiptPDF = function() {
             </div>
 
             <!-- ═ SHARED: INPUT ═ -->
-            <div style="padding:9px 10px 5px;background:#fff;">
+            <div style="padding:9px 10px 5px;background:var(--card-bg, #fff);">
               <div style="position:relative;">
                 <input type="text" id="ppob-customer-no" autocomplete="off" inputmode="numeric"
                   oninput="detectPpobBrand()" placeholder="Nomor HP / ID Pelanggan..." maxlength="30"
-                  style="width:100%;font-size:15px;padding:10px 38px 10px 12px;border:1.5px solid #e5e5e5;border-radius:12px;outline:none;box-sizing:border-box;transition:border-color 0.18s;color:#222;font-weight:600;"
-                  onfocus="this.style.borderColor='#E3222B'" onblur="this.style.borderColor='#e5e5e5'">
+                  style="width:100%;font-size:15px;padding:10px 38px 10px 12px;border:1.5px solid var(--border-color, #e5e5e5);border-radius:12px;outline:none;box-sizing:border-box;transition:border-color 0.18s;color:var(--text, #222);font-weight:600;background:var(--bg);"
+                  onfocus="this.style.borderColor='#E3222B'" onblur="this.style.borderColor='var(--border-color, #e5e5e5)'">
                 <div style="position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:17px;cursor:pointer;color:#E3222B;" onclick="alert('Fitur Buku Kontak segera hadir!')">📖</div>
               </div>
               <div id="ppob-input-error" style="color:#E3222B;font-size:10px;margin-top:2px;min-height:12px;"></div>
@@ -8438,8 +8445,8 @@ window.printReceiptPDF = function() {
             </div>
 
             <!-- ═ SHARED: FOOTER BAYAR ═ -->
-            <div id="ppob-footer" style="display:none;padding:10px 12px;background:#fff;border-top:1px solid #f0f0f0;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-              <div id="ppob-total-text" style="font-size:13px;color:#444;">Total: <b style="color:#E3222B;font-size:17px;">Rp0</b></div>
+            <div id="ppob-footer" style="display:none;padding:10px 12px;background:var(--card-bg, #fff);border-top:1px solid var(--border-color, #f0f0f0);align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+              <div id="ppob-total-text" style="font-size:13px;color:var(--text, #444);">Total: <b style="color:#E3222B;font-size:17px;">Rp0</b></div>
               <button id="btn-ppob-checkout" onclick="processPpobCheckout()"
                 style="background:linear-gradient(135deg,#E3222B,#ED4B53);color:#fff;border:none;padding:10px 22px;font-size:13px;border-radius:12px;cursor:pointer;font-weight:900;box-shadow:0 3px 12px rgba(227,34,43,0.35);">
                 💳 Bayar Sekarang
