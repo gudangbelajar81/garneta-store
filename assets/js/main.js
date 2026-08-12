@@ -7569,7 +7569,7 @@ window.printReceiptPDF = function() {
   }
 
   // === Main Type Switch (Prabayar / Pascabayar) ===
-  window.switchPpobMainType = function(type) { try { if(typeof alert !== 'undefined') alert('Tombol ditekan: ' + type);
+  window.switchPpobMainType = function(type) {
     ppobMainType  = type;
     ppobActiveTab = type === 'prabayar' ? 'Pulsa' : 'PLN Pascabayar';
     ppobBrand     = '';
@@ -8197,7 +8197,7 @@ window.printReceiptPDF = function() {
   };
 
   // === Sync ===
-  window.syncPpobProducts = async function() { try { if(typeof alert !== 'undefined') alert('Update ditekan');
+  window.syncPpobProducts = async function() {
     const btn = document.querySelector('button[onclick^="syncPpobProducts"]');
     if (!btn) return;
     const old = btn.innerHTML;
@@ -8231,7 +8231,7 @@ window.printReceiptPDF = function() {
   };
 
   // === History ===
-  window.showPpobHistory = async function() { try { if(typeof alert !== 'undefined') alert('Riwayat ditekan');
+  window.showPpobHistory = async function() {
     if (ppobView !== 'history') {
       ppobView = 'history';
       render();
