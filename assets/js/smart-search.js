@@ -33,9 +33,29 @@
         '<div id="smart-search-dropdown" class="smart-search-dropdown hidden">' +
           '<div id="smart-search-results" class="smart-search-results"></div>' +
         '</div>';
-      container.appendChild(wrapper);
+      if (!container.querySelector('.smart-search-wrapper')) {
+        container.appendChild(wrapper);
+      }
     }
     bindEvents();
+    
+    // Ensure data is loaded before allowing automatic searches for pre-filled inputs
+    const maxAttempts = 15;
+    let attempt = 0;
+    const checkDataReady = function() {
+      if (window.state && window.state.data && (window.state.data.products?.length > 0 || window.state.data.suppliers?.length > 0)) {
+        const input = document.getElementById('smart-search-input');
+        if (input && input.value.trim().length >= 1) {
+          performSearch(input.value.trim());
+        }
+        return;
+      }
+      if (attempt < maxAttempts) {
+        attempt++;
+        setTimeout(checkDataReady, 300);
+      }
+    };
+    checkDataReady();
   };
 
   function bindEvents() {
