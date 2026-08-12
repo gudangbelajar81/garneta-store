@@ -39,10 +39,16 @@
   };
 
   function bindEvents() {
-    if (eventsBound) return;
     const input = document.getElementById('smart-search-input');
     if (!input) return;
-    eventsBound = true;
+
+    // Direct event listener binding flag on element
+    if (input.dataset.searchBound === 'true') {
+      const query = input.value.trim();
+      if (query.length >= 1) performSearch(query);
+      return;
+    }
+    input.dataset.searchBound = 'true';
 
     // Keyboard shortcut Ctrl+K
     document.addEventListener('keydown', function(e) {
@@ -93,40 +99,42 @@
         closeDropdown();
       }
     });
+
+    // If input already has text, search immediately
+    if (input.value.trim().length >= 1) {
+      performSearch(input.value.trim());
+    }
   }
 
   function performSearch(query) {
-    if (!window.state || !window.state.data) return;
-
+    const state = window.state || {};
+    const data = state.data || {};
     const results = [];
-    const data = window.state.data;
     const lowerQuery = query.toLowerCase();
 
     // Search products (Barang)
-    if (data.products) {
-      data.products.forEach(function(p) {
-        const n = String(p.name || '').toLowerCase();
-        const c = String(p.category || '').toLowerCase();
-        const b = String(p.barcode || '').toLowerCase();
-        if (n.includes(lowerQuery) || c.includes(lowerQuery) || b.includes(lowerQuery)) {
-          results.push({ type: 'barang', data: p });
-        }
-      });
-    }
+    const products = data.products || [];
+    products.forEach(function(p) {
+      const n = String(p.name || '').toLowerCase();
+      const c = String(p.category || '').toLowerCase();
+      const b = String(p.barcode || '').toLowerCase();
+      if (n.includes(lowerQuery) || c.includes(lowerQuery) || b.includes(lowerQuery)) {
+        results.push({ type: 'barang', data: p });
+      }
+    });
 
     // Search suppliers
-    if (data.suppliers) {
-      data.suppliers.forEach(function(s) {
-        const n = String(s.name || '').toLowerCase();
-        const ph = String(s.phone || '').toLowerCase();
-        const notes = String(s.notes || '').toLowerCase();
-        if (n.includes(lowerQuery) || ph.includes(lowerQuery) || notes.includes(lowerQuery)) {
-          results.push({ type: 'supplier', data: s });
-        }
-      });
-    }
+    const suppliers = data.suppliers || [];
+    suppliers.forEach(function(s) {
+      const n = String(s.name || '').toLowerCase();
+      const ph = String(s.phone || '').toLowerCase();
+      const notes = String(s.notes || '').toLowerCase();
+      if (n.includes(lowerQuery) || ph.includes(lowerQuery) || notes.includes(lowerQuery)) {
+        results.push({ type: 'supplier', data: s });
+      }
+    });
 
-    renderResults(results.slice(0, 10), query);
+    renderResults(results.slice(0, 15), query);
     openDropdown();
   }
 
