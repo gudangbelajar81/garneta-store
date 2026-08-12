@@ -1,0 +1,293 @@
+16:       role: localStorage.getItem("role") || "Admin",
+70:            state.role = "Admin";
+83:       if (action === "login" || action === "verifySuperAdmin") {
+154:     function cuanReports() { return state.data.cuan_reports || []; }
+157:       const currentMenus = isSuperAdmin() ? superAdminMenus : adminMenus;
+177:       const superMode = state.role === "Super Admin";
+178:       el("role-label").textContent = superMode ? `Super Admin: ${state.currentUser?.name || ""}` : "Admin";
+186:           const currentMenus = isSuperAdmin() ? superAdminMenus : adminMenus;
+193:             const updateIndicator = window.hasPendingUpdate ? '<div style="width:8px; height:8px; background:var(--mint); border-radius:50%; position:absolute; top:0; right:0;"></div>' : '';
+244:                     <td><strong style="color:var(--mint); text-decoration:underline; text-underline-offset:3px;">${escapeHtml(e.name)}</strong></td>
+284:       <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); align-items: start;">
+330:                 ${input("amount", "Nominal", true, "text")}
+341:                 <thead><tr><th style="padding:4px 8px;">Tgl</th><th style="padding:4px 8px;">Nominal</th><th style="padding:4px 8px;">Ket</th><th style="padding:4px 8px; text-align:right;">Aksi</th></tr></thead>
+349:                       <button class="btn soft" style="padding:2px 4px;font-size:0.7rem;margin-right:2px; min-height:20px; height:22px; width:22px; display:inline-flex;" onclick="editBon('${c.id}')">✏️</button>
+350:                       <button class="btn soft" style="padding:2px 4px;font-size:0.7rem; min-height:20px; height:22px; width:22px; display:inline-flex;" onclick="hapusBon('${c.id}')">❌</button>
+375:                 ${input("leaveDays", "Potong Libur (Hari)", false, "number", 0)}
+393:                   <span style="color: #f43f5e; font-weight:600;">Potong Kasbon:</span>
+418:                   <input type="text" name="notes" style="height: 24px !important; min-height: 24px !important; max-height: 24px !important; padding: 0 6px !important; font-size: 0.7rem !important; border-radius: 4px !important; width: 100% !important; margin:0 !important;">
+420:                 <button type="button" id="btn-wa-persetujuan" class="btn soft" style="height: 24px !important; min-height: 24px !important; max-height: 24px !important; padding: 0 8px !important; font-size: 0.65rem !important; border-radius: 4px !important; display:flex !important; align-items:center !important; justify-content:center !important; margin:0 !important; border: 1px solid var(--border) !important; background: var(--bg-card) !important; color: var(--text-color) !important;" title="Kirim Rincian ke WA">💬 WA</button>
+421:                 <button type="submit" class="btn success" style="height: 24px !important; min-height: 24px !important; max-height: 24px !important; padding: 0 12px !important; font-size: 0.65rem !important; border-radius: 4px !important; display:flex !important; align-items:center !important; justify-content:center !important; margin:0 !important;">Cairkan Gaji</button>
+425:                 <input type="checkbox" name="resetJoinDate" checked style="width:14px !important; height:14px !important; min-height:14px !important; max-height:14px !important; margin:0 !important;"> 
+441:                     <th>Potong Bon</th>
+459:                               <button type="button" class="btn soft" onclick="printGaji('${p.id}', 'wa')" title="Kirim WA" style="padding:2px 4px; height:22px; min-height:20px; width:22px; font-size:0.7rem; display:inline-flex;">💬</button>
+460:                               <button type="button" class="btn danger" onclick="hapusRiwayatGaji('${p.id}')" title="Hapus Riwayat" style="padding:2px 4px; height:22px; min-height:20px; width:22px; font-size:0.7rem; display:inline-flex;">🗑️</button>
+500: Potong Kasbon   : ${p.totalDeductionBon > 0 ? rupiah(p.totalDeductionBon) : 'Rp 0'}
+602: Potong Kasbon   : ${p.totalDeductionBon > 0 ? rupiah(p.totalDeductionBon) : 'Rp 0'}
+771:        let defaultCicil = Math.min(totalBon, basicCalc);
+833: Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Full (Lunas)* atau mau *Dicicil Sebagian* dulu?`;
+854:         alert("Nominal cicilan tidak boleh lebih besar dari total utang kasbon!");
+861:       if (!confirm(`Yakin bayar gaji ${emp.name} sejumlah ${rupiah(net)}?\nPotong Kasbon: ${rupiah(cicil)}`)) return;
+887:       // [NEW] Global Orderan Reminder
+973:       if (["laporan", "statistik", "audit", "settings"].includes(state.route) && state.role !== "Super Admin") {
+974:         el("content").innerHTML = `<div class="card"><h2>Akses dibatasi</h2><p class="muted">Menu ini hanya bisa diakses Super Admin.</p></div>`;
+998:     const adminModules = [
+1005:       // Modul untuk Super Admin (semua)
+1006:       const superAdminModules = [
+1017:       const modules = isSuperAdmin() ? superAdminModules : adminModules;
+1026:           ${isSuperAdmin() ? stat("Keuntungan", rupiah(d.totalProfit)) : ""}
+1031:           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:16px;">
+1052:       return `<section id="neural-dashboard-container" style="min-height:calc(100vh - 140px);">
+1107:       const subTabs = isSuperAdmin() ? [
+1305: Minyak Goreng 3 45000"></textarea>
+1400:               const harga = p.salePriceEcer || p.salePrice || p.basePrice || 0;
+1486:                 price = prod.salePriceEcer || prod.salePrice || prod.basePrice || 0;
+1499:                 price = prod.salePriceEcer || prod.salePrice || prod.basePrice || 0;
+1526:       if (prod && Number(prod.discountMinQty) > 0 && qty >= Number(prod.discountMinQty)) {
+1761:                   width: 44mm; /* Dipersempit agar tidak terpotong di margin kanan kertas 57mm */
+2286:             <table class="data-table" id="ngitung-table" style="min-width: 0 !important; width: 100% !important; table-layout: fixed;">
+2348:               <div style="flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+2959:       window.orderanCart = window.orderanCart || [{ name: '', qty: 1, price: 0, modalEcer: 0 }];
+2961:           window.orderanCart.push({ name: '', qty: 1, price: 0, modalEcer: 0 });
+2970:           if (window.orderanCart.length === 0) window.orderanCart.push({ name: '', qty: 1, price: 0, modalEcer: 0 });
+2978:           const modalEl = rowDiv.querySelector('.orderan-modal-ecer');
+2979:           if (modalEl) modalEl.value = window.orderanCart[idx].modalEcer || 0;
+3000:               if (!window.orderanCart[idx].price) window.orderanCart[idx].price = prod.salePriceEcer || prod.salePrice || 0;
+3001:               window.orderanCart[idx].modalEcer = prod.basePriceEcer || prod.basePrice || 0;
+3003:               window.orderanCart[idx].modalEcer = 0;
+3010:               window.orderanCart.push({ name: '', qty: 1, price: 0, modalEcer: 0, isReady: false });
+3026:           if (window.orderanCart.length === 0) return alert("Tambahkan minimal 1 barang!");
+3048:              window.orderanCart = [{ name: '', qty: 1, price: 0, modalEcer: 0 }];
+3127:       if (state.role !== "Super Admin") {
+3217:              window.expresCart = Array.from({length: 20}, () => ({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0}));
+3220:          const totalCuan = expresRows.reduce((sum, r) => sum + (r.profit || 0), 0);
+3236:              <option value="Minyak Sawit"></option>
+3246:               <div style="display:grid; grid-template-columns: ${isSuperAdmin() ? '2fr 1fr 1fr' : '2fr 1fr'}; gap:0px; padding-bottom: 4px; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.2);">
+3249:                ${isSuperAdmin() ? '<div style="font-size:12px; color:#aaa; font-weight:bold; padding-left:6px;">CUAN</div>' : ''}
+3252:              <div style="display:grid; grid-template-columns: ${isSuperAdmin() ? '2fr 1fr 1fr' : '2fr 1fr'}; gap:0px; border-bottom:1px solid rgba(255,255,255,0.05); align-items:center;">
+3254:                <input type="number" class="jual-expres-input" value="${r.qty || ''}" oninput="window.updateExpresRow(${i}, 'qty', this.value)" min="0.1" step="0.1" style="color:#fff; border-left:1px solid rgba(255,255,255,0.05) !important;" ${i===0?'placeholder="Cth: 5"':''}>
+3255:                ${isSuperAdmin() ? `<input id="expres-jumlah-${i}" type="text" class="jual-expres-input" readonly style="background:rgba(0,0,0,0.15) !important; border-left:1px solid rgba(255,255,255,0.05) !important; color:var(--garneta-cyan) !important;" value="${r.profit > 0 ? rupiah(r.profit) : ''}" placeholder="Rp 0">` : ''}
+3265:                  ${isSuperAdmin() ? `
+3267:                    <span style="font-weight:bold; font-size:12px; margin-right:8px;">TOTAL CUAN</span>
+3268:                    <span id="expres-total" style="font-weight:bold; font-size:1rem; color:var(--garneta-cyan);">${rupiah(totalCuan)}</span>
+3271:                  <button id="btn-eksekusi-cuan" class="btn" style="background:var(--garneta-cyan); color:#000; font-weight:bold; font-size:12px; padding:4px 12px; border-radius:4px; border:none; cursor:pointer; min-height: 32px;" onclick="window.eksekusiCuan(${totalCuan})" ${totalCuan <= 0 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>🚀 Eksekusi</button>
+3290:                   <input type="number" readonly value="${item.modalEcer || 0}" class="input orderan-modal-ecer" style="width:100%; height:19px; padding:0 2px; font-size:10px; background:var(--garneta-bg); cursor:not-allowed; border-radius:4px; box-sizing:border-box;" title="Modal Ecer">
+3339:                   <div style="text-align:right; min-width:80px; ${i.isReady ? 'text-decoration:line-through; color:var(--garneta-text-muted);' : ''}">
+3429:          if (!isSuperAdmin()) {
+3430:             workspaceContent = `<div class="workspace-content"><div class="card" style="text-align:center; padding: 48px 16px;"><h3 style="color:#f43f5e; margin-top:0;">Akses Ditolak</h3><p class="muted">Hanya Super Admin yang dapat melihat laporan Cuan.</p></div></div>`;
+3432:              const reports = cuanReports();
+3433:              window.cuanLaporanTab = window.cuanLaporanTab || 'harian';
+3436:              if (window.cuanLaporanTab === 'harian') {
+3447:                  tableContent = `<table class="table"><thead><tr><th>Tanggal</th><th style="text-align:right;">Total Cuan</th></tr></thead><tbody>
+3448:                      ${sortedDates.map(d => `<tr><td>${d}</td><td style="text-align:right; color:var(--mint);">${rupiah(grouped[d])}</td></tr>`).join('')}
+3449:                      ${sortedDates.length === 0 ? '<tr><td colspan="2" class="muted" style="text-align:center;">Belum ada eksekusi cuan di bulan ini.</td></tr>' : ''}
+3451:              } else if (window.cuanLaporanTab === 'bulanan') {
+3459:                  tableContent = `<table class="table"><thead><tr><th>Bulan</th><th style="text-align:right;">Total Cuan</th></tr></thead><tbody>
+3460:                      ${sortedMonths.map(m => `<tr><td>${m}</td><td style="text-align:right; color:var(--mint);">${rupiah(grouped[m])}</td></tr>`).join('')}
+3463:              } else if (window.cuanLaporanTab === 'tahunan') {
+3471:                  tableContent = `<table class="table"><thead><tr><th>Tahun</th><th style="text-align:right;">Total Cuan</th></tr></thead><tbody>
+3472:                      ${sortedYears.map(y => `<tr><td>${y}</td><td style="text-align:right; color:var(--mint);">${rupiah(grouped[y])}</td></tr>`).join('')}
+3478:                <button class="workspace-tab ${window.cuanLaporanTab === 'harian' ? 'active' : ''}" onclick="window.setCuanLaporanTab('harian')" style="font-size: 0.8rem; padding: 6px 12px; flex:1;">Harian</button>
+3479:                <button class="workspace-tab ${window.cuanLaporanTab === 'bulanan' ? 'active' : ''}" onclick="window.setCuanLaporanTab('bulanan')" style="font-size: 0.8rem; padding: 6px 12px; flex:1;">Bulanan</button>
+3480:                <button class="workspace-tab ${window.cuanLaporanTab === 'tahunan' ? 'active' : ''}" onclick="window.setCuanLaporanTab('tahunan')" style="font-size: 0.8rem; padding: 6px 12px; flex:1;">Tahunan</button>
+3484:                  <h3 style="margin:0 0 8px 0; font-size:1rem;">🧾 Laporan Cuan</h3>
+3506:     window.eksekusiCuan = async function(total) {
+3510:         if (!confirm(`Yakin ingin mengeksekusi Total Cuan ${isSuperAdmin() ? rupiah(total) : 'Shift Ini'}? Data akan masuk ke Laporan A tanggal hari ini.`)) {
+3514:         const btn = document.getElementById('btn-eksekusi-cuan');
+3522:             await gas("add", { collection: "cuan_reports", item: payload });
+3525:             window.expresCart = Array.from({length: 20}, () => ({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0}));
+3534:             showToast("Sukses mengeksekusi cuan!", "success");
+3552:     window.setCuanLaporanTab = function(tab) {
+3553:        window.cuanLaporanTab = tab;
+3565:                const saleEcer = Number(String(prod.salePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
+3566:                const baseEcer = Number(String(prod.basePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
+3567:                row.cuanEcer = saleEcer - baseEcer;
+3570:                row.cuanEcer = 0;
+3575:        row.profit = row.qty * (row.isi || 1) * (row.cuanEcer || 0);
+3583:        const totalCuan = window.expresCart.reduce((sum, r) => sum + (r.profit || 0), 0);
+3586:            totalEl.innerText = rupiah(totalCuan);
+3592:          window.expresCart[index] = {name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0};
+3627:         const totalCuan = rows.reduce((acc, row) => acc + Number(row.cuan || 0), 0);
+3634:             <h3>Keranjang Penjualan${isSuperAdmin() ? ` - Total Cuan: <span style="color:#10b981;">${rupiah(totalCuan)}</span>` : ''}</h3>
+3702:           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+3753:       const min = prices.length ? Math.min(...prices) : 0;
+3765:             <label style="min-width:240px">Barang
+3774:             ${stat("Harga Terendah", rupiah(min))}
+3798:       return crudView("users", "Akun Super Admin", userForm(), userRows());
+3835:               <label>Nominal Kasbon (Rp)</label>
+3872:         alert('Nominal kasbon harus lebih besar dari 0!');
+3901:         users: ["Manajemen Pengguna", "Kelola akun kasir/admin dan owner (Super Admin)."],
+3934:             <h3 id="api-form-title" style="margin-top:0; color:var(--mint);">Tambah Kunci API</h3>
+3938:                 <select id="api-key-provider" required onchange="document.getElementById('api-key-url').value = this.value === 'OpenAI' ? 'https://api.openai.com/v1' : (this.value === 'Gemini' ? 'https://generativelanguage.googleapis.com' : (this.value === 'Groq' ? 'https://api.groq.com/openai/v1' : (this.value === 'DeepSeek' ? 'https://api.deepseek.com' : (this.value === 'Kie' ? 'https://api.kie.ai/codex/v1/responses' : ''))))">
+3941:                   <option value="Gemini">Gemini</option>
+3973:               <li>Pastikan selalu ada cadangan kunci untuk menjamin operasional AI berjalan lancar bak raksasa teknologi.</li>
+4102:           '--neural-mint': '#8df7df',
+4115:           '--neural-mint': '#ff66ff',
+4128:           '--neural-mint': '#93c5fd',
+4141:           '--neural-mint': '#7dd3fc',
+4229:         <div style="display:grid; grid-template-columns: ${isSuperAdmin() ? '1fr 1fr 1fr' : '1fr 1fr'}; gap:10px; grid-column: 1/-1;">
+4232:           ${isSuperAdmin() ? '<label>CUAN<input name="cuan" type="text" readonly tabindex="-1" style="background:var(--bg);font-weight:bold;"></label>' : '<input name="cuan" type="hidden">'}
+4237:           ${priceWithUnit("basePriceEcer", "unitEcer", "Harga Dasar Ecer", "Ecer", true)}
+4242:           ${priceWithUnit("salePriceEcer", "unitEcer", "Harga Jual Ecer", "Ecer", true)}
+4246:           <label>Potongan Harga (Per-Item)
+4255:           ${input("discountMinQty", "Syarat Min. Beli (Qty)", false, "number", "", "Cth: 5")}
+4321:           <div style="display:grid; grid-template-columns: ${isSuperAdmin() ? '2fr 1fr 1fr' : '2fr 1fr'}; gap:10px; grid-column: 1/-1;">
+4324:             ${isSuperAdmin() ? '<label>CUAN<input name="cuan" type="text" readonly tabindex="-1" style="background:var(--bg);font-weight:bold;"></label>' : '<input name="cuan" type="hidden">'}
+4329:             ${priceWithUnit("basePriceEcer", "unitEcer", "Harga Dasar Ecer", "Ecer", true)}
+4334:             ${priceWithUnit("salePriceEcer", "unitEcer", "Harga Jual Ecer", "Ecer", true)}
+4350:         ${isSuperAdmin() ? '<label>Potensi Cuan (Rp)<input name="cuan" type="text" readonly style="background-color:#1c2536;color:#10b981;font-weight:bold;" placeholder="Rp 0"></label>' : '<input name="cuan" type="hidden">'}
+4358:       const hasSuperAdmin = state.data.users.some((user) => user.role === "Super Admin");
+4361:         ${input("password", "Password", !hasSuperAdmin, "password")}
+4362:         ${select("role", "Hak Akses", hasSuperAdmin ? ["Admin", "Super Admin"] : ["Super Admin"])}
+4365:         <p class="muted" style="grid-column:1/-1">${hasSuperAdmin ? "Untuk mengganti password/nama, pilih akun di bawah lalu klik tombol Edit (Pena)." : "Belum ada Owner. Buat satu akun Super Admin pertama kali."}</p>
+4379:         let displayPot = "-";
+4380:         let displayMin = "-";
+4382:            displayPot = p.discountType === '%' ? p.discountValue + '%' : rupiah(p.discountValue);
+4384:         if (Number(p.discountMinQty) > 0) {
+4385:            displayMin = p.discountMinQty;
+4387:         const saleEcer = Number(String(p.salePriceEcer || '0').replace(/[^0-9]/g, '')) || 0; const baseEcer = Number(String(p.basePriceEcer || '0').replace(/[^0-9]/g, '')) || 0; return { ...p, displayPot, displayMin, cuan: saleEcer - baseEcer };
+4389:       const prodKeys   = isSuperAdmin()
+4390:         ? ["category", "name", "unit", "unitContent", "basePrice", "basePriceEcer", "salePrice", "salePriceEcer", "displayPot", "displayMin", "cuan"]
+4391:         : ["category", "name", "unit", "unitContent", "salePrice", "salePriceEcer", "displayPot", "displayMin"];
+4392:       const prodLabels = isSuperAdmin()
+4393:         ? ["Kategori", "Nama", "Satuan", "Isi/Unit", "BELI", "B.ECER", "JUAL", "J.ECER", "POT", "MIN", "CUAN"]
+4394:         : ["Kategori", "Nama", "Satuan", "Isi/Unit", "JUAL", "J.ECER", "POT", "MIN"];
+4405:       const keys = isSuperAdmin()
+4408:       const labels = isSuperAdmin()
+4451:       const cols   = isSuperAdmin() ? ["date", "product", "unitSold", "cuan"] : ["date", "product", "unitSold"];
+4452:       const labels = isSuperAdmin() ? ["Tanggal", "Nama Barang", "Unit Terjual", "Cuan"]  : ["Tanggal", "Nama Barang", "Unit Terjual"];
+4453:       return actionTable("pos", rows, cols, labels, (key, value) => key === "cuan" ? rupiah(value) : value);
+4477:       return `<div data-collection="${collection}">${table(rows, labels.concat(["Aksi"]), (row) => keys.map((key) => td(formatter ? formatter(key, row[key]) : row[key], key)).join("") + `<td class="actions" style="position:relative; overflow:visible; width:40px;"><button class="btn soft" onclick="document.querySelectorAll('.kebab-menu').forEach(m => m !== this.nextElementSibling && m.classList.add('hidden')); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();" style="padding: 2px 6px !important; font-size: 13px !important; min-height: 24px !important; line-height: 1 !important; border-radius: 4px !important;">⋮</button><div class="kebab-menu hidden" style="position:absolute; right:36px; top:50%; transform:translateY(-50%); background:var(--card-bg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.8); z-index: 50; display:flex; flex-direction:row; gap:12px; min-width:unset;"><button data-edit="${collection}" data-id="${row.id}" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">✏️</button><button data-delete="${collection}" data-id="${row.id}" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">🗑️</button></div></td>`)}</div>`;
+4508:     function priceWithUnit(namePrice, nameUnit, label, unitPlaceholder, isEcer) {
+4509:       const listOptions = isEcer 
+4512:       const dataListId = isEcer ? "satuan-ecer-list" : "satuan-list";
+4525:       if (e.target.name === 'unit' || e.target.name === 'unitEcer') {
+4540:       return ["basePrice", "basePriceEcer", "costPrice", "salePrice", "salePriceEcer", "amount", "total", "profitPerUnit", "profit", "cuan"].includes(key) ? rupiah(value) : value;
+4643:         if (product && product.discountMinQty && qty >= Number(product.discountMinQty)) {
+4741:           const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+4793:           cuan: Number(sale.profit || 0)
+4802:     function superAdmins() {
+4803:       return state.data.users.filter((user) => user.role === "Super Admin");
+4806:     function isSuperAdmin() {
+4807:       return state.role === "Super Admin";
+4810:     // Menu untuk Admin (5 menu)
+4811:     const adminMenus = [
+4822:     // Menu untuk Super Admin (semua menu)
+4823:     const superAdminMenus = [
+4833:     const menus = isSuperAdmin() ? superAdminMenus : adminMenus;
+4865:             let displayPot = "-";
+4866:             let displayMin = "-";
+4868:                displayPot = p.discountType === '%' ? p.discountValue + '%' : rupiah(p.discountValue);
+4870:             if (Number(p.discountMinQty) > 0) {
+4871:                displayMin = p.discountMinQty;
+4876:               displayEcer: p.salePriceEcer ? `${rupiah(p.salePriceEcer)}${p.unitEcer ? ' / ' + p.unitEcer : ''}` : '-',
+4877:               displayPot,
+4878:               displayMin
+4881:           const srchKeys = ["category", "name", "stock", "displayGrosir", "displayEcer", "displayPot", "displayMin"];
+4882:           const srchLabels = ["Kategori", "Nama Barang", "Stok", "Harga Grosir", "Harga Ecer", "POT", "MIN"];
+4936:               if (purchaseFormEl.elements.unitEcer) purchaseFormEl.elements.unitEcer.value = product.unitEcer || '';
+4939:               if (purchaseFormEl.elements.basePriceEcer) purchaseFormEl.elements.basePriceEcer.value = product.basePriceEcer || '';
+4993:                 unitEcer:     item.unitEcer || "-",
+4996:                 basePriceEcer:Number(String(item.basePriceEcer|| 0).replace(/[^0-9]/g, '')),
+4998:                 salePriceEcer:Number(String(item.salePriceEcer|| 0).replace(/[^0-9]/g, '')),
+5089:         const updateCuan = () => {
+5101:               let cuan = 0;
+5102:               if (Number(prod.salePriceEcer) > 0) {
+5103:                  const profitPerPcs = Number(prod.salePriceEcer) - (Number(prod.basePriceEcer) || 0);
+5104:                  cuan = profitPerPcs * (unitSold * unitContent);
+5107:                  cuan = profitPerBulk * unitSold;
+5109:               form.elements.cuan.value = cuan;
+5111:             form.elements.cuan.value = "";
+5115:         form.elements.product.addEventListener("input", updateCuan);
+5116:           form.elements.product.addEventListener("change", updateCuan);
+5117:         form.elements.unitSold.addEventListener("input", updateCuan);
+5138:             let cuan = 0;
+5139:             if (Number(prod.salePriceEcer) > 0) {
+5140:                const profitPerPcs = Number(prod.salePriceEcer) - (Number(prod.basePriceEcer) || 0);
+5141:                cuan = profitPerPcs * (unitSold * unitContent);
+5144:                cuan = profitPerBulk * unitSold;
+5154:             cuan
+5254:         watermark.style.opacity = String(Math.max(0, Math.min(Number(assets.opacity ?? defaultBrandAssets.opacity), 35)) / 100);
+5255:         watermark.style.setProperty("--watermark-size", `${Math.max(20, Math.min(Number(assets.size ?? defaultBrandAssets.size), 95))}vw`);
+5260:         watermarkText.style.setProperty("--watermark-text-size", `${Math.max(1, Math.min(Number(assets.textSize ?? defaultBrandAssets.textSize), 9))}vw`);
+5287:       root.style.setProperty("--mint", softenColor(theme.green, "#bbf7d0"));
+5570:       const luminance = 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+5571:       return luminance > 0.52;
+5604:               <summary style="cursor:pointer; font-weight:bold; color:var(--mint); margin-bottom:8px;">▾ LIHAT DAFTAR API KEY LENGKAP</summary>
+5611:               <option value="gemini" ${settings.provider === "gemini" ? "selected" : ""}>Gemini</option>
+5618:             <input id="ai-model" value="auto" placeholder="auto / gemini-2.5-flash" title="Kosongkan atau isi auto agar backend memilih model terbaik bawaan provider.">
+5625:             Analisa foto hanya memakai provider vision: Gemini, OpenAI, dan Groq. DeepSeek disimpan untuk fallback teks dan tidak dikirim gambar.
+5822:         await loadAiSettings(el("ai-provider")?.value || "gemini");
+6106:           basePriceEcer: product ? Math.round(harga / qty) : 0, // Calculate ecer price
+6118:         <thead><tr><th>Nama Barang</th><th>Qty</th><th>Harga Total</th><th>Harga Ecer</th><th>Status</th><th>Aksi</th></tr></thead>
+6124:             <td><input data-wa-field="basePriceEcer" type="text" inputmode="numeric" oninput="formatNumberInput(this)" value="${formatInitialNumber(row.basePriceEcer)}" style="width:100px"></td>
+6134:       <p class="muted">Barang yang sudah ada akan update harga dasar dan harga ecer. Barang baru akan ditambahkan ke database.</p>`;
+6172:                 basePriceEcer: Number(row.basePriceEcer || 0)
+6186:                 basePriceEcer: Number(row.basePriceEcer || 0),
+6242:         if (product && product.discountMinQty && qty >= Number(product.discountMinQty)) {
+6383:       const admins = superAdmins();
+6384:       el("login-users").innerHTML = admins.map((user) => `<option value="${user.name}"></option>`).join("");
+6393:                 const admins = superAdmins();
+6394:                 el("login-name").value = admins.length > 0 ? admins[0].name : "Admin Gudang";
+6406:       el("show-create-account").classList.toggle("hidden", admins.length > 0);
+6416:       if (superAdmins().length > 0) {
+6417:         alert("Super Admin sudah terdaftar. Hanya boleh ada satu akun Super Admin.");
+6428:            const superAdmins = state.data.users.filter(u => u.role === "Super Admin");
+6430:                  if (!name && superAdmins.length > 0) name = superAdmins[0].name;
+6438:           const res = await gas("resetAdmin");
+6439:           el("login-name").value = res.name || "Admin Gudang";
+6474:           role: "Super Admin",
+6477:         await gas("setupSuperAdmin", item);
+6486:       state.role = "Admin";
+6559:         // Auto Hitung Harga Dasar Ecer
+6560:         if (e.target.name === 'basePriceEcer' || e.target.name === 'basePrice' || e.target.name === 'unitContent') {
+6565:               if (e.target.name === 'basePriceEcer') {
+6566:                 const ecer = Number(String(e.target.value).replace(/[^0-9-]/g, '')) || 0;
+6567:                 form.basePrice.value = Math.round(ecer * unitContent);
+6570:                 form.basePriceEcer.value = Math.round(base / unitContent);
+6576:         // Auto Hitung Potensi Cuan
+6577:         if (['basePrice', 'basePriceEcer', 'salePrice', 'salePriceEcer', 'unitContent'].includes(e.target.name)) {
+6578:              const bPriceEcer = Number(String(form.basePriceEcer?.value).replace(/[^0-9-]/g, '')) || 0;
+6579:              const sPriceEcer = Number(String(form.salePriceEcer?.value).replace(/[^0-9-]/g, '')) || 0;
+6583:              let cuan = 0;
+6584:              if (sPriceEcer > 0) {
+6585:                 cuan = sPriceEcer - bPriceEcer;
+6587:                 cuan = sPrice - bPrice;
+6590:              if(form.cuan) {
+6591:                 form.cuan.value = (sPriceEcer > 0 || sPrice > 0) ? rupiah(cuan) : '';
+6592:                 form.cuan.style.color = cuan >= 0 ? '#10b981' : '#f43f5e';
+6611:         const editableFields = ["category", "name", "unit", "unitContent", "basePrice", "basePriceEcer", "salePrice", "salePriceEcer", "displayPot", "displayMin"];
+6620:         if (field === "displayPot") rawValue = product.discountValue || "";
+6621:         if (field === "displayMin") rawValue = product.discountMinQty || "";
+6627:         input.style.minWidth = "60px";
+6632:         input.style.border = "2px solid var(--mint)";
+6651:           if (field === "displayPot") {
+6654:           } else if (field === "displayMin") {
+6655:             updates.discountMinQty = val.replace(/[^0-9]/g, '');
+6656:           } else if (["basePrice", "basePriceEcer", "salePrice", "salePriceEcer", "unitContent"].includes(field)) {
+6663:           cell.innerHTML = `<span class="spinner" style="width:12px;height:12px;border:2px solid var(--mint);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;display:inline-block;"></span>`;
+6720:       if (!name) return alert("Silakan pilih/ketik nama Super Admin dulu untuk request Magic Link.");
+6738:     const name = el("login-name").value.trim() || 'Super Admin';
+6823:   if (!code || newPassword.length < 8) return showToast("Kode harus diisi dan password minimal 8 karakter.", "danger");
+6861:     showToast("Meminta otorisasi sidik jari...", "info");
+7194:     // Hitung estimasi biaya admin
+7196:     const adminFee = product.category === 'PLN' ? 2000 : 0;
+7197:     const basePrice = total - adminFee;
+7211:           <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span style="color:#888;">Biaya Transaksi</span><span>${adminFee === 0 ? 'Gratis' : rupiah(adminFee)}</span></div>
+7350:       showToast("Meminta akses printer Bluetooth...", "info");
+7454:         area.innerHTML = `<div style="overflow-x:auto;padding:16px;"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;">
+7536:             <div id="ppob-history-area" style="min-height:400px;"><div style="padding:60px;text-align:center;color:#aaa;">⏳ Memuat riwayat...</div></div>
+7539:               <div class="ppob-tab" onclick="switchPpobTab('Pulsa',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;font-weight:bold;color:#E3222B;border-bottom:3px solid #E3222B;white-space:nowrap;">📱 Pulsa</div>
+7540:               <div class="ppob-tab" onclick="switchPpobTab('Data',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;color:#666;white-space:nowrap;">📶 Data</div>
+7541:               <div class="ppob-tab" onclick="switchPpobTab('PLN',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;color:#666;white-space:nowrap;">💡 PLN</div>
+7542:               <div class="ppob-tab" onclick="switchPpobTab('Game',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;color:#666;white-space:nowrap;">🎮 Game</div>
+7543:               <div class="ppob-tab" onclick="switchPpobTab('E-Money',event)" style="flex:1;min-width:75px;text-align:center;padding:13px 8px;cursor:pointer;font-size:13px;color:#666;white-space:nowrap;">💸 E-Wallet</div>
+7546:             <div style="padding:22px 28px;min-height:420px;">
+7556:                 <div id="ppob-input-error" style="color:#E3222B;font-size:12px;margin-top:4px;min-height:14px;"></div>
+7563:               <div id="ppob-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:11px;">
+7792:            ...sale, productName, unitContent, cuan: Number(sale.profit || 0)
+7873:                         ${isSuperAdmin() ? '<th style="font-size:0.8rem; padding:0.5rem; text-align:right">Cuan</th>' : ''}
+7879:                           <td style="font-size:0.9rem; padding:0.5rem">${new Date(item.date).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}</td>
+7883:                           ${isSuperAdmin() ? `<td style="font-size:0.9rem; padding:0.5rem; text-align:right; color:${item.cuan >= 0 ? '#10b981' : '#f43f5e'}">${rupiah(item.cuan)}</td>` : ''}
+8018:               <label>Nominal (Rp)</label>
+8050:         alert('Nominal harus lebih besar dari 0!');

@@ -7602,8 +7602,10 @@ window.printReceiptPDF = function() {
     ppobActiveTab = tab;
     ppobBrand = tab === 'PLN' ? 'PLN' : '';
     ppobSelectedSku = '';
-    document.querySelectorAll('.ppob-cat').forEach(el => el.classList.remove('ppob-cat-active'));
-    if (event && event.currentTarget) event.currentTarget.classList.add('ppob-cat-active');
+    document.querySelectorAll('.ppob-cat').forEach(el => {
+      if (el.getAttribute('data-tab') === tab) el.classList.add('ppob-cat-active');
+      else el.classList.remove('ppob-cat-active');
+    });
     const inp = document.getElementById('ppob-customer-no');
     if (inp) inp.value = '';
     const bi = document.getElementById('ppob-brand-info');
@@ -7724,6 +7726,7 @@ window.printReceiptPDF = function() {
 
   // === Render Grid ===
   window.renderPpobGrid = function() {
+    try {
     const grid = document.getElementById('ppob-grid');
     if (!grid) return;
     if (ppobProducts.length === 0) {
