@@ -230,7 +230,7 @@ const PUBLIC_ACTIONS = new Set(["login", "verifySuperAdmin", "bootstrap", "dashb
 
 // Setting keys yang boleh dibaca publik (untuk branding toko di login screen)
 const PUBLIC_SETTING_KEYS = new Set(["STORE_NAME", "STORE_LOGO", "STORE_ADDRESS", "STORE_PHONE"]);
-const KASIR_COLLECTIONS = new Set(["products", "suppliers", "purchases", "sales", "priceHistory", "ngitungSales", "orders", "cuan_reports"]);
+const KASIR_COLLECTIONS = new Set(["products", "suppliers", "purchases", "sales", "priceHistory", "ngitungSales", "orders", "cuan_reports", "ppob_products"]);
 
 function verifyToken(req, res, next) {
   const action = req.body?.action;
