@@ -418,8 +418,8 @@ async function handleAction(action, payload, req) {
     clearAuditLogs: () => clearAuditLogs(),
     generateRegOptions: () => generateRegistrationOptionsWebAuthn(req),
     verifyReg: () => verifyRegistrationWebAuthn(payload, req),
-    generateAuthOptions: () => generateAuthenticationOptionsWebAuthn(payload),
-    verifyAuth: () => verifyAuthenticationWebAuthn(payload),
+    generateAuthOptions: () => generateAuthenticationOptionsWebAuthn(payload, req),
+    verifyAuth: () => verifyAuthenticationWebAuthn(payload, req),
     requestMagicLink: () => requestMagicLink(payload.phoneOrEmail),
       verifyMagicLink: () => verifyMagicLink(payload.token),
       generateRecoveryKey: () => generateRecoveryKey(req),
@@ -2407,17 +2407,40 @@ process.on("unhandledRejection", (reason) => {
 const currentChallenges = {}; // userId -> challenge
 
 const rpName = "GARNETA STORE";
-const rpID = process.env.RP_ID || "alveza-backend-production.up.railway.app";
-const origin = process.env.ORIGIN || "https://alveza-backend-production.up.railway.app";
+// Fallbacks are now handled dynamically inside the functions
+// const rpID = process.env.RP_ID || "alveza-backend-production.up.railway.app";
+// const origin = process.env.ORIGIN || "https://alveza-backend-production.up.railway.app";
+
+function getWebAuthnConfig(req) {
+  let dynamicRpID = process.env.RP_ID || "alveza-backend-production.up.railway.app";
+  let dynamicOrigin = process.env.ORIGIN || "https://alveza-backend-production.up.railway.app";
+
+  if (req && req.headers && req.headers.host) {
+    // Extract hostname without port for rpID
+    const hostParts = req.headers.host.split(':');
+    dynamicRpID = hostParts[0];
+    
+    // Construct origin
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    dynamicOrigin = `${protocol}://${req.headers.host}`;
+  }
+  
+  if (req && req.headers && req.headers.origin) {
+    dynamicOrigin = req.headers.origin;
+  }
+  
+  return { dynamicRpID, dynamicOrigin };
+}
 
 async function generateRegistrationOptionsWebAuthn(req) {
   if (!req.user) throw new Error("Harus login terlebih dahulu untuk mendaftar sidik jari.");
   
+  const { dynamicRpID } = getWebAuthnConfig(req);
   const [passkeys] = await db.query('SELECT public_key, webauthn_user_id FROM passkeys WHERE user_id = ?', [req.user.id]);
   
   const options = await simplewebauthn.generateRegistrationOptions({
     rpName,
-    rpID,
+    rpID: dynamicRpID,
     userID: req.user.id.toString(),
     userName: req.user.name,
     attestationType: "none",
@@ -2443,13 +2466,14 @@ async function verifyRegistrationWebAuthn(payload, req) {
   const expectedChallenge = currentChallenges[req.user.id];
   if (!expectedChallenge) throw new Error("Challenge tidak ditemukan atau sudah kadaluarsa.");
   
+  const { dynamicRpID, dynamicOrigin } = getWebAuthnConfig(req);
   let verification;
   try {
     verification = await simplewebauthn.verifyRegistrationResponse({
       response: payload,
       expectedChallenge,
-      expectedOrigin: origin,
-      expectedRPID: rpID,
+      expectedOrigin: dynamicOrigin,
+      expectedRPID: dynamicRpID,
     });
   } catch (error) {
     throw new Error("Verifikasi sidik jari gagal: " + error.message);
@@ -2478,7 +2502,7 @@ async function verifyRegistrationWebAuthn(payload, req) {
   throw new Error("Verifikasi sidik jari gagal.");
 }
 
-async function generateAuthenticationOptionsWebAuthn(payload) {
+async function generateAuthenticationOptionsWebAuthn(payload, req) {
   // If payload has a username, find their passkeys. Otherwise discoverable login.
   let allowCredentials = [];
   let expectedUserId = null;
@@ -2496,8 +2520,9 @@ async function generateAuthenticationOptionsWebAuthn(payload) {
     }
   }
 
+  const { dynamicRpID } = getWebAuthnConfig(req);
   const options = await simplewebauthn.generateAuthenticationOptions({
-    rpID,
+    rpID: dynamicRpID,
     allowCredentials,
     userVerification: "preferred",
   });
@@ -2507,7 +2532,7 @@ async function generateAuthenticationOptionsWebAuthn(payload) {
   return options;
 }
 
-async function verifyAuthenticationWebAuthn(payload) {
+async function verifyAuthenticationWebAuthn(payload, req) {
   const body = payload;
   let dbPasskey = null;
   let user = null;
@@ -2529,13 +2554,14 @@ async function verifyAuthenticationWebAuthn(payload) {
   const clientData = JSON.parse(clientDataJSON);
   const expectedChallenge = clientData.challenge;
 
+  const { dynamicRpID, dynamicOrigin } = getWebAuthnConfig(req);
   let verification;
   try {
     verification = await simplewebauthn.verifyAuthenticationResponse({
       response: body,
       expectedChallenge,
-      expectedOrigin: origin,
-      expectedRPID: rpID,
+      expectedOrigin: dynamicOrigin,
+      expectedRPID: dynamicRpID,
       authenticator: {
         credentialID: Buffer.from(dbPasskey.id, 'base64url'),
         credentialPublicKey: Buffer.from(dbPasskey.public_key, 'base64url'),
