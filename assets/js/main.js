@@ -7280,59 +7280,65 @@ function doPost(e) {
       }
     });
 
-    el("magic-link-login").onclick = async () => {
-      const name = el("login-name").value.trim();
-      if (!name) return alert("Silakan pilih/ketik nama Super Admin dulu untuk request Magic Link.");
-      try {
-        const res = await gas("requestMagicLink", { phoneOrEmail: name });
-        alert(res.message + "\\n\\n(DEMO LINK: " + res.demoLink + ")");
-        console.log("Demo Magic Link:", res.demoLink);
-      } catch (error) {
-        alert("Gagal request Magic Link: " + error.message);
-      }
-    };
+    if (el("magic-link-login")) {
+      el("magic-link-login").onclick = async () => {
+        const name = el("login-name").value.trim();
+        if (!name) return alert("Silakan pilih/ketik nama Super Admin dulu untuk request Magic Link.");
+        try {
+          const res = await gas("requestMagicLink", { phoneOrEmail: name });
+          alert(res.message + "\\n\\n(DEMO LINK: " + res.demoLink + ")");
+          console.log("Demo Magic Link:", res.demoLink);
+        } catch (error) {
+          alert("Gagal request Magic Link: " + error.message);
+        }
+      };
+    }
 
     
-el("webauthn-login").onclick = async () => {
-  const btn = el("webauthn-login");
-  const oldText = btn.innerHTML;
-  btn.innerHTML = '<span class="icon">⏳</span> Memproses...';
-  try {
-    const { startAuthentication } = window.SimpleWebAuthnBrowser || {};
-    if (!startAuthentication) throw new Error("Library WebAuthn belum siap.");
-    const name = el("login-name").value.trim() || 'Super Admin';
-    const options = await gas("generateAuthOptions", { name });
-    const authResp = await startAuthentication(options);
-    const verification = await gas("verifyAuth", authResp);
-    if (verification.token) {
-      localStorage.setItem("jwt_token", verification.token);
-      loginAs(verification);
-    }
-  } catch (error) {
-    console.error(error);
-    showToast("Gagal login dengan Sidik Jari: " + error.message, "danger");
-  } finally {
-    btn.innerHTML = oldText;
-  }
-};
-
-
-    el("webauthn-register").onclick = async () => {
-      try {
-        // 1. Get options from server
-        const options = await gas("generateRegOptions", {});
-        // 2. Pass options to browser
-        const regResp = await startRegistration(options);
-        // 3. Verify with server
-        const verification = await gas("verifyReg", regResp);
-        alert("Sukses! Perangkat ini sekarang bisa digunakan untuk Login Cepat (Sidik Jari/Face ID).");
-        el("login-modal").classList.add("hidden");
-        el("webauthn-register-panel").classList.add("hidden");
-      } catch (error) {
-        console.error(error);
-        alert("Gagal mendaftarkan Sidik Jari: " + error.message);
+if (el("webauthn-login")) {
+  el("webauthn-login").onclick = async () => {
+    const btn = el("webauthn-login");
+    const oldText = btn.innerHTML;
+    btn.innerHTML = '<span class="icon">⏳</span> Memproses...';
+    try {
+      const { startAuthentication } = window.SimpleWebAuthnBrowser || {};
+      if (!startAuthentication) throw new Error("Library WebAuthn belum siap.");
+      const name = el("login-name").value.trim() || 'Super Admin';
+      const options = await gas("generateAuthOptions", { name });
+      const authResp = await startAuthentication(options);
+      const verification = await gas("verifyAuth", authResp);
+      if (verification.token) {
+        localStorage.setItem("jwt_token", verification.token);
+        loginAs(verification);
       }
-    };
+    } catch (error) {
+      console.error(error);
+      showToast("Gagal login dengan Sidik Jari: " + error.message, "danger");
+    } finally {
+      btn.innerHTML = oldText;
+    }
+  };
+}
+
+
+    if (el("webauthn-register")) {
+      el("webauthn-register").onclick = async () => {
+        try {
+          // 1. Get options from server
+          const options = await gas("generateRegOptions", {});
+          // 2. Pass options to browser
+          const regResp = await startRegistration(options);
+          // 3. Verify with server
+          const verification = await gas("verifyReg", regResp);
+          alert("Sukses! Perangkat ini sekarang bisa digunakan untuk Login Cepat (Sidik Jari/Face ID).");
+          el("login-modal").classList.add("hidden");
+          el("webauthn-register-panel").classList.add("hidden");
+        } catch (error) {
+          console.error(error);
+          alert("Gagal mendaftarkan Sidik Jari: " + error.message);
+        }
+      };
+    }
 
   
 
