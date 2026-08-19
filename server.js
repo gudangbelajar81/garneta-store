@@ -283,7 +283,24 @@ function verifyToken(req, res, next) {
 }
 
 // [SECURITY] Webhook Fonnte (CS Robot Otomatis) — dengan rate limiter
-app.post("/api/webhook/fonnte", webhookLimiter, async (req, res) => {
+
+// [WEBHOOK] Digiflazz Webhook
+app.post("/api/webhook/digiflazz", async (req, res) => {
+  try {
+    const ppob = require('./ppob');
+    if (typeof ppob.handleWebhook === 'function') {
+      const ok = await ppob.handleWebhook(req.body);
+      if (ok) {
+        return res.json({ status: true, message: "Webhook processed" });
+      }
+    }
+    res.json({ status: false, message: "Ignored or not found" });
+  } catch (error) {
+    console.error("Digiflazz Webhook Error:", error);
+    res.status(500).json({ status: false, error: error.message });
+  }
+});
+\napp.post("/api/webhook/fonnte", webhookLimiter, async (req, res) => {
   try {
     const { device, sender, message, name } = req.body;
     
@@ -430,6 +447,8 @@ async function handleAction(action, payload, req) {
     setSetting: async () => { await setSetting(payload.key, payload.value); return { ok: true }; },
     ppob_sync: () => ppob.syncProducts(payload.cmd),
     ppob_topup: () => ppob.topup(payload.buyer_sku_code, payload.customer_no),
+    ppob_inquiry_pasca: () => ppob.inquiryPostpaid(payload.buyer_sku_code, payload.customer_no),
+    ppob_pay_pasca: () => ppob.payPostpaid(payload.buyer_sku_code, payload.customer_no, payload.ref_id),
     ppob_checkStatus: () => ppob.checkStatus(payload.ref_id),
 
     exportToGAS: async () => {

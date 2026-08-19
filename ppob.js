@@ -38,8 +38,9 @@ async function syncProducts(cmd = 'prepaid') {
 
   for (const currentCmd of cmds) {
     try {
+      const payloadCmd = currentCmd === 'postpaid' ? 'pasca' : currentCmd;
       const response = await axios.post(`${DIGI_URL}/price-list`, {
-        cmd: currentCmd,
+        cmd: payloadCmd,
         username: config.username,
         sign: sign
       });
@@ -55,7 +56,10 @@ async function syncProducts(cmd = 'prepaid') {
         const values = [];
 
         for (const p of chunk) {
-          const price = Number(p.price);
+          let price = Number(p.price);
+          if (isNaN(price) && p.admin !== undefined) {
+            price = Number(p.admin);
+          }
           let markup = 2000;
           if (price >= 100000 && price < 500000) markup = 5000;
           else if (price >= 500000) markup = 10000;
@@ -88,7 +92,7 @@ async function syncProducts(cmd = 'prepaid') {
         totalSynced += chunk.length;
       }
     } catch (error) {
-      const msg = error.response?.data?.data?.message || error.message;
+      const msg = error.response?.data?.data?.message || error.response?.data?.message || error.message;
       console.error(`Gagal sync ${currentCmd}: ${msg}`);
     }
   }
@@ -228,9 +232,112 @@ async function checkStatus(ref_id) {
   }
 }
 
+/**
+ * Inquiry Pascabayar (Cek Tagihan)
+ */
+async function inquiryPostpaid(buyer_sku_code, customer_no) {
+  const config = await getDigiConfig();
+  if (!config.username || !config.key) throw new Error("Konfigurasi Digiflazz belum diatur.");
+
+  const custNo = String(customer_no).trim();
+  if (!custNo) throw new Error("Nomor tujuan (ID Pelanggan) tidak boleh kosong.");
+
+  // Cek produk di database
+  const [prodRows] = await db.query("SELECT * FROM ppob_products WHERE buyer_sku_code = ? LIMIT 1", [buyer_sku_code]);
+  if (!prodRows.length) throw new Error("Produk tidak ditemukan.");
+  const product = prodRows[0];
+
+  if (product.buyer_product_status === 'gangguan') {
+    throw new Error(`Produk "${product.product_name}" sedang gangguan.`);
+  }
+
+  const ref_id = "GS-INQ-" + Date.now() + Math.random().toString(36).substring(2, 6).toUpperCase();
+  const sign = md5(config.username + config.key + ref_id);
+  const testing = String(config.key).trim().startsWith('dev-');
+
+  try {
+    const response = await axios.post(`${DIGI_URL}/transaction`, {
+      commands: "inq-pasca",
+      username: config.username,
+      buyer_sku_code: buyer_sku_code,
+      customer_no: custNo,
+      ref_id: ref_id,
+      sign: sign,
+      testing: testing
+    });
+
+    const result = response.data.data;
+    if (result.status === 'Gagal') {
+      throw new Error(result.message || 'Cek tagihan gagal.');
+    }
+
+    // result.desc contains details like customer_name, lembar_tagihan, etc.
+    return { ok: true, data: result, ref_id: ref_id };
+  } catch (error) {
+    const rawMsg = error.response?.data?.data?.message || error.response?.data?.message || error.message || 'Cek tagihan gagal';
+    throw new Error(rawMsg);
+  }
+}
+
+/**
+ * Payment Pascabayar (Bayar Tagihan)
+ */
+async function payPostpaid(buyer_sku_code, customer_no, ref_id) {
+  const config = await getDigiConfig();
+  if (!config.username || !config.key) throw new Error("Konfigurasi Digiflazz belum diatur.");
+
+  const custNo = String(customer_no).trim();
+  
+  // Cek produk
+  const [prodRows] = await db.query("SELECT * FROM ppob_products WHERE buyer_sku_code = ? LIMIT 1", [buyer_sku_code]);
+  if (!prodRows.length) throw new Error("Produk tidak ditemukan.");
+  const product = prodRows[0];
+
+  const sign = md5(config.username + config.key + ref_id);
+  const testing = String(config.key).trim().startsWith('dev-');
+
+  try {
+    const response = await axios.post(`${DIGI_URL}/transaction`, {
+      commands: "pay-pasca",
+      username: config.username,
+      buyer_sku_code: buyer_sku_code,
+      customer_no: custNo,
+      ref_id: ref_id,
+      sign: sign,
+      testing: testing
+    });
+
+    const result = response.data.data;
+    
+    // Admin fee logic for post-paid: profit is selling_price - price (price from Digiflazz)
+    // Often for postpaid, we just take the Digiflazz admin fee as profit, or add our own.
+    // The selling_price is provided by Digiflazz in the inquiry response.
+    const price = Number(result.price || 0);
+    const selling_price = Number(result.selling_price || price);
+    const profit = selling_price - price;
+
+    await db.query(`
+      INSERT INTO ppob_transactions (
+        ref_id, customer_no, buyer_sku_code, product_name, type, amount, selling_price, profit, status, sn, rc, message
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      ref_id, custNo, buyer_sku_code, product.product_name, 'Pascabayar', 
+      price, selling_price, profit,
+      result.status, result.sn || '', result.rc || '', result.message || ''
+    ]);
+
+    return { ok: true, data: result, profit: profit };
+  } catch (error) {
+    const rawMsg = error.response?.data?.data?.message || error.message || 'Pembayaran gagal';
+    throw new Error(rawMsg);
+  }
+}
+
 module.exports = {
   syncProducts,
   topup,
+  inquiryPostpaid,
+  payPostpaid,
   handleWebhook,
   checkStatus
 };

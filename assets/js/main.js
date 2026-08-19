@@ -2,12 +2,12 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
 
     // --- GLOBAL ERROR BOUNDARY ---
     window.addEventListener('error', function(e) {
-      console.error("Global Error Caught:", e.error || e.message); if (typeof alert !== "undefined") alert("ERROR SILUMAN TERDETEKSI:\n" + (e.error || e.message));
+      console.error("Global Error Caught:", e.error || e.message); console.log("Error siluman terdeteksi (suppressed)");
       // Optional: Prevent default so it doesn't show in standard console (uncomment if desired)
       // e.preventDefault(); 
     });
     window.addEventListener('unhandledrejection', function(e) {
-      console.error("Unhandled Promise Rejection Caught:", e.reason); if (typeof alert !== "undefined") alert("JANJI GAGAL (Promise Rejection):\n" + (e.reason && e.reason.message ? e.reason.message : e.reason));
+      console.error("Unhandled Promise Rejection Caught:", e.reason); console.log("Promise rejection (suppressed)");
     });
     // -----------------------------
     
@@ -3989,7 +3989,7 @@ Beras Premium 1"></textarea>
 
     function settings() {
       let tab = localStorage.getItem("settingsTab") || "api";
-      if (tab === "tema" || tab === "install") tab = "api";
+      if (tab === "tema") tab = "api";
       const titles = {
         api: ["Pusat API", "Kelola koneksi AI dari server Railway. Key tetap tersembunyi dan hanya dipakai backend."],
         warna: ["Warna Tampilan", "Racik warna dashboard, sidebar, topbar, dan halaman agar tidak membosankan."],
@@ -3998,7 +3998,8 @@ Beras Premium 1"></textarea>
         audit: ["Audit", "Catatan semua aktivitas penting yang terjadi di sistem."],
         gaji: ["Gaji & Kasbon", "Manajemen data gaji karyawan dan pinjaman (kasbon)."],
           bluetooth: ["Bluetooth Printer", "Pengaturan kertas cetak dan koneksi printer thermal Bluetooth."],
-          ppob: ["PPOB & Digiflazz", "Pengaturan API Digiflazz untuk fitur pulsa/tagihan."]
+          ppob: ["PPOB & Digiflazz", "Pengaturan API Digiflazz untuk fitur pulsa/tagihan."],
+          install: ["Install PWA", "Install aplikasi web ini ke Home Screen."]
       };
       const [title, description] = titles[tab] || titles.api;
       return `<section class="settings-page">
@@ -4011,6 +4012,7 @@ Beras Premium 1"></textarea>
           ${settingsTabButton("gaji", "GAJI & BON", tab)}
             ${settingsTabButton("bluetooth", "BLUETOOTH", tab)}
             ${settingsTabButton("ppob", "PPOB & DIGI", tab)}
+            ${settingsTabButton("install", "INSTALL", tab)}
         </div>
 
         ${tab === "api" ? `
@@ -4138,6 +4140,17 @@ Beras Premium 1"></textarea>
         </div>
         ` : ""}
           
+          
+          ${tab === "install" ? `
+          <div class="api-center-card" style="max-width: 100%;">
+            <div class="api-section-title">📲 Install Aplikasi Android / PC</div>
+            <p class="muted" style="margin-bottom:16px;">Jadikan GARNETA STORE sebagai aplikasi nyata di perangkat Anda untuk akses lebih cepat.</p>
+            <div style="background: rgba(0,255,204,0.1); border: 1px solid rgba(0,255,204,0.3); border-radius: 12px; padding: 20px; text-align: center;">
+              <button class="api-primary" id="install-pwa" type="button" style="padding: 16px; font-size: 16px; width: 100%; max-width: 300px; border-radius: 12px; margin-bottom: 12px; font-weight: bold;">📥 INSTALL APLIKASI SEKARANG</button>
+              <p style="font-size: 12px; color: var(--neural-text-soft);">Catatan: Jika tombol tidak bereaksi, gunakan menu browser (titik tiga) lalu pilih <strong>Add to Home Screen / Install App</strong>.</p>
+            </div>
+          </div>
+          ` : ""}
           ${tab === "ppob" ? `
           <div class="theme-panel">
             <div class="api-section-title">Konfigurasi Digiflazz (PPOB)</div>
@@ -7762,13 +7775,15 @@ window.printReceiptPDF = function() {
       'BPJS':                ['BPJS Kesehatan'],
       'Multifinance':        ['Multifinance'],
     };
-    const cats = catMap[ppobActiveTab] || ['Pulsa'];
+        const cats = catMap[ppobActiveTab] || ['Pulsa'];
     const filtered = ppobProducts.filter(p => {
       const brand = p.brand || '';
       const category = p.category || '';
       if (ppobBrand && brand.toUpperCase() !== ppobBrand.toUpperCase()) return false;
       return cats.some(cat => category.toLowerCase() === cat.toLowerCase());
     }).sort((a,b) => Number(a.sale_price) - Number(b.sale_price));
+
+    if (filtered.length === 1 && !ppobSelectedSku) { setTimeout(() => window.selectPpobProduct(filtered[0].buyer_sku_code), 50); }
 
     if (filtered.length === 0) {
       grid.innerHTML = `
@@ -7783,14 +7798,15 @@ window.printReceiptPDF = function() {
       const gangguan = p.buyer_product_status === 'gangguan';
       const selected = p.buyer_sku_code === ppobSelectedSku;
       return `
-        <div class="ppob-card ${selected ? 'selected' : ''} ${gangguan ? 'gangguan' : ''}" id="card-${p.buyer_sku_code}"
+        <div class="ppob-card" id="card-${p.buyer_sku_code}"
           onclick="${gangguan ? '' : `selectPpobProduct('${p.buyer_sku_code}')`}"
-          title="${gangguan ? 'Produk sedang gangguan' : ''}">
-          <div class="ppob-brand-name">${p.brand}</div>
-          <div class="ppob-product-name">${p.product_name}</div>
-          <div class="ppob-price">${rupiah(Math.round(Number(p.sale_price)))}</div>
-          ${gangguan ? '<div class="ppob-badge gangguan">GANGGUAN</div>' : ''}
-          ${selected ? '<div class="ppob-selected-mark">✅</div>' : ''}
+          title="${gangguan ? 'Produk sedang gangguan, tidak bisa dipesan' : ''}"
+          style="border:${selected ? '2px solid #E3222B' : '1px solid #eee'}; border-radius:16px; padding:18px 14px; text-align:center; position:relative; transition:all 0.15s; background:${gangguan ? '#fafafa' : selected ? '#fff8f7' : '#fff'}; cursor:${gangguan ? 'not-allowed' : 'pointer'}; opacity:${gangguan ? '0.55' : '1'}; box-shadow:${selected ? '0 0 0 3px rgba(245,61,45,0.1)' : '0 1px 4px rgba(0,0,0,0.04)'};pointer-events:${gangguan ? 'none' : 'auto'};">
+          <div style="font-size:11px; color:#bbb; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">${p.brand}</div>
+          <div style="font-size:15px; font-weight:bold; margin-bottom:10px; color:${gangguan ? '#bbb' : '#222'}; line-height:1.4;">${p.product_name}</div>
+          <div style="color:${gangguan ? '#ccc' : '#E3222B'}; font-weight:bold; font-size:18px;">${rupiah(Math.round(Number(p.sale_price)))}</div>
+          ${gangguan ? '<div style="position:absolute;top:6px;right:6px;background:#ff9800;color:#fff;padding:2px 7px;font-size:10px;border-radius:20px;font-weight:bold;">GANGGUAN</div>' : ''}
+          ${selected ? '<div style="position:absolute;top:6px;left:6px;font-size:14px;">✅</div>' : ''}
         </div>
       `;
     }).join('');
@@ -7813,7 +7829,10 @@ window.printReceiptPDF = function() {
     const p = ppobProducts.find(x => x.buyer_sku_code === ppobSelectedSku);
     if (p) {
       footer.style.display = 'flex';
-      document.getElementById('ppob-total-text').innerHTML = 'Total: <b style="color:#E3222B; font-size:20px;">' + rupiah(Math.round(Number(p.sale_price))) + '</b>';
+      const isPasca = (typeof ppobMainType !== 'undefined' && ppobMainType === 'pascabayar');
+      document.getElementById('ppob-total-text').innerHTML = isPasca ? '' : ('Total: <b style="color:#E3222B; font-size:20px;">' + rupiah(Math.round(Number(p.sale_price))) + '</b>');
+      const btnCheck = document.getElementById('btn-ppob-checkout');
+      if (btnCheck) btnCheck.innerHTML = isPasca ? '🔍 Cek Tagihan' : '💳 Bayar Sekarang';
     }
   };
 
@@ -7858,6 +7877,7 @@ window.printReceiptPDF = function() {
   };
 
   // === Checkout ===
+  // === Checkout ===
   window.processPpobCheckout = async function() {
     if (ppobIsProcessing) { showToast("Transaksi sedang diproses...", "error"); return; }
     if (!ppobSelectedSku) return;
@@ -7865,152 +7885,245 @@ window.printReceiptPDF = function() {
     if (!p) return;
     const custNo = (document.getElementById('ppob-customer-no').value || '').trim();
     if (!custNo) { showToast("Mohon isi nomor tujuan!", "error"); return; }
-    if (!/^[0-9]+$/.test(custNo)) { showToast("Nomor tujuan hanya boleh angka!", "error"); return; }
+    if (!/^[0-9A-Za-z]+$/.test(custNo)) { showToast("Format nomor tujuan tidak valid!", "error"); return; }
+    
     ppobIsProcessing = true;
+    const btn = document.getElementById('btn-ppob-checkout');
+    const oldBtnText = btn ? btn.innerHTML : "💳 Bayar Sekarang";
 
-    showPpobConfirm(p, custNo, async function() {
-      const btn = document.getElementById('btn-ppob-checkout');
-      if (btn) { btn.innerHTML = "⏳ Memproses..."; btn.disabled = true; }
+    // == JIKA PASCABAYAR ==
+    if (ppobMainType === 'pascabayar') {
+      if (btn) { btn.innerHTML = "⏳ Mengecek Tagihan..."; btn.disabled = true; }
       try {
-        const res = await gas('ppob_topup', { buyer_sku_code: p.buyer_sku_code, customer_no: custNo });
-        savePpobRecent(custNo);
-        showToast("✅ Transaksi Berhasil!", "success");
-
-        const total = Math.round(Number(p.sale_price));
-        const sn = res.data?.sn || '-';
-        const status = res.data?.status || 'Sukses';
-        const isSukses = status === 'Sukses';
-        const refId = res.data?.ref_id || '';
-
-        // Success modal (with WA Share and Save Contact)
-        const sm = document.createElement('div');
-        sm.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+        const res = await gas('ppob_inquiry_pasca', { buyer_sku_code: p.buyer_sku_code, customer_no: custNo });
+        if (btn) { btn.innerHTML = oldBtnText; btn.disabled = false; }
         
-        sm._ppobData = {
-          productName: p.product_name,
-          custNo: custNo,
-          sn: sn,
-          status: status,
-          total: total
-        };
-
-        const validSnInitial = sn && sn !== '-' && sn !== 'null' && sn !== 'undefined';
-        const receiptText = encodeURIComponent(`*STRUK PEMBAYARAN PPOB*\n\nProduk: ${p.product_name}\nNomor: ${custNo}\nStatus: ${status}\n${validSnInitial ? 'SN/Token: ' + sn + '\n' : ''}\n*Total: ${rupiah(total)}*\n\nTerima kasih telah berbelanja di Garneta Store!`);
-        const waLink = `https://wa.me/?text=${receiptText}`;
-
-        sm.innerHTML = `
-          <div style="background:var(--card-bg, #fff);border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:ppobModalIn 0.2s ease;">
+        const inqData = res.data;
+        const refId = res.ref_id;
+        const tagihan = Number(inqData.selling_price || inqData.price || 0);
+        const adminFee = Number(inqData.admin || 0);
+        const customerName = inqData.customer_name || 'Tidak diketahui';
+        
+        // Modal Confirm Pasca
+        const old = document.getElementById('ppob-pasca-modal');
+        if (old) old.remove();
+        const el = document.createElement('div');
+        el.id = 'ppob-pasca-modal';
+        el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+        el.innerHTML = `
+          <div style="background:var(--card-bg, #fff);border-radius:16px;padding:28px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:ppobModalIn 0.2s ease;">
             <div style="text-align:center;margin-bottom:20px;">
-              <div style="font-size:50px;margin-bottom:12px;">${isSukses ? '✅' : '⏳'}</div>
-              <div style="font-size:20px;font-weight:900;color:var(--text, #222);">${isSukses ? 'Transaksi Sukses!' : 'Transaksi Diproses'}</div>
+              <div style="font-size:44px;margin-bottom:6px;">🧾</div>
+              <h3 style="margin:0;font-size:18px;color:var(--text, #222);">Rincian Tagihan Pascabayar</h3>
               <div style="font-size:13px;color:var(--soft-text, #777);margin-top:4px;">${p.product_name}</div>
             </div>
             
-            <div style="background:var(--bg, #f8f9fa);border:1px solid var(--border-color, #eee);border-radius:12px;padding:16px;margin-bottom:20px;">
-              <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
-                <span style="color:var(--soft-text, #666);font-size:13px;">No. Tujuan</span>
-                <span style="font-weight:bold;font-size:14px;color:var(--text, #222);">${custNo}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
-                <span style="color:var(--soft-text, #666);font-size:13px;">Total</span>
-                <span style="font-weight:900;font-size:14px;color:var(--text, #222);">${rupiah(total)}</span>
-              </div>
-              <div id="modal-ppob-sn-container" style="display:${validSnInitial ? 'block' : 'none'};margin-top:16px;padding-top:16px;border-top:1px dashed var(--border-color, #ccc);">
-                <div style="font-size:11px;color:var(--soft-text, #666);margin-bottom:6px;text-align:center;text-transform:uppercase;letter-spacing:1px;">Serial Number (SN) / Token</div>
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <div id="modal-ppob-sn" style="background:var(--card-bg, #fff);color:var(--text, #222);border:1px solid var(--border-color, #ddd);border-radius:8px;padding:10px;font-size:15px;font-weight:bold;letter-spacing:1.5px;flex:1;text-align:center;word-break:break-all;">${sn}</div>
-                  <button onclick="navigator.clipboard.writeText(document.getElementById('modal-ppob-sn').innerText).then(()=>showToast('SN disalin!','success'))" style="padding:10px 14px;background:#E3222B;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:13px;">📋 Salin</button>
-                </div>
+            <div style="background:var(--bg, #fafafa);border-radius:16px;padding:16px;margin-bottom:18px;border:1px solid var(--border-color, #eee);">
+              <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;"><span style="color:var(--soft-text, #888);">No. Pelanggan</span><span style="font-weight:600;color:var(--text, #222);">${custNo}</span></div>
+              <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;"><span style="color:var(--soft-text, #888);">Nama</span><span style="font-weight:600;color:var(--text, #222);">${customerName}</span></div>
+              <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;"><span style="color:var(--soft-text, #888);">Periode</span><span style="font-weight:600;color:var(--text, #222);">${inqData.desc?.detail?.[0]?.periode || '-'}</span></div>
+              
+              <div style="border-top:1px dashed var(--border-color, #ddd); margin:10px 0; padding-top:10px;"></div>
+              
+              <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span style="color:var(--soft-text, #888);">Tagihan</span><span style="color:var(--text, #222);">${rupiah(tagihan - adminFee)}</span></div>
+              <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span style="color:var(--soft-text, #888);">Biaya Admin</span><span style="color:var(--text, #222);">${rupiah(adminFee)}</span></div>
+              
+              <div style="display:flex;justify-content:space-between;padding-top:12px;margin-top:8px;border-top:1px solid var(--border-color, #eee);font-size:14px;">
+                <span style="color:var(--text, #444);font-weight:600;">Total Bayar</span>
+                <span style="font-weight:bold;font-size:20px;color:#E3222B;">${rupiah(tagihan)}</span>
               </div>
             </div>
-
-            <div style="text-align:center; margin-bottom:20px;">
-              <div style="font-size:12px; color:var(--soft-text, #666); margin-bottom:6px;">Simpan nomor ini ke Buku Telepon?</div>
-              <div style="display:flex; gap:8px;">
-                <input type="text" id="ppob-save-name" placeholder="Nama Pemilik (Maks 15 char)" maxlength="15" style="flex:1; padding:8px 12px; border:1px solid var(--border-color, #ddd); border-radius:6px; font-size:13px; outline:none; background:var(--bg, #f8f9fa); color:var(--text, #222);">
-                <button onclick="const nm=document.getElementById('ppob-save-name').value; if(nm){ savePpobRecent('${custNo}', nm); showToast('Kontak disimpan!','success'); this.disabled=true; this.innerText='Tersimpan'; }" style="padding:8px 12px; background:var(--text, #444); color:var(--card-bg, #fff); border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold;">Simpan</button>
-              </div>
-            </div>
-
+            
+            <p style="color:var(--soft-text, #aaa);font-size:12px;text-align:center;margin-bottom:16px;">Pastikan Anda telah menerima uang dari pelanggan sebelum melunasi tagihan ini.</p>
             <div style="display:flex;gap:10px;">
-              <button onclick="this.closest('div[style*=fixed]').remove();" style="flex:1;padding:12px;border:1px solid #ddd;border-radius:16px;background:#fff;color:#555;font-size:14px;cursor:pointer;font-weight:600;">Tutup</button>
-              <button onclick="window.open('${waLink}', '_blank');" style="flex:1;padding:12px;background:#25D366;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Kirim WA</button>
-              <button id="btn-modal-print-pdf" style="flex:1;padding:12px;background:#333;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;" title="Print ke PDF / Printer Biasa">🖨️ PDF</button>
-              <button id="btn-modal-print-thermal" style="flex:1;padding:12px;background:#0ea5e9;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;" title="Print ke Printer Bluetooth Thermal">🖨️ Thermal</button>
+              <button onclick="document.getElementById('ppob-pasca-modal').remove();ppobIsProcessing=false;" style="flex:1;padding:13px;border:1px solid var(--border-color, #ddd);border-radius:16px;background:var(--card-bg, #fff);color:var(--text, #555);font-size:15px;cursor:pointer;font-weight:600;">Batal</button>
+              <button id="btn-pay-pasca" style="flex:2;padding:13px;border:none;border-radius:16px;background:#E3222B;color:#fff;font-size:15px;cursor:pointer;font-weight:bold;">✅ Bayar Tagihan</button>
             </div>
           </div>
         `;
-        document.body.appendChild(sm);
-
-        // Bind dynamic print handlers using live modal state
-        sm.querySelector('#btn-modal-print-pdf').onclick = () => {
-          printPpobReceipt(sm._ppobData.productName, sm._ppobData.custNo, sm._ppobData.sn, sm._ppobData.status, sm._ppobData.total);
-        };
-        sm.querySelector('#btn-modal-print-thermal').onclick = () => {
-          printPpobReceiptBluetooth(sm._ppobData.productName, sm._ppobData.custNo, sm._ppobData.sn, sm._ppobData.status, sm._ppobData.total);
-        };
-
-        // --- Active Polling Logic ---
-        if (status === 'Pending' && refId) {
-            let ppobCheckCount = 0;
-            const ppobCheckInterval = setInterval(async () => {
-                ppobCheckCount++;
-                try {
-                    const checkRes = await gas('ppob_checkStatus', { ref_id: refId });
-                    if (checkRes && checkRes.data) {
-                        const newStatus = checkRes.data.status;
-                        const newSn = checkRes.data.sn;
-                        if (newStatus) {
-                          sm._ppobData.status = newStatus;
-                          const statusEl = document.getElementById('modal-ppob-status');
-                          if (statusEl) {
-                              statusEl.innerHTML = newStatus;
-                              statusEl.style.color = newStatus === 'Sukses' ? '#16a34a' : (newStatus === 'Pending' ? '#eab308' : '#E3222B');
-                          }
-                        }
-                        if (newSn && newSn !== '-') {
-                          sm._ppobData.sn = newSn;
-                          const snContainer = document.getElementById('modal-ppob-sn-container');
-                          const snEl = document.getElementById('modal-ppob-sn');
-                          if (snContainer && snEl) {
-                              snContainer.style.display = 'block';
-                              snEl.innerText = newSn;
-                          }
-                        }
-                        if (newStatus === 'Sukses' || newStatus === 'Gagal') {
-                            clearInterval(ppobCheckInterval);
-                        }
-                    }
-                } catch(e) {
-                    console.error("Gagal cek status otomatis", e);
-                }
-                if (ppobCheckCount > 15) clearInterval(ppobCheckInterval);
-            }, 5000);
-
-            sm.addEventListener('click', (e) => {
-                if(e.target === sm || e.target.closest('button')?.innerText === 'Tutup') {
-                    clearInterval(ppobCheckInterval);
-                }
-            });
+        document.body.appendChild(el);
+        
+        const payBtn = document.getElementById('btn-pay-pasca');
+        if(payBtn) {
+          payBtn.onclick = async () => {
+            payBtn.innerHTML = "⏳ Melunasi...";
+            payBtn.disabled = true;
+            try {
+              const payRes = await gas('ppob_pay_pasca', { buyer_sku_code: p.buyer_sku_code, customer_no: custNo, ref_id: refId });
+              savePpobRecent(custNo);
+              document.getElementById('ppob-pasca-modal').remove();
+              showPpobSuccessModal(p, custNo, payRes.data, tagihan);
+            } catch (err) {
+              payBtn.innerHTML = "✅ Bayar Tagihan";
+              payBtn.disabled = false;
+              showToast(err.message || "Pembayaran gagal", "error");
+            }
+          };
         }
-        // ----------------------------
-
-
-        // Reset
-        document.getElementById('ppob-customer-no').value = '';
-        ppobSelectedSku = '';
-        ppobBrand = ppobActiveTab === 'PLN' ? 'PLN' : '';
-        renderRecentNumbers('');
-        updatePpobFooter();
-        renderBrandFilters();
-        renderPpobGrid();
-      } catch(err) {
-        showToast("❌ " + (err.message || 'Transaksi gagal'), "error");
-      } finally {
+      } catch (e) {
         ppobIsProcessing = false;
-        if (btn) { btn.innerHTML = "💳 Bayar Sekarang"; btn.disabled = false; }
+        if (btn) { btn.innerHTML = oldBtnText; btn.disabled = false; }
+        showToast(e.message || "Gagal mengecek tagihan", "error");
       }
-    });
+    } else {
+      // == JIKA PRABAYAR ==
+      showPpobConfirm(p, custNo, async function() {
+        if (btn) { btn.innerHTML = "⏳ Memproses..."; btn.disabled = true; }
+        try {
+          const res = await gas('ppob_topup', { buyer_sku_code: p.buyer_sku_code, customer_no: custNo });
+          savePpobRecent(custNo);
+          const total = Math.round(Number(p.sale_price));
+          showPpobSuccessModal(p, custNo, res.data, total);
+        } catch (e) {
+          showToast(e.message || "Transaksi gagal", "error");
+          if (btn) { btn.innerHTML = oldBtnText; btn.disabled = false; }
+          ppobIsProcessing = false;
+        }
+      });
+    }
+  };
+
+  window.showPpobSuccessModal = function(p, custNo, data, total) {
+    ppobIsProcessing = false;
+    const btn = document.getElementById('btn-ppob-checkout');
+    if (btn) { btn.innerHTML = "💳 Bayar Sekarang"; btn.disabled = false; }
+    
+    showToast("✅ Transaksi Berhasil!", "success");
+
+    const sn = data?.sn || '-';
+    const status = data?.status || 'Sukses';
+    const isSukses = status === 'Sukses';
+    const refId = data?.ref_id || '';
+    
+    const sm = document.createElement('div');
+    sm.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+    
+    sm._ppobData = {
+      productName: p.product_name,
+      custNo: custNo,
+      sn: sn,
+      status: status,
+      total: total
+    };
+
+    const validSnInitial = sn && sn !== '-' && sn !== 'null' && sn !== 'undefined';
+    const receiptText = encodeURIComponent(`*STRUK PEMBAYARAN PPOB*\n\nProduk: ${p.product_name}\nNomor: ${custNo}\nStatus: ${status}\n${validSnInitial ? 'SN/Token: ' + sn + '\n' : ''}\n*Total: ${rupiah(total)}*\n\nTerima kasih telah berbelanja di Garneta Store!`);
+    const waLink = `https://wa.me/?text=${receiptText}`;
+
+    sm.innerHTML = `
+      <div style="background:var(--card-bg, #fff);border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:ppobModalIn 0.2s ease;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <div style="font-size:50px;margin-bottom:12px;">${isSukses ? '✅' : '⏳'}</div>
+          <div style="font-size:20px;font-weight:900;color:var(--text, #222);">${isSukses ? 'Transaksi Sukses!' : 'Transaksi Diproses'}</div>
+          <div style="font-size:13px;color:var(--soft-text, #777);margin-top:4px;">${p.product_name}</div>
+        </div>
+        
+        <div style="background:var(--bg, #f8f9fa);border:1px solid var(--border-color, #eee);border-radius:12px;padding:16px;margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+            <span style="color:var(--soft-text, #666);font-size:13px;">No. Tujuan</span>
+            <span style="font-weight:bold;font-size:14px;color:var(--text, #222);">${custNo}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+            <span style="color:var(--soft-text, #666);font-size:13px;">Status</span>
+            <span id="modal-ppob-status" style="font-weight:bold;font-size:14px;color:${isSukses ? '#16a34a' : '#eab308'};">${status}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+            <span style="color:var(--soft-text, #666);font-size:13px;">Total</span>
+            <span style="font-weight:900;font-size:14px;color:var(--text, #222);">${rupiah(total)}</span>
+          </div>
+          <div id="modal-ppob-sn-container" style="display:${validSnInitial ? 'block' : 'none'};margin-top:16px;padding-top:16px;border-top:1px dashed var(--border-color, #ccc);">
+            <div style="font-size:11px;color:var(--soft-text, #666);margin-bottom:6px;text-align:center;text-transform:uppercase;letter-spacing:1px;">Serial Number (SN) / Token</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div id="modal-ppob-sn" style="background:var(--card-bg, #fff);color:var(--text, #222);border:1px solid var(--border-color, #ddd);border-radius:8px;padding:10px;font-size:15px;font-weight:bold;letter-spacing:1.5px;flex:1;text-align:center;word-break:break-all;">${sn}</div>
+              <button onclick="navigator.clipboard.writeText(document.getElementById('modal-ppob-sn').innerText).then(()=>showToast('SN disalin!','success'))" style="padding:10px 14px;background:#E3222B;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:13px;">📋 Salin</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align:center; margin-bottom:20px;">
+          <div style="font-size:12px; color:var(--soft-text, #666); margin-bottom:6px;">Simpan nomor ini ke Buku Telepon?</div>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="ppob-save-name" placeholder="Nama Pemilik (Maks 15 char)" maxlength="15" style="flex:1; padding:8px 12px; border:1px solid var(--border-color, #ddd); border-radius:6px; font-size:13px; outline:none; background:var(--bg, #f8f9fa); color:var(--text, #222);">
+            <button onclick="const nm=document.getElementById('ppob-save-name').value; if(nm){ savePpobRecent('${custNo}', nm); showToast('Kontak disimpan!','success'); this.disabled=true; this.innerText='Tersimpan'; }" style="padding:8px 12px; background:var(--text, #444); color:var(--card-bg, #fff); border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold;">Simpan</button>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;">
+          <button onclick="this.closest('div[style*=fixed]').remove();" style="flex:1;padding:12px;border:1px solid #ddd;border-radius:16px;background:#fff;color:#555;font-size:14px;cursor:pointer;font-weight:600;">Tutup</button>
+          <button onclick="window.open('${waLink}', '_blank');" style="flex:1;padding:12px;background:#25D366;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Kirim WA</button>
+          <button id="btn-modal-print-pdf" style="flex:1;padding:12px;background:#333;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;" title="Print ke PDF / Printer Biasa">🖨️ PDF</button>
+          <button id="btn-modal-print-thermal" style="flex:1;padding:12px;background:#0ea5e9;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;" title="Print ke Printer Bluetooth Thermal">🖨️ Thermal</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(sm);
+
+    // Bind dynamic print handlers
+    if(sm.querySelector('#btn-modal-print-pdf')) {
+      sm.querySelector('#btn-modal-print-pdf').onclick = () => {
+        if(window.printPpobReceipt) window.printPpobReceipt(sm._ppobData.productName, sm._ppobData.custNo, sm._ppobData.sn, sm._ppobData.status, sm._ppobData.total);
+        else showToast('Fitur cetak PDF belum tersedia', 'error');
+      };
+    }
+    if(sm.querySelector('#btn-modal-print-thermal')) {
+      sm.querySelector('#btn-modal-print-thermal').onclick = () => {
+        if(window.printPpobReceiptBluetooth) window.printPpobReceiptBluetooth(sm._ppobData.productName, sm._ppobData.custNo, sm._ppobData.sn, sm._ppobData.status, sm._ppobData.total);
+        else showToast('Fitur cetak Thermal belum tersedia', 'error');
+      };
+    }
+
+    // --- Active Polling Logic ---
+    if (status === 'Pending' && refId) {
+        let ppobCheckCount = 0;
+        const ppobCheckInterval = setInterval(async () => {
+            ppobCheckCount++;
+            try {
+                const checkRes = await gas('ppob_checkStatus', { ref_id: refId });
+                if (checkRes && checkRes.data) {
+                    const newStatus = checkRes.data.status;
+                    const newSn = checkRes.data.sn;
+                    if (newStatus) {
+                      sm._ppobData.status = newStatus;
+                      const statusEl = document.getElementById('modal-ppob-status');
+                      if (statusEl) {
+                          statusEl.innerHTML = newStatus;
+                          statusEl.style.color = newStatus === 'Sukses' ? '#16a34a' : (newStatus === 'Pending' ? '#eab308' : '#E3222B');
+                      }
+                    }
+                    if (newSn && newSn !== '-') {
+                      sm._ppobData.sn = newSn;
+                      const snContainer = document.getElementById('modal-ppob-sn-container');
+                      const snEl = document.getElementById('modal-ppob-sn');
+                      if (snContainer && snEl) {
+                          snContainer.style.display = 'block';
+                          snEl.innerText = newSn;
+                      }
+                    }
+                    if (newStatus === 'Sukses' || newStatus === 'Gagal') {
+                        clearInterval(ppobCheckInterval);
+                    }
+                }
+            } catch(e) {
+                console.error("Gagal cek status otomatis", e);
+            }
+            if (ppobCheckCount > 15) clearInterval(ppobCheckInterval);
+        }, 5000);
+
+        sm.addEventListener('click', (e) => {
+            if(e.target === sm || e.target.closest('button')?.innerText === 'Tutup') {
+                clearInterval(ppobCheckInterval);
+            }
+        });
+    }
+    
+    // Reset inputs
+    document.getElementById('ppob-customer-no').value = '';
+    ppobSelectedSku = '';
+    ppobBrand = ppobActiveTab === 'PLN' ? 'PLN' : '';
+    renderRecentNumbers('');
+    updatePpobFooter();
+    renderBrandFilters();
+    renderPpobGrid();
   };
 
   // === Print Receipt ===
