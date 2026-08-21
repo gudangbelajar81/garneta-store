@@ -242,18 +242,35 @@
     const installBtn = document.getElementById('dashboard-install-btn');
     if (installBtn) {
       installBtn.addEventListener('click', async () => {
-        if (!window.deferredInstallPrompt) {
+        // Cek apakah sedang dibuka di aplikasi PWA (standalone)
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        
+        if (isStandalone) {
           Swal.fire({
-            title: 'Otomatisasi Tidak Tersedia',
-            html: 'Browser Anda tidak mendukung instalasi 1-klik (mungkin karena sudah terinstal, atau Anda menggunakan iPhone).<br><br><b>PENGGUNA ANDROID/PC:</b><br>Klik ikon titik tiga di pojok kanan atas browser, lalu pilih <b>Add to Home Screen / Install App</b>.<br><br><b>PENGGUNA iPHONE/iPad:</b><br>Buka web ini di Safari, tap ikon <b>Share</b> di bawah, lalu pilih <b>Add to Home Screen</b>.',
-            icon: 'info',
-            confirmButtonText: 'Mengerti',
+            title: 'Sudah Terinstal! 🎉',
+            text: 'Anda saat ini sedang membuka GARNETA dari aplikasi yang sudah terinstal di perangkat ini.',
+            icon: 'success',
             confirmButtonColor: '#00ffcc',
             background: '#0b1f24',
             color: '#fff'
           });
           return;
         }
+
+        if (!window.deferredInstallPrompt) {
+          Swal.fire({
+            title: 'Sudah Terinstal / Tidak Didukung',
+            html: 'GARNETA sepertinya <b>sudah terinstal</b> di HP/PC ini (silakan cek layar utama/Home Screen Anda).<br><br>Jika belum terinstal, browser Anda mungkin tidak mendukung instalasi otomatis (seperti iPhone/Safari). Anda bisa menginstalnya secara manual:<br><br><b>PENGGUNA ANDROID/PC:</b><br>Klik ikon titik tiga di pojok kanan atas browser, lalu pilih <b>Add to Home Screen / Install App</b>.<br><br><b>PENGGUNA iPHONE/iPad:</b><br>Buka web ini di Safari, tap ikon <b>Share</b> di bawah, lalu pilih <b>Add to Home Screen</b>.',
+            icon: 'info',
+            confirmButtonText: 'Oke, Mengerti',
+            confirmButtonColor: '#00ffcc',
+            background: '#0b1f24',
+            color: '#fff'
+          });
+          return;
+        }
+        
+        // Jika ada prompt otomatis (belum terinstal & didukung browser)
         window.deferredInstallPrompt.prompt();
         await window.deferredInstallPrompt.userChoice;
         window.deferredInstallPrompt = null;
