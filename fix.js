@@ -1,51 +1,24 @@
-﻿const fs = require('fs');
-let html = fs.readFileSync('index.html', 'utf8');
+const fs = require('fs');
+let txt = fs.readFileSync('assets/js/main.js', 'utf8');
 
-// The broken string we want to fix:
-// </div>\n        ;\n      }
-// or literal \n in the file.
+const badStart = '} catch(e) {\\n      showToast("Gagal memuat katalog PPOB", "error");';
+const badEnd = 'if (filtered.length === 1 && !ppobSelectedSku) { setTimeout(() => window.selectPpobProduct(filtered[0].buyer_sku_code), 50); }';
 
-// Let's just use regex to replace everything from <!-- INLINE POS CHECKOUT --> to function kalkulator()
-const regex = /<!-- INLINE POS CHECKOUT -->[\s\S]*?(?=function kalkulator\(\) {)/;
+const idx1 = txt.indexOf('} catch(e) {\r\n      showToast("Gagal memuat katalog PPOB", "error");');
+const idx2 = txt.indexOf('} catch(e) {\n      showToast("Gagal memuat katalog PPOB", "error");');
+const idx = idx1 > -1 ? idx1 : idx2;
 
-const fixed_html = <!-- INLINE POS CHECKOUT -->
-              <div class="ngitung-inline-checkout" style="padding: 16px; background: rgba(0,0,0,0.2); border-radius: 12px; margin-top: 16px; border: 1px solid rgba(255,255,255,0.05);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                  <span style="color: #aaa; font-size: 0.85rem;">Total Belanja</span>
-                  <span id="ngitung-inline-total" style="font-size: 1.25rem; font-weight: 900; color: #ee4d2d;">Rp 0</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 12px;">
-                  <span style="color: #aaa; font-size: 0.85rem; flex: 1;">Jumlah Bayar</span>
-                  <input type="number" id="ngitung-inline-bayar" inputmode="numeric" placeholder="0" oninput="ngitungHandleBayarInput()" style="flex: 1; text-align: right; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px 12px; border-radius: 8px; font-weight: 900; font-size: 1.1rem; width: 100%;">
-                </div>
-                
-                <div id="ngitung-inline-status-container" class="hidden" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 12px; border-radius: 8px;">
-                  <span id="ngitung-inline-status-label" style="font-size: 0.85rem; font-weight: 800;">Status</span>
-                  <span id="ngitung-inline-status-value" style="font-size: 1.1rem; font-weight: 900;">-</span>
-                </div>
-                
-                <div id="ngitung-inline-customer-container" class="hidden" style="margin-bottom: 16px;">
-                  <input type="text" id="ngitung-inline-customer" placeholder="Nama Pelanggan (Wajib untuk Hutang)" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px; border-radius: 8px;">
-                </div>
-                
-                <div style="display: flex; gap: 8px; align-items: center;">
-                  <button class="btn" onclick="ngitungProcessCheckout('save')" style="background: linear-gradient(135deg, #f53d2d, #ff6633); color: #fff; font-weight: 800; border: none; padding: 12px; border-radius: 8px; flex: 1; text-transform: uppercase;">Simpan</button>
-                  <button class="btn" onclick="ngitungProcessCheckout('pdf')" style="background: #00a8ff; border: none; color: #fff; padding: 12px; border-radius: 8px; font-size: 1.2rem; width: 48px; padding: 0; display:flex; justify-content:center; align-items:center;" title="Cetak PDF">📄</button>
-                  <button class="btn" onclick="ngitungProcessCheckout('bluetooth')" style="background: var(--GARNETA STORE-cyan); color: #000; border: none; padding: 12px; border-radius: 8px; font-size: 1.2rem; width: 48px; padding: 0; display:flex; justify-content:center; align-items:center;" title="Bluetooth">🖨️</button>
-                  <button class="btn" onclick="ngitungProcessCheckout('wa')" style="background: #25D366; border: none; color: #fff; padding: 12px; border-radius: 8px; font-size: 1.2rem; width: 48px; padding: 0; display:flex; justify-content:center; align-items:center;" title="Kirim WA">💬</button>
-                </div>
-              </div>
-              
-            </div>
-        \ ;
-      }
-
-      ;
-
-html = html.replace(regex, fixed_html);
-
-// Also remove literal \n that was accidentally injected
-html = html.replace(/\\n        ;/g, '');
-
-fs.writeFileSync('index.html', html, 'utf8');
-console.log('Fixed syntax error via Node script!');
+if (idx > -1) {
+  const targetEnd = 'if (filtered.length === 1 && !ppobSelectedSku) { setTimeout(() => window.selectPpobProduct(filtered[0].buyer_sku_code), 50); }';
+  const endIdx = txt.indexOf(targetEnd, idx);
+  if (endIdx > -1) {
+    // Cut out everything from idx up to just before endIdx
+    txt = txt.substring(0, idx) + txt.substring(endIdx);
+    fs.writeFileSync('assets/js/main.js', txt);
+    console.log('Fixed duplication! Sliced from ' + idx + ' to ' + endIdx);
+  } else {
+    console.log('endIdx not found');
+  }
+} else {
+  console.log('idx not found');
+}

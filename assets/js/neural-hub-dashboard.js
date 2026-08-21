@@ -239,12 +239,19 @@
         }
       }
     });
-
     const installBtn = document.getElementById('dashboard-install-btn');
     if (installBtn) {
       installBtn.addEventListener('click', async () => {
         if (!window.deferredInstallPrompt) {
-          alert("Tombol otomatis tidak tersedia.\n\nJika Anda pakai iPhone, silakan ikuti petunjuk tertulis (Pilih ikon Share -> Add to Home Screen).\n\nJika Android, pilih 'Add to Home Screen' atau 'Install App' dari menu browser (titik 3 di kanan atas).");
+          Swal.fire({
+            title: 'Otomatisasi Tidak Tersedia',
+            html: 'Browser Anda tidak mendukung instalasi 1-klik (mungkin karena sudah terinstal, atau Anda menggunakan iPhone).<br><br><b>PENGGUNA ANDROID/PC:</b><br>Klik ikon titik tiga di pojok kanan atas browser, lalu pilih <b>Add to Home Screen / Install App</b>.<br><br><b>PENGGUNA iPHONE/iPad:</b><br>Buka web ini di Safari, tap ikon <b>Share</b> di bawah, lalu pilih <b>Add to Home Screen</b>.',
+            icon: 'info',
+            confirmButtonText: 'Mengerti',
+            confirmButtonColor: '#00ffcc',
+            background: '#0b1f24',
+            color: '#fff'
+          });
           return;
         }
         window.deferredInstallPrompt.prompt();
