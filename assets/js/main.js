@@ -3998,8 +3998,7 @@ Beras Premium 1"></textarea>
         audit: ["Audit", "Catatan semua aktivitas penting yang terjadi di sistem."],
         gaji: ["Gaji & Kasbon", "Manajemen data gaji karyawan dan pinjaman (kasbon)."],
           bluetooth: ["Bluetooth Printer", "Pengaturan kertas cetak dan koneksi printer thermal Bluetooth."],
-          ppob: ["PPOB & Digiflazz", "Pengaturan API Digiflazz untuk fitur pulsa/tagihan."],
-          install: ["Install PWA", "Install aplikasi web ini ke Home Screen."]
+          ppob: ["PPOB & Digiflazz", "Pengaturan API Digiflazz untuk fitur pulsa/tagihan."]
       };
       const [title, description] = titles[tab] || titles.api;
       return `<section class="settings-page">
@@ -4012,7 +4011,6 @@ Beras Premium 1"></textarea>
           ${settingsTabButton("gaji", "GAJI & BON", tab)}
             ${settingsTabButton("bluetooth", "BLUETOOTH", tab)}
             ${settingsTabButton("ppob", "PPOB & DIGI", tab)}
-            ${settingsTabButton("install", "INSTALL", tab)}
         </div>
 
         ${tab === "api" ? `
@@ -4141,16 +4139,7 @@ Beras Premium 1"></textarea>
         ` : ""}
           
           
-          ${tab === "install" ? `
-          <div class="api-center-card" style="max-width: 100%;">
-            <div class="api-section-title">📲 Install Aplikasi Android / PC</div>
-            <p class="muted" style="margin-bottom:16px;">Jadikan GARNETA STORE sebagai aplikasi nyata di perangkat Anda untuk akses lebih cepat.</p>
-            <div style="background: rgba(0,255,204,0.1); border: 1px solid rgba(0,255,204,0.3); border-radius: 12px; padding: 20px; text-align: center;">
-              <button class="api-primary" id="install-pwa" type="button" style="padding: 16px; font-size: 16px; width: 100%; max-width: 300px; border-radius: 12px; margin-bottom: 12px; font-weight: bold;">📥 INSTALL APLIKASI SEKARANG</button>
-              <p style="font-size: 12px; color: var(--neural-text-soft);">Catatan: Jika tombol tidak bereaksi, gunakan menu browser (titik tiga) lalu pilih <strong>Add to Home Screen / Install App</strong>.</p>
-            </div>
-          </div>
-          ` : ""}
+
           ${tab === "ppob" ? `
           <div class="theme-panel">
             <div class="api-section-title">Konfigurasi Digiflazz (PPOB)</div>
