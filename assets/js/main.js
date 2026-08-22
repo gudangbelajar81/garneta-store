@@ -82,9 +82,9 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
            if (!silentAuthError) {
                showToast("Sesi habis atau ditolak. Silakan login kembali.", "error");
                renderShell();
-               el("content").innerHTML = `<div class="card" style="text-align:center; padding: 40px; margin-top:20px;"><h2>Sesi Kedaluwarsa</h2><p>Akses ditolak karena sesi tidak valid. Silakan login kembali.</p></div>`;
-               const loginBtn = el("super-login");
-               if(loginBtn) loginBtn.click();
+               el("content").innerHTML = `<div class="card" style="text-align:center; padding: 40px; margin-top:20px;"><h2>Sesi Kedaluwarsa</h2><p>Akses ditolak karena sesi tidak valid. Silakan tekan tombol <strong>MASUK SUPER ADMIN</strong> di atas untuk login kembali.</p></div>`;
+               // [FIX] Auto-popup login dimatikan. Hanya muncul saat tombol MASUK SUPER ADMIN diklik.
+               // if(loginBtn) loginBtn.click(); // DILARANG auto-popup
            }
            throw new Error(result.message);
         }
@@ -4645,8 +4645,14 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       </table></div>`;
     }
 
-    function actionTable(collection, rows, keys, labels, formatter) {
-      return `<div data-collection="${collection}">${table(rows, labels.concat(["Aksi"]), (row) => keys.map((key) => td(formatter ? formatter(key, row[key]) : row[key], key)).join("") + `<td class="actions" style="position:relative; overflow:visible; width:40px;"><button class="btn soft" onclick="document.querySelectorAll('.kebab-menu').forEach(m => m !== this.nextElementSibling && m.classList.add('hidden')); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();" style="padding: 2px 6px !important; font-size: 13px !important; min-height: 24px !important; line-height: 1 !important; border-radius: 4px !important;">⋮</button><div class="kebab-menu hidden" style="position:absolute; right:36px; top:50%; transform:translateY(-50%); background:var(--card-bg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.8); z-index: 50; display:flex; flex-direction:row; gap:12px; min-width:unset;"><button data-edit="${collection}" data-id="${row.id}" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">✏️</button><button data-delete="${collection}" data-id="${row.id}" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">🗑️</button></div></td>`)}</div>`;
+        function actionTable(collection, rows, keys, labels, formatter) {
+      let finalLabels = labels.concat(["Aksi"]);
+      if (collection === "products") finalLabels = ["☑️"].concat(finalLabels);
+      return `<div data-collection="${collection}">${table(rows, finalLabels, (row) => {
+        const isChecked = (window.expresCart || window.getInitialExpresCart())?.some(r => (r.name || "").trim().toLowerCase() === (row.name || "").trim().toLowerCase()) ? "checked" : "";
+        const prefix = collection === "products" ? `<td style="width:30px; text-align:center;"><input type="checkbox" style="width:16px; height:16px; cursor:pointer; accent-color:var(--garneta-cyan);" onchange="window.toggleExpresItem('${row.id}', this.checked)" ${isChecked}></td>` : "";
+        return prefix + keys.map((key) => td(formatter ? formatter(key, row[key]) : row[key], key)).join("") + `<td class="actions" style="position:relative; overflow:visible; width:40px;"><button class="btn soft" onclick="document.querySelectorAll('.kebab-menu').forEach(m => m !== this.nextElementSibling && m.classList.add('hidden')); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();" style="padding: 2px 6px !important; font-size: 13px !important; min-height: 24px !important; line-height: 1 !important; border-radius: 4px !important;">⋮</button><div class="kebab-menu hidden" style="position:absolute; right:36px; top:50%; transform:translateY(-50%); background:var(--card-bg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.8); z-index: 50; display:flex; flex-direction:row; gap:12px; min-width:unset;"><button data-duplicate="${collection}" data-id="${row.id}" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none; display: ${collection === 'products' ? 'inline-block' : 'none'};" title="Duplikat">📄</button><button data-edit="${collection}" data-id="${row.id}" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">✏️</button><button data-delete="${collection}" data-id="${row.id}" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">🗑️</button></div></td>`;
+      })}</div>`;
     }
 
     function simpleTable(rows, keys, labels, formatter) {
@@ -5562,6 +5568,18 @@ function doPost(e) {
             return;
           }
           fillForm(button.dataset.edit, button.dataset.id);
+        };
+      });
+
+      document.querySelectorAll("[data-duplicate]").forEach((button) => {
+        button.onclick = () => {
+          fillForm(button.dataset.duplicate, button.dataset.id);
+          // Tunggu sebentar agar render() selesai mengganti DOM
+          setTimeout(() => {
+              const form = document.querySelector(`form[data-form="${button.dataset.duplicate}"]`);
+              if (form && form.elements.id) form.elements.id.value = "";
+              if (window.showToast) window.showToast("Data diduplikat. Silakan ubah lalu Simpan.", "info");
+          }, 50);
         };
       });
 
@@ -7252,7 +7270,7 @@ function doPost(e) {
       const msg = error?.message || String(error);
       if (msg.includes("Akses ditolak") || msg.includes("login") || msg.includes("401")) {
         el("content").innerHTML = `<div class="card" style="text-align:center; padding: 40px; margin-top:20px;"><h2>Sesi Kedaluwarsa 🔒</h2><p>Akses ditolak karena sesi tidak valid. Silakan login kembali.</p></div>`;
-        el("super-login").click();
+        // [FIX] Auto-popup login dimatikan. Hanya muncul saat tombol MASUK SUPER ADMIN diklik.
       } else {
         el("content").innerHTML = `<div class="card"><h2>Error</h2><p>${error.message}</p></div>`;
       }
@@ -9061,3 +9079,47 @@ window.deleteManualCashflow = async function(id) {
         alert("Gagal menghapus: " + err.message);
     }
 };
+
+    window.toggleExpresItem = function(id, checked) {
+        if (!window.expresCart) window.expresCart = window.getInitialExpresCart();
+        const product = (window.state && window.state.data && window.state.data.products || []).find(p => String(p.id) === String(id));
+        if (!product) return;
+        
+        const productName = (product.name || "").trim();
+        
+        if (checked) {
+            // Cek jika sudah ada
+            const exists = window.expresCart.some(r => (r.name || "").trim().toLowerCase() === productName.toLowerCase());
+            if (!exists) {
+                // Cari slot kosong pertama
+                let emptyIdx = window.expresCart.findIndex(r => !(r.name || "").trim());
+                if (emptyIdx === -1) {
+                    // Jika penuh, tambah row baru
+                    window.expresCart.push({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0});
+                    emptyIdx = window.expresCart.length - 1;
+                }
+                const saleEcer = Number(String(product.salePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
+                const baseEcer = Number(String(product.basePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
+                const isiUnit = Number(String(product.unitContent || '1').replace(/[^0-9]/g, '')) || 1;
+                
+                window.expresCart[emptyIdx] = {
+                    name: productName,
+                    qty: '',
+                    isi: isiUnit,
+                    cuanEcer: saleEcer - baseEcer,
+                    profit: 0,
+                    productId: product.id
+                };
+            }
+        } else {
+            // Hapus dari expresCart
+            const idx = window.expresCart.findIndex(r => (r.name || "").trim().toLowerCase() === productName.toLowerCase());
+            if (idx !== -1) {
+                // Hapus dan geser ke bawah, lalu tambahkan baris kosong di akhir agar jumlah minimal tetap 20 jika diperlukan
+                window.expresCart.splice(idx, 1);
+                if (window.expresCart.length < 20) {
+                    window.expresCart.push({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0});
+                }
+            }
+        }
+    };
