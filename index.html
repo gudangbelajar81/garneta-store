@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0b1f24">
   <link rel="manifest" href="/manifest.webmanifest">
-  <title>GARNETA STORE</title>
+  
+  <link rel="icon" type="image/svg+xml" href="/assets/images/pwa-icon.svg">
+  <link rel="apple-touch-icon" href="/assets/images/pwa-icon.svg">
+<title>GARNETA STORE</title>
   
   <link rel="stylesheet" href="/assets/css/app-updates.css?v=1786551670131">
   <link rel="stylesheet" href="/assets/css/neural-dashboard.css?v=3">
@@ -736,7 +739,16 @@
       }
     })();
   </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW reg failed', err));
+      });
+    }
+  </script>
 </body>
+
 </html>
 
 
