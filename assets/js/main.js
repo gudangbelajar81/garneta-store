@@ -991,6 +991,15 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
       
       try {
         el("content").innerHTML = views[state.route] ? views[state.route]() : `<div class="card"><h2>Menu tidak ditemukan</h2><p class="muted">Route: ${state.route}</p></div>`;
+      const globalBackBtn = document.getElementById('global-back-btn');
+      if (globalBackBtn) {
+          if (state.route === 'dashboard') {
+              globalBackBtn.style.display = 'none';
+          } else {
+              globalBackBtn.style.display = 'flex';
+          }
+      }
+
       } catch (err) {
         console.error("Render Error:", err);
         el("content").innerHTML = `

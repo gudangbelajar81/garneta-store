@@ -57,6 +57,9 @@
             <button id="toggle-animation-btn" class="anim-button" style="padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s;">
               <span style="font-size: 16px;">✨</span> Animasi
             </button>
+            <button id="hard-refresh-btn" class="anim-button" style="padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s;" onclick="window.location.reload(true)">
+              <span style="font-size: 16px;">🔄</span> Muat Ulang
+            </button>
             <button id="show-pwa-modal-btn" class="anim-button" style="padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s;">
               <span style="font-size: 16px;">📱</span> Install Aplikasi
             </button>
