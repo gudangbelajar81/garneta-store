@@ -7726,6 +7726,7 @@ window.printReceiptPDF = function() {
       </head>
       <body>
         <div class="header">
+          <img src="/assets/images/garneta-logo-receipt.svg" style="max-width: 140px; height: auto; margin-bottom: 8px; display: inline-block;" alt="Logo Garneta Store"><br>
           <h2>${localStorage.getItem('storeName') || 'GARNETA STORE'}</h2>
           ${localStorage.getItem('storeAddress') ? `<p>${localStorage.getItem('storeAddress')}</p>` : ''}
           <div class="divider"></div>
@@ -7738,7 +7739,7 @@ window.printReceiptPDF = function() {
         ${paymentDetails}
         <div class="divider"></div>
         <div class="footer">
-          <p>\</p>
+          <p>${localStorage.getItem('storeFooter') || 'Terima Kasih Telah Berbelanja!'}</p>
         </div>
         <script>
           window.onload = () => { 
@@ -8343,6 +8344,7 @@ window.printReceiptPDF = function() {
     const dateStr = new Date().toLocaleString('id-ID');
     const fmt = n => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n).replace(/\u00A0/g, ' ');
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Struk PPOB</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Courier New',monospace;width:280px;padding:16px;font-size:12px;color:#000;}.center{text-align:center;}.divider{border:none;border-top:1px dashed #000;margin:8px 0;}.row{display:flex;justify-content:space-between;margin:3px 0;}.big{font-size:17px;font-weight:bold;}.sn{font-size:15px;font-weight:bold;letter-spacing:3px;word-break:break-all;text-align:center;}</style></head><body>
+      <div class="center" style="margin-bottom:6px;"><img src="/assets/images/garneta-logo-receipt.svg" style="max-width:120px;height:auto;" alt="Logo Garneta Store"></div>
       <div class="center big">${localStorage.getItem('storeName') || 'GARNETA STORE'}</div>
       ${localStorage.getItem('storeAddress') ? `<div class="center" style="font-size:10px;margin-top:2px;">${localStorage.getItem('storeAddress')}</div>` : ''}
       <div class="center" style="margin-top:8px;margin-bottom:4px;">Struk Pembayaran PPOB</div>
