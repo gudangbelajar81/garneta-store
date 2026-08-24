@@ -4874,8 +4874,18 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       return `<input type="hidden" name="id">`;
     }
 
-    function formButtons() {
-      return `<div class="actions" style="align-self:end"><button class="btn primary">Simpan</button><button class="btn" type="reset">Reset</button></div>`;
+    window.handleBackFromForm = function(collection) {
+      if (state.route === 'barang' && typeof switchBarangWorkspace === 'function') {
+        switchBarangWorkspace('list');
+      } else if (state.route === 'pembelian' && typeof switchPembelianWorkspace === 'function') {
+        switchPembelianWorkspace('list');
+      } else if (typeof showPage === 'function') {
+        showPage(state.route);
+      }
+    };
+
+    function formButtons(collection = "") {
+      return `<div class="actions" style="align-self:end"><button class="btn primary">Simpan</button><button class="btn" type="reset">Reset</button><button class="btn soft" type="button" onclick="window.handleBackFromForm('${collection}')" title="Kembali ke Daftar Data">🔙 Kembali</button></div>`;
     }
 
 
