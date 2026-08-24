@@ -4430,7 +4430,7 @@ ${tab === "bluetooth" ? `
           '--surface': '#ffffff',
           '--surface-2': '#f1f5f9',
           '--topbar-bg': 'rgba(255, 255, 255, 0.95)',
-          '--sidebar-bg': '#ffffff',
+          '--sidebar-bg': 'linear-gradient(180deg, #091e3a 0%, #122b46 100%)',
           '--card-bg': '#ffffff',
           '--field-bg': '#f1f5f9',
           '--text': '#0f172a',
