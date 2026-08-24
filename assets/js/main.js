@@ -4413,6 +4413,32 @@ ${tab === "bluetooth" ? `
           '--neural-text-soft': '#94a3b8',
           '--neural-glass': 'rgba(19, 42, 71, 0.9)',
           '--neural-glass-border': 'rgba(0, 212, 255, 0.25)'
+        },
+        light: {
+          '--neural-bg': '#f8fafc',
+          '--neural-surface': '#ffffff',
+          '--neural-surface-2': '#f1f5f9',
+          '--neural-cyan': '#0284c7',
+          '--neural-cyan-glow': 'rgba(2, 132, 199, 0.25)',
+          '--neural-mint': '#0369a1',
+          '--neural-orange': '#ea580c',
+          '--neural-text': '#0f172a',
+          '--neural-text-soft': '#475569',
+          '--neural-glass': 'rgba(255, 255, 255, 0.95)',
+          '--neural-glass-border': 'rgba(2, 132, 199, 0.2)',
+          '--page': '#f8fafc',
+          '--surface': '#ffffff',
+          '--surface-2': '#f1f5f9',
+          '--topbar-bg': 'rgba(255, 255, 255, 0.95)',
+          '--sidebar-bg': '#ffffff',
+          '--card-bg': '#ffffff',
+          '--field-bg': '#f1f5f9',
+          '--text': '#0f172a',
+          '--soft-text': '#475569',
+          '--green': '#0284c7',
+          '--mint': '#0369a1',
+          '--orange': '#ea580c',
+          '--line': 'rgba(0, 0, 0, 0.12)'
         }
       };
       
@@ -4425,6 +4451,23 @@ ${tab === "bluetooth" ? `
       });
       
       localStorage.setItem('garneta_theme', themeKey);
+      updateThemeToggleIcon(themeKey);
+    }
+
+    window.toggleThemeMode = function() {
+      const current = localStorage.getItem('garneta_theme') || 'neural';
+      const newTheme = (current === 'light') ? 'neural' : 'light';
+      applyGarnetaTheme(newTheme);
+      if (window.showToast) window.showToast(`Mode ${newTheme === 'light' ? 'Terang (Light ☀️)' : 'Gelap (Dark 🌙)'} Aktif`, 'info');
+    };
+
+    function updateThemeToggleIcon(themeKey) {
+      const btn = document.getElementById('theme-toggle-btn');
+      if (btn) {
+        const isLight = themeKey === 'light';
+        btn.innerHTML = isLight ? '☀️' : '🌙';
+        btn.title = isLight ? 'Beralih ke Mode Gelap (Dark 🌙)' : 'Beralih ke Mode Terang (Light ☀️)';
+      }
     }
 
     function crudView(collection, title, form, rows) {

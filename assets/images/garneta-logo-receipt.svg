@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #000000; }
+      .fg { fill: #ffffff; }
+      .stroke-line { fill: none; stroke: #ffffff; stroke-width: 8; stroke-linecap: round; }
+      .bold-text { font-family: 'Segoe UI', Arial, sans-serif; font-weight: 900; fill: #ffffff; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <!-- Background Base Circle for Print High Contrast -->
+  <circle cx="256" cy="256" r="240" fill="#000000"/>
+  <circle cx="256" cy="256" r="226" fill="none" stroke="#ffffff" stroke-width="6"/>
+  <circle cx="256" cy="256" r="218" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="8 6"/>
+
+  <!-- High Contrast Monochromatic 'G' Water Wave Logo -->
+  <g fill="#ffffff">
+    <!-- Outer Arch Ribbon of 'G' -->
+    <path d="M 360,165 
+             C 310,100 190,95 130,160 
+             C 70,225 70,325 130,385 
+             C 195,445 320,440 375,370 
+             C 410,325 415,260 415,240 
+             L 250,240 L 250,285 L 365,285 
+             C 360,325 330,375 256,380 
+             C 190,385 135,335 135,260 
+             C 135,185 190,140 260,140 
+             C 305,140 340,165 360,195 Z"/>
+
+    <!-- Inner Wave Line Accent -->
+    <path d="M 370,160 
+             C 320,95 210,95 140,150 
+             C 120,165 105,185 95,210 
+             C 110,175 135,145 165,125 
+             C 230,85 330,95 385,150 Z" 
+          fill="#ffffff" 
+          opacity="0.8"/>
+
+    <!-- Water Splash Accent Circles for Print -->
+    <circle cx="390" cy="140" r="10"/>
+    <circle cx="415" cy="170" r="6"/>
+    <circle cx="110" cy="380" r="7"/>
+  </g>
+
+  <!-- Central Water Core Spark -->
+  <circle cx="256" cy="256" r="8" fill="#000000"/>
+
+  <!-- High-Contrast Receipt Typography -->
+  <text x="256" y="445" font-size="22" font-weight="900" fill="#ffffff" letter-spacing="7" text-anchor="middle" font-family="Arial, sans-serif">GARNETA</text>
+  <text x="256" y="468" font-size="12" font-weight="800" fill="#ffffff" letter-spacing="9" text-anchor="middle" font-family="Arial, sans-serif">STORE</text>
+</svg>
