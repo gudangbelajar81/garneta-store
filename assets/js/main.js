@@ -8785,7 +8785,7 @@ window.printReceiptPDF = function() {
         banner.style.display = 'flex';
         banner.style.alignItems = 'center';
         banner.style.gap = '10px';
-        banner.innerHTML = '<span>ðŸš€ Update sistem terbaru telah tersedia!</span> <span style="text-decoration: underline;">Klik untuk Memuat Ulang</span>';
+        banner.innerHTML = '<span>🚀 Update sistem terbaru telah tersedia!</span> <span style="text-decoration: underline;">Klik untuk Memuat Ulang</span>';
         
         banner.onclick = () => {
           window.location.reload(true);
