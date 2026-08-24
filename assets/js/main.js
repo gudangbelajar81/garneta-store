@@ -1821,21 +1821,23 @@ Minyak Goreng 3 45000"></textarea>
           data.push(0x1b, 0x61, 0x00); // Left align
         
         let buffer = new Uint8Array(data);
-        for (let i = 0; i < buffer.length; i += 100) {
+        const btChunkSize = 32;
+        for (let i = 0; i < buffer.length; i += btChunkSize) {
+            const chunk = buffer.slice(i, i + btChunkSize);
             if (characteristic.properties && characteristic.properties.writeWithoutResponse) {
                 try {
                   if (typeof characteristic.writeValueWithoutResponse === 'function') {
-                    await characteristic.writeValueWithoutResponse(buffer.slice(i, i + 100));
+                    await characteristic.writeValueWithoutResponse(chunk);
                   } else {
-                    await characteristic.writeValue(buffer.slice(i, i + 100));
+                    await characteristic.writeValue(chunk);
                   }
                 } catch (e) {
-                  await characteristic.writeValue(buffer.slice(i, i + 100));
+                  await characteristic.writeValue(chunk);
                 }
             } else {
-                await characteristic.writeValue(buffer.slice(i, i + 100));
+                await characteristic.writeValue(chunk);
             }
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 20));
           }
         
         // Putuskan koneksi agar HP lain bisa gantian ngeprint
@@ -2359,7 +2361,9 @@ window.globalBluetoothDevice = device;
             
             receiptLines.push(...encoder.encode("\n"));
             receiptLines.push([0x1b, 0x61, 0x01]); // Center
-            receiptLines.push(...encoder.encode((storeFooter || "Terima Kasih") + "\n\n\n\n")); // Rata tengah, penutup
+            receiptLines.push(...encoder.encode((storeFooter || "Terima kasih atas kunjungan Anda!") + "\n\n")); // Rata tengah, penutup
+            receiptLines.push([0x1b, 0x64, 0x05]); // Feed 5 lines
+            receiptLines.push([0x1d, 0x56, 0x42, 0x00]); // GS V B 0 (Auto Cut paper for 80mm VSC TM-80D)
             receiptLines.push([0x1b, 0x61, 0x00]); // Kiri lagi
             
             let payload = [
@@ -2379,23 +2383,25 @@ window.globalBluetoothDevice = device;
             flatten(payload);
 
             let buffer = new Uint8Array(flatPayload);
+            const btChunkSize = 32;
             
-            for (let i = 0; i < buffer.length; i += 100) {
-            if (characteristic.properties && characteristic.properties.writeWithoutResponse) {
-                try {
-                  if (typeof characteristic.writeValueWithoutResponse === 'function') {
-                    await characteristic.writeValueWithoutResponse(buffer.slice(i, i + 100));
-                  } else {
-                    await characteristic.writeValue(buffer.slice(i, i + 100));
+            for (let i = 0; i < buffer.length; i += btChunkSize) {
+              const chunk = buffer.slice(i, i + btChunkSize);
+              if (characteristic.properties && characteristic.properties.writeWithoutResponse) {
+                  try {
+                    if (typeof characteristic.writeValueWithoutResponse === 'function') {
+                      await characteristic.writeValueWithoutResponse(chunk);
+                    } else {
+                      await characteristic.writeValue(chunk);
+                    }
+                  } catch (e) {
+                    await characteristic.writeValue(chunk);
                   }
-                } catch (e) {
-                  await characteristic.writeValue(buffer.slice(i, i + 100));
-                }
-            } else {
-                await characteristic.writeValue(buffer.slice(i, i + 100));
+              } else {
+                  await characteristic.writeValue(chunk);
+              }
+              await new Promise(resolve => setTimeout(resolve, 20));
             }
-            await new Promise(resolve => setTimeout(resolve, 50));
-          }
             
             await new Promise(resolve => setTimeout(resolve, 500));
             showToast("Berhasil dicetak!", "success");
@@ -8514,12 +8520,28 @@ window.printReceiptPDF = function() {
       receiptLines.push(...encoder.encode(padLR("TOTAL", fmt(total)) + "\n"));
       receiptLines.push([0x1b, 0x61, 0x01]); // Align Center
       receiptLines.push(...encoder.encode("-".repeat(paperSize) + "\n"));
-      receiptLines.push(...encoder.encode((storeFooter || "Terima kasih atas kunjungan Anda!") + "\n\n\n\n")); // Feed paper
+      receiptLines.push(...encoder.encode((storeFooter || "Terima kasih atas kunjungan Anda!") + "\n\n")); // Feed paper
+      receiptLines.push([0x1b, 0x64, 0x05]); // Feed 5 lines
+      receiptLines.push([0x1d, 0x56, 0x42, 0x00]); // GS V B 0 (Auto Cut paper for 80mm VSC TM-80D)
       
       const dataFlat = receiptLines.flat(Infinity);
-      const chunkSize = 512;
-      for (let i = 0; i < dataFlat.length; i += chunkSize) {
-        await characteristic.writeValue(new Uint8Array(dataFlat.slice(i, i + chunkSize)));
+      const btChunkSize = 32;
+      for (let i = 0; i < dataFlat.length; i += btChunkSize) {
+        const chunk = new Uint8Array(dataFlat.slice(i, i + btChunkSize));
+        if (characteristic.properties && characteristic.properties.writeWithoutResponse) {
+          try {
+            if (typeof characteristic.writeValueWithoutResponse === 'function') {
+              await characteristic.writeValueWithoutResponse(chunk);
+            } else {
+              await characteristic.writeValue(chunk);
+            }
+          } catch (e) {
+            await characteristic.writeValue(chunk);
+          }
+        } else {
+          await characteristic.writeValue(chunk);
+        }
+        await new Promise(resolve => setTimeout(resolve, 20));
       }
       
       device.gatt.disconnect();
