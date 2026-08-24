@@ -2299,7 +2299,7 @@ window.globalBluetoothDevice = device;
             // Format Struk (32 Karakter)
             let storeName = localStorage.getItem('storeName') || "GARNETA STORE";
             let storeAddress = localStorage.getItem('storeAddress') || "";
-            let storeFooter = localStorage.getItem('storeFooter') || "Terima Kasih!";
+            let storeFooter = localStorage.getItem('storeFooter') || "Terima kasih atas kunjungan Anda!";
             let receiptLines = [];
             
             // Header (Mahkota) - Max 16 chars for double size, otherwise normal
@@ -8445,7 +8445,7 @@ window.printReceiptPDF = function() {
       
       let storeName = localStorage.getItem('storeName') || "GARNETA STORE";
       let storeAddress = localStorage.getItem('storeAddress') || "";
-      let storeFooter = localStorage.getItem('storeFooter') || "Terima Kasih!";
+      let storeFooter = localStorage.getItem('storeFooter') || "Terima kasih atas kunjungan Anda!";
       
       receiptLines.push([0x1b, 0x61, 0x01]); // Align Center
       if (storeName.length <= 16) {
@@ -8514,7 +8514,7 @@ window.printReceiptPDF = function() {
       receiptLines.push(...encoder.encode(padLR("TOTAL", fmt(total)) + "\n"));
       receiptLines.push([0x1b, 0x61, 0x01]); // Align Center
       receiptLines.push(...encoder.encode("-".repeat(paperSize) + "\n"));
-      receiptLines.push(...encoder.encode("Terima Kasih!\n\n\n\n")); // Feed paper
+      receiptLines.push(...encoder.encode((storeFooter || "Terima kasih atas kunjungan Anda!") + "\n\n\n\n")); // Feed paper
       
       const dataFlat = receiptLines.flat(Infinity);
       const chunkSize = 512;
