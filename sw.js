@@ -1,10 +1,10 @@
-﻿const CACHE_NAME = 'garneta-store-v3-1787521805.50489.38395';
+﻿const CACHE_NAME = 'garneta-store-v4-1787582075.87504.50489.38395';
 const ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/assets/images/pwa-icon.svg',
-  '/assets/images/garneta-logo-g.svg',
+  '/assets/images/garneta-logo-g.png',
   '/assets/css/style.css',
   '/assets/js/main.js'
 ];
