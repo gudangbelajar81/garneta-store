@@ -2418,6 +2418,44 @@ window.globalBluetoothDevice = device;
           }
       };
 
+      window.printReceiptRawBT = function(data) {
+        try {
+          const storeName = localStorage.getItem('storeName') || "GARNETA STORE";
+          const storeAddress = localStorage.getItem('storeAddress') || "";
+          const storeFooter = localStorage.getItem('storeFooter') || "Terima kasih atas kunjungan Anda!";
+          const paperSize = parseInt(localStorage.getItem('printerPaperSize') || '48');
+          
+          let text = "\x1b\x40\x1b\x61\x01" + storeName + "\n";
+          if (storeAddress) text += storeAddress + "\n";
+          text += "-".repeat(paperSize) + "\n";
+          text += "\x1b\x61\x00" + (data.date || new Date().toLocaleString('id-ID')) + "\n";
+          text += "Kasir: " + (data.operator || 'Kasir') + "\n";
+          text += "Pelanggan: " + (data.customer || 'Umum') + "\n";
+          text += "-".repeat(paperSize) + "\n";
+          
+          if (data.items && Array.isArray(data.items)) {
+            data.items.forEach(r => {
+              let amount = r.price * r.qty;
+              let priceLine = `${r.qty}x ${new Intl.NumberFormat("id-ID").format(r.price)}`;
+              let rightStr = new Intl.NumberFormat("id-ID").format(amount);
+              text += String(r.name).substring(0, paperSize) + "\n";
+              text += padLR(priceLine, rightStr, paperSize) + "\n";
+            });
+          }
+          
+          let tTotal = data.total !== undefined ? data.total : (data.grandTotal || 0);
+          text += "-".repeat(paperSize) + "\n";
+          text += padLR("TOTAL", "Rp " + new Intl.NumberFormat("id-ID").format(tTotal), paperSize) + "\n";
+          text += "-".repeat(paperSize) + "\n\x1b\x61\x01";
+          text += storeFooter + "\n\n\n\x1b\x64\x05\x1d\x56\x42\x00";
+          
+          const base64Data = btoa(unescape(encodeURIComponent(text)));
+          window.location.href = "intent:base64," + base64Data + "#Intent;scheme=rawbt;package=ru.a404.rawbtprinter;end;";
+        } catch(e) {
+          showToast("Gagal memanggil RawBT: " + e.message, "error");
+        }
+      };
+
 window.ngitungClearAll = function() {
         window.ngitungRows = [{ id: Date.now(), name: '', price: '', qty: '' }];
         window.ngitungDraft = { bayar: "", customer: "", phone: "" };
