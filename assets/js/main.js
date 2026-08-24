@@ -188,9 +188,9 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
         });
       });
       const superMode = state.role === "Super Admin";
-      el("role-label").textContent = superMode ? `Super Admin: ${state.currentUser?.name || ""}` : "Admin";
-      el("super-login").classList.toggle("hidden", superMode);
-      el("logout-super").classList.toggle("hidden", !superMode);
+      if (el("role-label")) el("role-label").textContent = superMode ? `Super Admin: ${state.currentUser?.name || ""}` : "Admin";
+      if (el("super-login")) el("super-login").classList.toggle("hidden", superMode);
+      if (el("logout-super")) el("logout-super").classList.toggle("hidden", !superMode);
       
       window.toggleAppDrawer = function() {
         const modal = document.getElementById('app-drawer-modal');
@@ -1061,7 +1061,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
       }
 
       const label = menus.find(([key]) => key === state.route)?.[1] || "Dashboard";
-      el("page-title").textContent = label;
+      if (el("page-title")) el("page-title").textContent = label;
       // Set ikon topbar sesuai halaman aktif
       const routeIcons = {
         dashboard: "🏠", barang: "📦", supplier: "🏢", pembelian: "🛒",
