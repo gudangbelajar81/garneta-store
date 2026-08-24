@@ -469,13 +469,208 @@
       }
 </style>
   <script src="/assets/js/vendor/sweetalert2.all.min.js"></script>
+<style id="standar-mewah-override">
+      /* =========================================
+         DESKTOP-FIRST LAYOUT OVERRIDES (PC)
+         ========================================= */
+      @media (min-width: 901px) {
+        .sidebar .nav { display: flex !important; flex-direction: column !important; gap: 4px !important; }
+        .sidebar .nav .neural-node { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 12px !important; padding: 10px 14px !important; border: none !important; border-radius: 8px !important; background: transparent !important; color: var(--soft-text, #cbd5e1) !important; cursor: pointer !important; transition: all 0.2s ease !important; width: 100% !important; height: auto !important; min-height: unset !important; justify-content: flex-start !important; }
+        .sidebar .nav .neural-node:hover { background: rgba(255,255,255,0.06) !important; color: #fff !important; transform: translateX(4px) !important; }
+        .sidebar .nav .neural-node.active { background: linear-gradient(90deg, rgba(0,255,204,0.1), transparent) !important; color: var(--green, #00ffcc) !important; border-left: 3px solid var(--green, #00ffcc) !important; border-radius: 0 8px 8px 0 !important; }
+        .sidebar .nav .neural-node .node-icon { font-size: 1.4rem !important; margin: 0 !important; width: 32px !important; text-align: center !important; }
+        .sidebar .nav .neural-node .node-label { font-size: 0.95rem !important; font-weight: 600 !important; margin: 0 !important; letter-spacing: 0.5px !important; }
+        .sidebar .brand { margin-bottom: 24px !important; }
+      }
+
+      /* =========================================
+         MOBILE-FIRST LAYOUT OVERRIDES 
+         ========================================= */
+      @media (max-width: 900px) {
+        .app { display: flex !important; flex-direction: column !important; padding: 0 !important; height: 100vh !important; overflow: hidden !important; }
+        
+        .sidebar { position: static !important; width: 100% !important; height: 8vh !important; max-height: 8vh !important; border-radius: 0 !important; border: none !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; padding: 0 16px !important; background: rgba(8,24,29,.95) !important; box-shadow: 0 4px 24px rgba(0,0,0,0.4) !important; display: flex !important; flex-direction: row !important; align-items: center !important; z-index: 100 !important; justify-content: space-between !important; flex: 0 0 auto !important; }
+        
+        .brand { display: flex !important; flex-direction: row !important; align-items: center !important; margin: 0 !important; padding: 0 !important; width: auto !important; gap: 12px !important; }
+        .brand-logo { width: 5vh !important; height: 5vh !important; max-width: 48px !important; max-height: 48px !important; margin: 0 !important; }
+        .brand-title { font-size: 2vh !important; line-height: 1 !important; display: inline-block !important; margin: 0 !important; }
+        .brand-subtitle { display: none !important; }
+
+        .nav { display: flex !important; flex-direction: row !important; gap: 2px !important; width: auto !important; padding: 0 !important; overflow: visible !important; align-items: center !important; justify-content: center !important; flex: 1 !important; }
+        .nav .neural-node { padding: 0 10px !important; width: auto !important; height: 6vh !important; min-height: 6vh !important; justify-content: center !important; gap: 4px !important; display: flex !important; flex-direction: row !important; align-items: center !important; border-radius: 0 !important; background: transparent !important; border: none !important; border-bottom: 2px solid transparent !important; transition: all 0.2s ease !important; flex: 0 0 auto !important; }
+        .nav .neural-node.active { border-bottom-color: var(--green, #00ffcc) !important; background: transparent !important; box-shadow: none !important; }
+        .nav .neural-node:hover { background: rgba(255,255,255,0.04) !important; transform: none !important; }
+        .nav .neural-node::before { display: none !important; }
+        .nav .neural-node .node-icon { font-size: 1.8vh !important; margin: 0 !important; line-height: 1 !important; filter: none !important; }
+        .nav .neural-node .node-label { font-size: 1.25vh !important; font-weight: 600 !important; letter-spacing: 0.3px !important; margin: 0 !important; opacity: 0.75 !important; text-align: center !important; line-height: 1 !important; }
+        .nav .neural-node.active .node-label { opacity: 1 !important; color: var(--green, #00ffcc) !important; }
+        .nav .neural-node.active .node-icon { filter: drop-shadow(0 0 4px rgba(0,255,204,0.5)) !important; }
+      
+        /* Main Content Area — bukan scroll container, hanya wrapper */
+        .main { position: relative !important; width: 100% !important; flex: 1 !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; padding: 0 !important; }
+        
+        /* Second Topbar — STICKY agar tidak bergeser saat keyboard muncul */
+        .topbar { position: sticky !important; top: 0 !important; z-index: 200 !important; border-radius: 0 0 12px 12px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: space-between !important; padding: 0 12px !important; height: 5.5vh !important; min-height: 38px !important; background: rgba(10,21,38,0.92) !important; backdrop-filter: blur(24px) !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; margin: 0 12px !important; flex: 0 0 auto !important; gap: 6px !important; overflow: visible !important; }
+        /* Pastikan container search tidak terpotong oleh topbar */
+        .topbar #smart-search-container { overflow: visible !important; position: relative !important; z-index: 500 !important; }
+        .topbar #smart-search-container .smart-search-wrapper { max-width: none !important; margin: 0 !important; width: 100% !important; }
+        .topbar #smart-search-container .smart-search-dropdown { z-index: 9999 !important; position: absolute !important; }
+        .topbar > div:first-child { display: flex !important; align-items: center !important; flex: 0 0 auto !important; }
+        .topbar #page-title { font-size: 1.4rem !important; font-weight: 800 !important; margin: 0 !important; display: none !important; }
+        .topbar #page-title-icon { font-size: 1.3rem !important; }
+        .topbar #clock { display: none !important; }
+        .topbar input { height: 4vh !important; min-height: 30px !important; max-height: 36px !important; font-size: 12px !important; padding: 0 12px !important; border-radius: 8px !important; background: rgba(0,0,0,0.2) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: #fff !important; transition: all 0.3s ease !important; width: 100% !important; }
+        .topbar input:focus { background: rgba(0,0,0,0.4) !important; border-color: rgba(0,255,204,0.5) !important; outline: none !important; }
+        
+        /* Admin Buttons */
+        .topbar #super-login { height: 4vh !important; min-height: 36px !important; font-size: 1.4vh !important; padding: 0 16px !important; border-radius: 12px !important; flex: 0 0 auto !important; margin: 0 !important; display: flex !important; align-items: center !important; font-weight: bold !important; background: linear-gradient(135deg, var(--primary) 0%, #0099ff 100%) !important; box-shadow: 0 4px 15px rgba(0,153,255,0.3) !important; border: none !important; }
+        .topbar #logout-super { background: transparent !important; border: none !important; font-size: 3.5vh !important; cursor: pointer !important; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6)) !important; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important; display: flex !important; align-items: center !important; justify-content: center !important; padding: 0 10px !important; }
+        .topbar #logout-super:active { transform: scale(0.85) !important; }
+        .topbar #logout-super.hidden, .topbar #super-login.hidden, .topbar .hidden { display: none !important; }
+
+        /* Content area — SATU-SATUNYA yang boleh scroll */
+        .content { flex: 1 !important; overflow-y: auto !important; overflow-x: hidden !important; height: 0 !important; min-height: 0 !important; padding-bottom: 24px !important; }
+
+        /* MOBILE OVERRIDES */
+        .app { padding-bottom: 0 !important; }
+        .sidebar { position: static !important; width: 100% !important; height: 8vh !important; max-height: 8vh !important; border-radius: 0 0 24px 24px !important; border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; padding: 0 6px !important; flex-direction: row !important; z-index: 100 !important; }
+        .brand { display: none !important; }
+        .nav { flex-direction: row !important; gap: 0px !important; height: 100% !important; padding: 0 !important; overflow-y: hidden !important; overflow-x: auto !important; justify-content: flex-start !important; }
+        .nav .neural-node { width: auto !important; min-width: 52px !important; height: 100% !important; padding: 0 8px !important; flex-direction: column !important; border-radius: 0 !important; border-bottom: 2px solid transparent !important; gap: 3px !important; }
+        .nav .neural-node .node-icon { font-size: 2vh !important; }
+        .nav .neural-node .node-label { font-size: 1.2vh !important; margin-top:2px !important; }
+        .topbar { margin: 0 !important; border-radius: 0 0 16px 16px !important; padding: 0 12px !important; }
+        .topbar #smart-search-container { flex: 1 !important; max-width: none !important; width: auto !important; min-width: 120px !important; }
+      }
+      
+
+
+      /* EXIT ICON ANIMATIONS */
+      @keyframes doorSwing3D {
+        0%   { transform: perspective(200px) rotateY(-55deg); }
+        40%  { transform: perspective(200px) rotateY(-70deg); }
+        60%  { transform: perspective(200px) rotateY(-70deg); }
+        100% { transform: perspective(200px) rotateY(-55deg); }
+      }
+      @keyframes personWalk {
+        0%   { transform: translateX(0px); }
+        40%  { transform: translateX(6px); }
+        60%  { transform: translateX(6px); }
+        100% { transform: translateX(0px); }
+      }
+      @keyframes armSwing {
+        0%,100% { transform-origin: 35px 44px; transform: rotate(0deg); }
+        50%     { transform-origin: 35px 44px; transform: rotate(15deg); }
+      }
+      @keyframes armSwingR {
+        0%,100% { transform-origin: 45px 44px; transform: rotate(0deg); }
+        50%     { transform-origin: 45px 44px; transform: rotate(-15deg); }
+      }
+      @keyframes legSwing {
+        0%,100% { transform-origin: 38px 61px; transform: rotate(-10deg); }
+        50%     { transform-origin: 38px 61px; transform: rotate(12deg); }
+      }
+      @keyframes legSwingR {
+        0%,100% { transform-origin: 42px 61px; transform: rotate(10deg); }
+        50%     { transform-origin: 42px 61px; transform: rotate(-12deg); }
+      }
+      @keyframes ambientPulse {
+        0%,100% { opacity: 0.08; rx: 32; }
+        50%     { opacity: 0.18; rx: 38; }
+      }
+      #logout-super:hover #exit-icon-svg { transform: scale(1.25); transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1); }
+      #exit-icon-svg { transform: scale(1); transition: transform 0.2s ease; }
+
+      
+      /* HIDE DATALIST ARROW */
+      /* .ngitung-container input::-webkit-calendar-picker-indicator { display: none !important; opacity: 0; } */
+      /* .ngitung-container input::-webkit-list-button { display: none !important; } */
+
+      .ngitung-sticky-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg, #1e293b); height: 74px; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; box-shadow: 0 -4px 20px rgba(0,0,0,0.3); z-index: 1000; border-top: 1px solid var(--line); }
+      .sticky-bar-left { display: flex; flex-direction: column; }
+      .total-label { font-size: 0.85rem; color: #aaa; font-weight: 600; }
+      .total-amount { font-size: 1.35rem; font-weight: 900; color: #ee4d2d; }
+      .btn-checkout { background: linear-gradient(135deg, #f53d2d, #ff6633); color: #fff; font-weight: 800; font-size: 1rem; border-radius: 8px; padding: 12px 24px; border: none; box-shadow: 0 4px 12px rgba(238,77,45,0.4); text-transform: uppercase; cursor: pointer; }
+      
+      .bottom-sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; display: flex; align-items: flex-end; opacity: 1; transition: opacity 0.3s ease; backdrop-filter: blur(2px); }
+      .bottom-sheet-overlay.hidden { opacity: 0; pointer-events: none; }
+      .bottom-sheet-content { background: var(--card-bg, #1e293b); width: 100%; border-radius: 24px 24px 0 0; padding: 24px 20px; transform: translateY(0); transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); max-height: 92vh; overflow-y: auto; border-top: 1px solid rgba(255,255,255,0.1); }
+      .bottom-sheet-overlay.hidden .bottom-sheet-content { transform: translateY(100%); }
+      .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px; }
+      .sheet-header h3 { margin: 0; font-size: 1.3rem; font-weight: 800; color: #fff; }
+      .btn-close { background: rgba(255,255,255,0.1); border: none; font-size: 1.2rem; color: #fff; width: 32px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+      
+      .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+      .form-group label { font-size: 0.85rem; font-weight: 600; color: #bbb; }
+      .form-group input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #fff; font-size: 1rem; font-weight: bold; }
+      .form-group input:focus { border-color: #00ffcc; outline: none; }
+      
+      .payment-tabs { display: flex; gap: 10px; margin-top: 16px; }
+      .pay-tab { flex: 1; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #aaa; font-weight: bold; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; text-align: center; }
+      .pay-tab.active { background: rgba(0,255,204,0.15); border-color: #00ffcc; color: #00ffcc; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,255,204,0.1); }
+      
+      .grand-total-section { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 20px; border-top: 1px dashed rgba(255,255,255,0.15); font-size: 1.2rem; font-weight: 800; color: #fff; }
+      #ngitung-grand-total { color: #ee4d2d; font-size: 1.6rem; font-weight: 900; }
+      
+      .action-buttons { display: flex; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
+      .action-buttons .btn { flex: 1; min-width: 100px; padding: 14px; border-radius: 12px; font-weight: 800; font-size: 1rem; display: flex; justify-content: center; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+      
+      @media (min-width: 901px) {
+        .ngitung-sticky-bar { left: 240px; } /* Adjust for desktop sidebar */
+        .bottom-sheet-content { max-width: 500px; margin: 0 auto; border-radius: 24px 24px 0 0; }
+      }
+
+      /* NGITUNG FULL WIDTH OVERRIDE */
+      @media (max-width: 900px) {
+        .ngitung-container {
+          width: 100vw !important;
+          position: relative;
+          left: 50%;
+          right: 50%;
+          margin-left: -50vw !important;
+          margin-right: -50vw !important;
+          padding: 0 4px !important;
+        }
+        .ngitung-container .table-wrap {
+          border: none !important;
+          border-radius: 0 !important;
+          max-height: 80vh;
+          overflow-y: auto;
+          overflow-x: hidden;
+        }
+      }
+      /* ZEN MODE */
+      /* Dihapus: @media (max-height: 550px) yang menyembunyikan topbar saat keyboard HP muncul */
+      .hidden-on-mobile, #role-label { display: none !important; }
+      
+      /* Hapus tombol panah naik-turun di kotak angka */
+      input[type=number]::-webkit-inner-spin-button, 
+      input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+      }
+      input[type=number] {
+          -moz-appearance: textfield;
+      }
+
+      /* Inline Editing visual cue */
+      div[data-collection="products"] td.editable-cell {
+          cursor: cell;
+          transition: background-color 0.2s;
+      }
+      div[data-collection="products"] td.editable-cell:hover {
+          background-color: rgba(16, 185, 129, 0.15); /* light mint background */
+          box-shadow: inset 0 0 0 1px var(--mint);
+      }
+</style>
+  <script src="/assets/js/vendor/sweetalert2.all.min.js"></script>
   <script src='assets/js/audio.js' defer></script>
 </head>
 <body>
   <div class="app">
     <aside class="sidebar neural-sidebar">
       <div class="brand" onclick="if(window.toggleAppDrawer) window.toggleAppDrawer()" style="cursor: pointer;" title="Buka Menu">
-        <img class="brand-logo" id="brand-logo" src="/assets/images/garneta-logo-g.png" alt="Garneta basket logo">
+        <img class="brand-logo" id="brand-logo" src="/assets/images/garneta-logo-g.svg" alt="Garneta logo">
         <div><span class="brand-title">GARNETA<br>STORE</span></div>
       </div>
       <div class="nav" id="nav" style="display:flex; gap:8px; width:100%; padding:0 12px;"></div>
@@ -485,14 +680,8 @@
       <div class="topbar">
         <!-- Icon Halaman (kiri) - Tanpa teks -->
         <div style="flex: 0 0 auto; display: flex; align-items: center; gap: 8px;">
-          <button id="global-back-btn" class="btn soft" style="display: none; padding: 4px 8px; border-radius: 8px; font-size: 14px; min-height: 32px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); cursor: pointer;" title="Kembali ke Dashboard">
+          <button id="global-back-btn" class="btn soft" onclick="if(window.showPage) window.showPage('dashboard'); else if(window.navigate) window.navigate('dashboard');" style="display: none; padding: 4px 8px; border-radius: 8px; font-size: 14px; min-height: 32px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); cursor: pointer;" title="Kembali ke Dashboard">
             🔙
-          </button>
-          <span id="page-title-icon" style="font-size: 1.4rem; line-height: 1;"></span>
-          <strong id="page-title" style="display: none;">Dashboard</strong>
-          <div class="muted" id="clock" style="display:none;"></div>
-        </div>
-        <!-- Smart Search - diperluas mengisi ruang -->
         <div class="actions" style="display:flex; align-items:center; gap:8px; flex:1; padding: 0 8px;">
           <div id="smart-search-container" style="position:relative; flex:1; min-width:0;">
             <div class="smart-search-wrapper">

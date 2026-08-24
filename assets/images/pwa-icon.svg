@@ -1,7 +1,90 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#0b1f24"/>
-  <path d="M112 172h288v224H112z" fill="#102a31" stroke="#24f0c7" stroke-width="18"/>
-  <path d="M144 172l28-56h168l28 56" fill="none" stroke="#ff7043" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M170 242h172M170 294h112M170 346h150" stroke="#8df7df" stroke-width="22" stroke-linecap="round"/>
-  <circle cx="365" cy="330" r="34" fill="#ff7043"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0a232a"/>
+      <stop offset="75%" stop-color="#050e14"/>
+      <stop offset="100%" stop-color="#020609"/>
+    </radialGradient>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00ffcc"/>
+      <stop offset="35%" stop-color="#00bfff"/>
+      <stop offset="70%" stop-color="#ffd700"/>
+      <stop offset="100%" stop-color="#00ffb3"/>
+    </linearGradient>
+    <linearGradient id="waterFlow1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00ffff"/>
+      <stop offset="40%" stop-color="#00a8ff"/>
+      <stop offset="80%" stop-color="#7000ff"/>
+      <stop offset="100%" stop-color="#00ffcc"/>
+    </linearGradient>
+    <linearGradient id="waterFlow2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#55ffff"/>
+      <stop offset="50%" stop-color="#00d2ff"/>
+      <stop offset="100%" stop-color="#0055ff"/>
+    </linearGradient>
+    <linearGradient id="goldEnergy" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffe600"/>
+      <stop offset="50%" stop-color="#ff9900"/>
+      <stop offset="100%" stop-color="#00ffcc"/>
+    </linearGradient>
+    <filter id="glowEffect" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="256" cy="256" r="240" fill="url(#bgGlow)"/>
+  <circle cx="256" cy="256" r="234" fill="none" stroke="url(#ringGrad)" stroke-width="4" opacity="0.85" filter="url(#glowEffect)"/>
+  <circle cx="256" cy="256" r="224" fill="none" stroke="#00ffcc" stroke-width="1.5" stroke-dasharray="8 6" opacity="0.4"/>
+
+  <path d="M 80,260 Q 140,200 220,270 T 360,250 T 440,280" fill="none" stroke="url(#waterFlow2)" stroke-width="3" opacity="0.25" filter="url(#glowEffect)"/>
+
+  <g filter="url(#glowEffect)">
+    <path d="M 360,165 
+             C 310,100 190,95 130,160 
+             C 70,225 70,325 130,385 
+             C 195,445 320,440 375,370 
+             C 410,325 415,260 415,240 
+             L 250,240 L 250,285 L 365,285 
+             C 360,325 330,375 256,380 
+             C 190,385 135,335 135,260 
+             C 135,185 190,140 260,140 
+             C 305,140 340,165 360,195 Z" 
+          fill="url(#waterFlow1)" 
+          stroke="#00ffff" 
+          stroke-width="2"/>
+
+    <path d="M 345,175 
+             C 300,120 200,115 145,170 
+             C 95,225 95,310 145,365 
+             C 200,420 305,415 355,355 
+             C 385,320 390,275 390,255 
+             L 265,255 L 265,270 L 350,270 
+             C 345,305 320,355 256,360 
+             C 205,365 155,325 155,260 
+             C 155,195 200,155 260,155 
+             C 295,155 325,175 345,200 Z" 
+          fill="url(#waterFlow2)" 
+          opacity="0.9"/>
+
+    <path d="M 370,160 
+             C 320,95 210,95 140,150 
+             C 120,165 105,185 95,210 
+             C 110,175 135,145 165,125 
+             C 230,85 330,95 385,150 Z" 
+          fill="url(#goldEnergy)" 
+          opacity="0.95"/>
+
+    <circle cx="390" cy="140" r="10" fill="#00ffff" filter="url(#glowEffect)"/>
+    <circle cx="415" cy="170" r="6" fill="#ffd700" filter="url(#glowEffect)"/>
+    <circle cx="425" cy="210" r="4.5" fill="#00ffcc"/>
+    <circle cx="110" cy="380" r="7" fill="#00d2ff" filter="url(#glowEffect)"/>
+  </g>
+
+  <circle cx="256" cy="256" r="6" fill="#ffffff" filter="url(#glowEffect)"/>
+  <text x="256" y="445" font-family="'Montserrat', 'Segoe UI', Arial, sans-serif" font-size="21" font-weight="900" fill="#ffffff" letter-spacing="7" text-anchor="middle" filter="url(#glowEffect)">GARNETA</text>
+  <text x="256" y="468" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="800" fill="#00ffcc" letter-spacing="9" text-anchor="middle" opacity="0.9">STORE</text>
 </svg>

@@ -1,6 +1,6 @@
-﻿@echo off
+@echo off
 title Server Kasir Lokal
-cd /d "D:\jadi\saas\inventory system"
+cd /d "D:\jadi\saas\GARNETA STORE"
 echo ==========================================
 echo MESIN SERVER KASIR SEDANG BERJALAN
 echo ==========================================

@@ -4742,7 +4742,62 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       </table></div>`;
     }
 
-        function actionTable(collection, rows, keys, labels, formatter) {
+    window.handleMenuAction = async function(action, collection, id) {
+      document.querySelectorAll('.kebab-menu').forEach(m => m.classList.add('hidden'));
+
+      if (action === 'edit') {
+        if (collection === "shopping") {
+          if (typeof fillShoppingForm === 'function') fillShoppingForm(id);
+          return;
+        }
+        if (typeof fillForm === 'function') fillForm(collection, id);
+      } else if (action === 'duplicate') {
+        if (typeof fillForm === 'function') fillForm(collection, id);
+        setTimeout(() => {
+          const form = document.querySelector(`form[data-form="${collection}"]`);
+          if (form && form.elements.id) form.elements.id.value = "";
+          if (window.showToast) window.showToast("Data diduplikat. Silakan ubah lalu Simpan.", "info");
+        }, 50);
+      } else if (action === 'delete') {
+        if (collection === "shopping") {
+          if (typeof saveShoppingRows === 'function' && typeof shoppingRows === 'function') {
+            saveShoppingRows(shoppingRows().filter((row) => String(row.id) !== String(id)));
+            if (typeof render === 'function') render();
+          }
+          return;
+        }
+
+        const confirmDelete = confirm("Apakah Anda yakin ingin menghapus data ini?");
+        if (!confirmDelete) return;
+
+        const collectionMap = {
+          products: "products", purchases: "purchases", sales: "sales",
+          employees: "employees", cashAdvances: "cashAdvances", payrolls: "payrolls",
+          users: "users", suppliers: "suppliers"
+        };
+        const stateKey = collectionMap[collection];
+        let removed = null;
+        if (stateKey && window.state && window.state.data[stateKey]) {
+          removed = window.state.data[stateKey].find(r => String(r.id) === String(id));
+          window.state.data[stateKey] = window.state.data[stateKey].filter(r => String(r.id) !== String(id));
+          if (typeof render === 'function') render();
+        }
+
+        try {
+          if (typeof gas === 'function') await gas("remove", { collection, id });
+          if (window.showToast) window.showToast("Data berhasil dihapus", "success");
+        } catch (err) {
+          if (removed && stateKey && window.state.data[stateKey]) {
+            window.state.data[stateKey].push(removed);
+            window.state.data[stateKey].sort((a, b) => Number(b.id) - Number(a.id));
+          }
+          if (typeof render === 'function') render();
+          alert("Gagal menghapus: " + err.message);
+        }
+      }
+    };
+
+    function actionTable(collection, rows, keys, labels, formatter) {
       let finalLabels = labels.concat(["Aksi"]);
       if (collection === "products") finalLabels = ["☑️"].concat(finalLabels);
       return `<div data-collection="${collection}">${table(rows, finalLabels, (row) => {
