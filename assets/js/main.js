@@ -142,6 +142,34 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
       }
     }
 
+    
+    // [SUPER HARD REFRESH] Clear Service Workers, Delete CacheStorage & Force Reload with Timestamp Buster
+    window.forceSuperHardRefresh = async function() {
+      try {
+        if (window.showToast) window.showToast("🔄 Membersihkan Cache & Memuat Versi Terbaru...", "info");
+        
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (let reg of registrations) {
+            await reg.unregister();
+          }
+        }
+        
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+        
+        try { sessionStorage.clear(); } catch(e) {}
+      } catch (e) {
+        console.error('Error during hard refresh:', e);
+      }
+      
+      const url = new URL(window.location.href);
+      url.searchParams.set('v', Date.now());
+      window.location.href = url.toString();
+    };
+
     async function load() {
       state.data = await gas("bootstrap", {}, true);
       startSyncPolling();
