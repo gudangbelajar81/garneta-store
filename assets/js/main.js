@@ -3413,24 +3413,7 @@ Beras Premium 1"></textarea>
          const totalCuan = expresRows.reduce((sum, r) => sum + (r.profit || 0), 0);
          const datalistHtml = `
            <datalist id="expres-products">
-             <option value="Beras A"></option>
-             <option value="Beras B"></option>
-             <option value="Beras C"></option>
-             <option value="Cakra"></option>
-             <option value="Gula Pasir"></option>
-             <option value="Gunung Agung"></option>
-             <option value="Kacang A"></option>
-             <option value="Kacang B"></option>
-             <option value="Kacang C"></option>
-             <option value="Kentang Besar"></option>
-             <option value="Kentang Pl"></option>
-             <option value="Kentang Siomay"></option>
-             <option value="Maizena"></option>
-             <option value="Minyak Sawit"></option>
-             <option value="Payung"></option>
-             <option value="Segitiga"></option>
-             <option value="Sphp"></option>
-             <option value="Telur"></option>
+             ${(state?.data?.products || []).map(p => `<option value="${escapeAttr(p.name || '')}"></option>`).join('')}
            </datalist>
          `;
 
@@ -3696,31 +3679,8 @@ Beras Premium 1"></textarea>
        render();
     };
 
-    window.getInitialExpresCart = function() {
-        const defaultExpresItems = [
-            "Beras A", "Beras B", "Beras C", "Cakra", "Gula Pasir", "Gunung Agung", 
-            "Kacang A", "Kacang B", "Kacang C", "Kentang Besar", "Kentang Pl", "Kentang Siomay",
-            "Maizena", "Minyak Sawit", "Payung", "Segitiga", "Sphp", "Telur"
-        ];
-        const products = (window.state && window.state.data && window.state.data.products) ? window.state.data.products : [];
-        
-        return Array.from({length: 20}, (_, i) => {
-            let name = defaultExpresItems[i] || '';
-            let isi = 1;
-            let cuanEcer = 0;
-            
-            if (name && products.length > 0) {
-                const prod = products.find(p => (p.name || "").trim().toLowerCase() === name.toLowerCase());
-                if (prod) {
-                    isi = prod.unitContent || 1;
-                    const saleEcer = Number(String(prod.salePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
-                    const baseEcer = Number(String(prod.basePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
-                    cuanEcer = saleEcer - baseEcer;
-                }
-            }
-            
-            return { name: name, qty: '', isi: isi, cuanEcer: cuanEcer, profit: 0 };
-        });
+        window.getInitialExpresCart = function() {
+        return Array.from({length: 20}, () => ({ name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0 }));
     };
 
     window.eksekusiCuan = async function() {
@@ -4882,12 +4842,20 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
     };
 
     function actionTable(collection, rows, keys, labels, formatter) {
-      let finalLabels = labels.concat(["Aksi"]);
-      if (collection === "products") finalLabels = ["☑️"].concat(finalLabels);
+      const isProducts = collection === "products";
+      let finalLabels = isProducts ? ["☑️", "Aksi"].concat(labels) : labels.concat(["Aksi"]);
       return `<div data-collection="${collection}">${table(rows, finalLabels, (row) => {
         const isChecked = (window.expresCart || window.getInitialExpresCart())?.some(r => (r.name || "").trim().toLowerCase() === (row.name || "").trim().toLowerCase()) ? "checked" : "";
-        const prefix = collection === "products" ? `<td style="width:30px; text-align:center;"><input type="checkbox" style="width:16px; height:16px; cursor:pointer; accent-color:var(--garneta-cyan);" onchange="window.toggleExpresItem('${row.id}', this.checked)" ${isChecked}></td>` : "";
-        return prefix + keys.map((key) => td(formatter ? formatter(key, row[key]) : row[key], key)).join("") + `<td class="actions" style="position:relative; overflow:visible; width:40px;"><button class="btn soft kebab-toggle" onclick="document.querySelectorAll('.kebab-menu').forEach(m => m !== this.nextElementSibling && m.classList.add('hidden')); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();" style="padding: 2px 6px !important; font-size: 13px !important; min-height: 24px !important; line-height: 1 !important; border-radius: 4px !important;">⋮</button><div class="kebab-menu hidden" style="position:absolute; right:36px; top:50%; transform:translateY(-50%); background:var(--card-bg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.8); z-index: 50; display:flex; flex-direction:row; gap:12px; min-width:unset;"><button onclick="event.stopPropagation(); window.handleMenuAction('duplicate', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none; display: ${collection === 'products' ? 'inline-block' : 'none'};" title="Duplikat">📄</button><button onclick="event.stopPropagation(); window.handleMenuAction('edit', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">✏️</button><button onclick="event.stopPropagation(); window.handleMenuAction('delete', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">🗑️</button></div></td>`;
+        const checkboxCell = `<td style="width:30px; text-align:center;"><input type="checkbox" style="width:16px; height:16px; cursor:pointer; accent-color:var(--garneta-cyan);" onchange="window.toggleExpresItem('${row.id}', this.checked)" ${isChecked}></td>`;
+        const actionMenuPos = isProducts ? "left:36px;" : "right:36px;";
+        const actionsCell = `<td class="actions" style="position:relative; overflow:visible; width:40px; text-align:center;"><button class="btn soft kebab-toggle" onclick="document.querySelectorAll('.kebab-menu').forEach(m => m !== this.nextElementSibling && m.classList.add('hidden')); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();" style="padding: 2px 6px !important; font-size: 13px !important; min-height: 24px !important; line-height: 1 !important; border-radius: 4px !important;">⋮</button><div class="kebab-menu hidden" style="position:absolute; ${actionMenuPos} top:50%; transform:translateY(-50%); background:var(--card-bg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.8); z-index: 50; display:flex; flex-direction:row; gap:12px; min-width:unset;"><button onclick="event.stopPropagation(); window.handleMenuAction('duplicate', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none; display: ${isProducts ? 'inline-block' : 'none'};" title="Duplikat">📄</button><button onclick="event.stopPropagation(); window.handleMenuAction('edit', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">✏️</button><button onclick="event.stopPropagation(); window.handleMenuAction('delete', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">🗑️</button></div></td>`;
+        const dataCells = keys.map((key) => td(formatter ? formatter(key, row[key]) : row[key], key)).join("");
+        
+        if (isProducts) {
+          return checkboxCell + actionsCell + dataCells;
+        } else {
+          return dataCells + actionsCell;
+        }
       })}</div>`;
     }
 
