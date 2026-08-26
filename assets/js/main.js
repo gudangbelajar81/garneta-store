@@ -4778,7 +4778,9 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       const query = (window.pembelianSearchQuery || "").trim().toLowerCase();
       if (query) {
         purchasesList = purchasesList.filter(p => {
-          const dateMatch = (p.date || "").toLowerCase().includes(query);
+          const rawDate = (p.date || "").toLowerCase();
+          const cleanDate = formatDateDisplay(p.date).toLowerCase();
+          const dateMatch = rawDate.includes(query) || cleanDate.includes(query);
           const prodMatch = (p.product || "").toLowerCase().includes(query);
           const qtyMatch = String(p.qty || "").toLowerCase().includes(query);
           const amountMatch = String(p.amount || "").toLowerCase().includes(query);
@@ -4993,7 +4995,17 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       return `<label>${label}<select name="${name}">${options.map((item) => `<option${item === selectedValue ? ' selected' : ''}>${item}</option>`).join("")}</select></label>`;
     }
 
+    function formatDateDisplay(val) {
+      if (!val) return "-";
+      const s = String(val).trim();
+      if (s.includes("T")) {
+        return s.split("T")[0];
+      }
+      return s;
+    }
+
     function priceFormat(key, value) {
+      if (key === "date" || key === "displayDate") return formatDateDisplay(value);
       return ["basePrice", "basePriceEcer", "costPrice", "salePrice", "salePriceEcer", "amount", "total", "profitPerUnit", "profit", "cuan"].includes(key) ? rupiah(value) : value;
     }
 
