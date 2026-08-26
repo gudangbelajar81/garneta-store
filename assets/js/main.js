@@ -1263,13 +1263,12 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
           </div>
       ` : '';
 
-      // Render toolbar: Supplier Kiri, Form, Daftar, Dropdown Tengah, Cari Kanan
+      // Render toolbar: Supplier Kiri, Form, Daftar, Dropdown Tengah
       const toolbar = `<div class="workspace-toolbar" style="display:flex; justify-content:space-between; width:100%; gap:4px; margin-bottom:8px;">
           ${supplierBtn}
           ${formBtn}
           ${daftarBtn}
           ${dropdownHtml}
-          ${searchBtn}
       </div>`;
       
       // Render active workspace content
@@ -1335,20 +1334,36 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
           break;
         case 'list':
         default:
+          const totalProductsCount = state.data.products?.length || 0;
+          const currentQuery = window.productSearchQuery || '';
+          
           workspaceContent = `<div class="workspace-content">
             <div class="card">
               <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-                <h3 style="margin:0;">📋 Daftar Barang (${state.data.products?.length || 0})</h3>
-                <div style="display:flex; gap:4px; opacity:0.75;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'">
-                  <button class="btn soft" onclick="window.openAppsScriptExportModal()" style="font-size:0.68rem; padding:2px 8px; font-weight:600; border-radius:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.85);" title="Export Spreadsheet">
-                    Export
-                  </button>
-                  <button class="btn soft" onclick="window.openAppsScriptImportModal()" style="font-size:0.68rem; padding:2px 8px; font-weight:600; border-radius:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.85);" title="Import Spreadsheet">
-                    Import
-                  </button>
+                <h3 style="margin:0;">📋 Daftar Barang (${totalProductsCount})</h3>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                  <div style="position:relative; display:flex; align-items:center;">
+                    <input type="text" 
+                           id="daftar-barang-search-input" 
+                           placeholder="🔍 Cari barang, kategori..." 
+                           value="${escapeAttr(currentQuery)}"
+                           oninput="window.handleProductSearchInput(this.value)"
+                           style="padding:4px 26px 4px 8px; font-size:0.8rem; border-radius:6px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.3); color:#fff; width:190px;">
+                    ${currentQuery ? `<button onclick="window.handleProductSearchInput(''); const el = document.getElementById('daftar-barang-search-input'); if(el) el.value='';" style="position:absolute; right:6px; background:none; border:none; color:#aaa; cursor:pointer; font-size:12px; padding:0;" title="Clear">✕</button>` : ''}
+                  </div>
+                  <div style="display:flex; gap:4px; opacity:0.75;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'">
+                    <button class="btn soft" onclick="window.openAppsScriptExportModal()" style="font-size:0.68rem; padding:2px 8px; font-weight:600; border-radius:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.85);" title="Export Spreadsheet">
+                      Export
+                    </button>
+                    <button class="btn soft" onclick="window.openAppsScriptImportModal()" style="font-size:0.68rem; padding:2px 8px; font-weight:600; border-radius:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.85);" title="Import Spreadsheet">
+                      Import
+                    </button>
+                  </div>
                 </div>
               </div>
-              ${productRows()}
+              <div id="product-rows-container">
+                ${productRows()}
+              </div>
             </div>
           </div>`;
       }
@@ -4679,8 +4694,29 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       </form>`;
     }
 
+        window.handleProductSearchInput = function(val) {
+      window.productSearchQuery = val;
+      const container = document.getElementById('product-rows-container');
+      if (container) {
+        container.innerHTML = productRows();
+      } else {
+        if (typeof render === 'function') render();
+      }
+    };
+
     function productRows() {
-      const sorted = [...(state.data.products || [])].sort((a, b) => {
+      let productsList = state.data.products || [];
+      const query = (window.productSearchQuery || "").trim().toLowerCase();
+      if (query) {
+        productsList = productsList.filter(p => {
+          const nameMatch = (p.name || "").toLowerCase().includes(query);
+          const catMatch = (p.category || "").toLowerCase().includes(query);
+          const unitMatch = (p.unit || "").toLowerCase().includes(query);
+          const barcodeMatch = (p.barcode || "").toLowerCase().includes(query);
+          return nameMatch || catMatch || unitMatch || barcodeMatch;
+        });
+      }
+      const sorted = [...productsList].sort((a, b) => {
         const catA = (a.category || "").toLowerCase();
         const catB = (b.category || "").toLowerCase();
         if (catA < catB) return -1;
@@ -4690,16 +4726,18 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
         return nameA < nameB ? -1 : nameA > nameB ? 1 : 0;
       }).map(p => {
         let displayPot = "-";
-        let displayMin = "-";
-        if (Number(p.discountValue) > 0) {
-           displayPot = p.discountType === '%' ? p.discountValue + '%' : rupiah(p.discountValue);
+        if (Number(p.discountMinQty) > 0) {
+           displayPot = p.discountPercent > 0 ? `${p.discountPercent}%` : (p.discountAmount > 0 ? rupiah(p.discountAmount) : "-");
         }
+        let displayMin = "-";
         if (Number(p.discountMinQty) > 0) {
            displayMin = p.discountMinQty;
         }
-        const saleEcer = Number(String(p.salePriceEcer || '0').replace(/[^0-9]/g, '')) || 0; const baseEcer = Number(String(p.basePriceEcer || '0').replace(/[^0-9]/g, '')) || 0; return { ...p, displayPot, displayMin, cuan: saleEcer - baseEcer };
+        const saleEcer = Number(String(p.salePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
+        const baseEcer = Number(String(p.basePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
+        return { ...p, displayPot, displayMin, cuan: saleEcer - baseEcer };
       });
-      const prodKeys   = isSuperAdmin()
+      const prodKeys = isSuperAdmin()
         ? ["category", "name", "unit", "unitContent", "basePrice", "basePriceEcer", "salePrice", "salePriceEcer", "displayPot", "displayMin", "cuan"]
         : ["category", "name", "unit", "unitContent", "salePrice", "salePriceEcer", "displayPot", "displayMin"];
       const prodLabels = isSuperAdmin()
