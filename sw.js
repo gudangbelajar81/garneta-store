@@ -1,4 +1,4 @@
-const CACHE_NAME = 'garneta-store-v4-1787582075.87504.50489.38395';
+const CACHE_NAME = 'garneta-store-v5-' + Date.now();
 const ASSETS = [
   '/',
   '/index.html',
@@ -10,17 +10,35 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS).catch(() => {}))
   );
 });
 
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
+});
+
 self.addEventListener('fetch', (e) => {
-  // PWA requires a fetch handler. We can just do a network-first or cache-first.
-  // For this POS, network-first is safer so they always get the latest API.
   if (e.request.method !== 'GET') return;
-  
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    fetch(e.request).then((response) => {
+      if (response && response.status === 200) {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy));
+      }
+      return response;
+    }).catch(() => caches.match(e.request))
   );
 });

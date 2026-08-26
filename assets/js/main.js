@@ -79,9 +79,8 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
            state.role = "Admin";
            state.currentUser = null;
            
-           if (!silentAuthError) {
+           if (!silentAuthError && !["bootstrap", "sync", "list", "getSetting"].includes(action)) {
                showToast("Akses ditolak: Fitur ini khusus Super Admin.", "error");
-               // DILARANG memunculkan popup paksa login atau me-reset halaman (Permintaan Bos)
            }
            throw new Error(result.message);
         }
@@ -130,7 +129,7 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
         if (window.dataVersion !== syncData.dataVersion) {
            window.dataVersion = syncData.dataVersion;
            showToast("🔄 Sinkronisasi: Ada aktivitas data baru.", "info");
-           state.data = await gas("bootstrap");
+           state.data = await gas("bootstrap", {}, true);
            render();
         }
       } catch(e) {}
@@ -144,7 +143,7 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
     }
 
     async function load() {
-      state.data = await gas("bootstrap");
+      state.data = await gas("bootstrap", {}, true);
       startSyncPolling();
       renderShell();
       render();
