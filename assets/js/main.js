@@ -80,11 +80,8 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
            state.currentUser = null;
            
            if (!silentAuthError) {
-               showToast("Sesi habis atau ditolak. Silakan login kembali.", "error");
-               renderShell();
-               el("content").innerHTML = `<div class="card" style="text-align:center; padding: 40px; margin-top:20px;"><h2>Sesi Kedaluwarsa</h2><p>Akses ditolak karena sesi tidak valid. Silakan tekan tombol <strong>MASUK SUPER ADMIN</strong> di atas untuk login kembali.</p></div>`;
-               // [FIX] Auto-popup login dimatikan. Hanya muncul saat tombol MASUK SUPER ADMIN diklik.
-               // if(loginBtn) loginBtn.click(); // DILARANG auto-popup
+               showToast("Akses ditolak: Fitur ini khusus Super Admin.", "error");
+               // DILARANG memunculkan popup paksa login atau me-reset halaman (Permintaan Bos)
            }
            throw new Error(result.message);
         }
@@ -9390,3 +9387,4 @@ window.deleteManualCashflow = async function(id) {
             }
         }
     };
+

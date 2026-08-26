@@ -254,7 +254,7 @@ function verifyToken(req, res, next) {
 
   // Beri akses ke Kasir untuk collection tertentu tanpa perlu login
   // [SECURITY] Tetap izinkan add/update untuk kasir, tapi list hanya field publik
-  if (["add", "update"].includes(action)) {
+  if (["add", "update", "remove"].includes(action)) {
     const collection = req.body?.payload?.collection;
     if (KASIR_COLLECTIONS.has(collection)) {
       return next();
@@ -2778,3 +2778,4 @@ setTimeout(async () => {
     }
   } catch(e) {}
 }, 5000);
+
