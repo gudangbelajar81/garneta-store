@@ -1385,7 +1385,6 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
     
     function pembelian() {
       const workspaces = [
-        { id: 'search', icon: '🔍', label: 'Cari' },
         { id: 'form', icon: '➕', label: 'Form' },
         { id: 'wa', icon: '📱', label: 'Paste WA' },
         { id: 'list', icon: '📋', label: 'Daftar' }
@@ -1446,10 +1445,26 @@ Minyak Goreng 3 45000"></textarea>
           break;
         case 'list':
         default:
+          const totalPurchasesCount = state.data.purchases?.length || 0;
+          const currentPembelianQuery = window.pembelianSearchQuery || '';
+          
           workspaceContent = `<div class="workspace-content">
             <div class="card">
-              <h3>📋 Daftar Pembelian (${state.data.purchases?.length || 0})</h3>
-              ${purchaseRows()}
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                <h3 style="margin:0;">📋 Daftar Pembelian (${totalPurchasesCount})</h3>
+                <div style="position:relative; display:flex; align-items:center;">
+                  <input type="text" 
+                         id="daftar-pembelian-search-input" 
+                         placeholder="🔍 Cari barang, tanggal..." 
+                         value="${escapeAttr(currentPembelianQuery)}"
+                         oninput="window.handlePembelianSearchInput(this.value)"
+                         style="padding:4px 26px 4px 8px; font-size:0.8rem; border-radius:6px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.3); color:#fff; width:200px;">
+                  ${currentPembelianQuery ? `<button onclick="window.handlePembelianSearchInput(''); const el = document.getElementById('daftar-pembelian-search-input'); if(el) el.value='';" style="position:absolute; right:6px; background:none; border:none; color:#aaa; cursor:pointer; font-size:12px; padding:0;" title="Clear">✕</button>` : ''}
+                </div>
+              </div>
+              <div id="pembelian-rows-container">
+                ${purchaseRows()}
+              </div>
             </div>
           </div>`;
       }
@@ -4748,8 +4763,30 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
 
 
 
+        window.handlePembelianSearchInput = function(val) {
+      window.pembelianSearchQuery = val;
+      const container = document.getElementById('pembelian-rows-container');
+      if (container) {
+        container.innerHTML = purchaseRows();
+      } else {
+        if (typeof render === 'function') render();
+      }
+    };
+
     function purchaseRows() {
-      return actionTable("purchases", state.data.purchases, ["date", "product", "qty", "amount", "total"], ["Tanggal", "Barang", "Banyak", "Harga", "Total"], priceFormat);
+      let purchasesList = state.data.purchases || [];
+      const query = (window.pembelianSearchQuery || "").trim().toLowerCase();
+      if (query) {
+        purchasesList = purchasesList.filter(p => {
+          const dateMatch = (p.date || "").toLowerCase().includes(query);
+          const prodMatch = (p.product || "").toLowerCase().includes(query);
+          const qtyMatch = String(p.qty || "").toLowerCase().includes(query);
+          const amountMatch = String(p.amount || "").toLowerCase().includes(query);
+          const totalMatch = String(p.total || "").toLowerCase().includes(query);
+          return dateMatch || prodMatch || qtyMatch || amountMatch || totalMatch;
+        });
+      }
+      return actionTable("purchases", purchasesList, ["date", "product", "qty", "amount", "total"], ["Tanggal", "Barang", "Banyak", "Harga", "Total"], priceFormat);
     }
 
     function saleRows() {
