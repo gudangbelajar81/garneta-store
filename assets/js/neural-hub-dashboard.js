@@ -53,15 +53,18 @@
           </div>
 
           <!-- Action Buttons -->
-          <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
-            <button id="toggle-animation-btn" class="anim-button" style="padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s;">
-              <span style="font-size: 16px;">✨</span> Animasi
+          <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+            <button id="toggle-animation-btn" class="anim-button" style="padding: 10px 16px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.3s;">
+              <span style="font-size: 15px;">✨</span> Animasi
             </button>
-            <button id="hard-refresh-btn" class="anim-button" style="padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s;" onclick="if(window.forceSuperHardRefresh) window.forceSuperHardRefresh(); else window.location.reload(true);">
-              <span style="font-size: 16px;">🔄</span> Muat Ulang
+            <button id="hard-refresh-btn" class="anim-button" style="padding: 10px 16px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.3s;" onclick="if(window.forceSuperHardRefresh) window.forceSuperHardRefresh(); else window.location.reload(true);">
+              <span style="font-size: 15px;">🔄</span> Muat Ulang
             </button>
-            <button id="show-pwa-modal-btn" class="anim-button" style="padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s;">
-              <span style="font-size: 16px;">📱</span> Install Aplikasi
+            <button id="theme-toggle-btn" class="anim-button" style="padding: 10px 16px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.3s;" onclick="if(window.toggleThemeMode) window.toggleThemeMode();">
+              <span style="font-size: 15px;">🌙</span> Mode Tema
+            </button>
+            <button id="show-pwa-modal-btn" class="anim-button" style="padding: 10px 16px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.3s;">
+              <span style="font-size: 15px;">📱</span> Install Aplikasi
             </button>
           </div>
         </div>
