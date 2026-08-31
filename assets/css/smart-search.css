@@ -150,7 +150,7 @@
 /* Card Info - Compact Row Layout */
 .quick-action-info {
   display: flex;
-  flex-direction: column;
+  flex-direction: column !important;
   gap: 4px;
   margin-bottom: 10px;
 }
@@ -268,8 +268,8 @@
   }
 
   .hover-ninja-container {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: column !important;
+    align-items: flex-start !important;
     overflow: visible;
   }
 
@@ -285,7 +285,7 @@
   }
   
   .quick-action-buttons {
-    flex-direction: column;
+    flex-direction: column !important;
   }
   
   .quick-action-buttons .btn {
