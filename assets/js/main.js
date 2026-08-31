@@ -128,9 +128,13 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
 
         if (window.dataVersion !== syncData.dataVersion) {
            window.dataVersion = syncData.dataVersion;
-           showToast("🔄 Sinkronisasi: Ada aktivitas data baru.", "info");
+           // Silently update state.data without toast and without forcing render
+           // to prevent disrupting the user while typing in forms
            state.data = await gas("bootstrap", {}, true);
-           render();
+           // Only re-render if on dashboard to avoid interrupting data entry
+           if (state.route === 'dashboard') {
+             render();
+           }
         }
       } catch(e) {}
     }
