@@ -1590,9 +1590,14 @@ Minyak Goreng 3 45000"></textarea>
     }
 
     function isExcludedNgitungCategory(p) {
-      if (!p || !p.category) return false;
-      const cat = String(p.category).toLowerCase();
-      return cat.includes("buah") || cat.includes("sayur") || cat.includes("bumbu");
+      if (!p) return false;
+      const cat = String(p.category || "").toLowerCase();
+      const name = String(p.name || "").toLowerCase();
+      
+      const isExcludedCategory = cat.includes("buah") || cat.includes("sayur") || cat.includes("bumbu");
+      const isTelur = name.includes("telur");
+      
+      return isExcludedCategory || isTelur;
     }
 
     window.ngitungPopulateDatalist = function() {
