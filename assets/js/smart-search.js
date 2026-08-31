@@ -204,6 +204,7 @@
         '<button class="btn primary" style="padding: 4px 10px; font-size: 0.8rem; border-radius: 4px;" onclick="quickActionJual(\'' + product.id + '\')">🛒 Jual</button>' +
         '<button class="btn soft" style="padding: 4px 10px; font-size: 0.8rem; border-radius: 4px; background: rgba(255,255,255,0.05); color: #ccc;" onclick="quickActionEditBarang(\'' + product.id + '\')">✏️ Edit</button>' +
         '<button class="btn soft" style="padding: 4px 10px; font-size: 0.8rem; border-radius: 4px; background: rgba(255,255,255,0.05); color: #ccc;" onclick="quickActionLihatSupplier(\'' + product.id + '\')">🏢 Suplier</button>' +
+        '<button class="btn danger" style="padding: 4px 10px; font-size: 0.8rem; border-radius: 4px; background: rgba(255,71,87,0.15); color: #ff4757; border: 1px solid rgba(255,71,87,0.3);" onclick="quickActionHapusBarang(\'' + product.id + '\', \'' + escapeHtml(product.name).replace(/'/g, "\\'") + '\')">🗑️ Hapus</button>' +
       '</div>' +
     '</div>';
   }
@@ -336,6 +337,22 @@
         }
       }
     }, 100);
+  };
+
+  window.quickActionHapusBarang = async function(productId, productName) {
+    if (!confirm('❗ Yakin ingin menghapus barang "' + productName + '"?\n\nTindakan ini tidak bisa dibatalkan.')) return;
+    try {
+      await window.gas('delete', { collection: 'products', id: productId });
+      // Close dropdown and reload
+      const dropdown = document.getElementById('smart-search-dropdown');
+      if (dropdown) dropdown.classList.add('hidden');
+      const input = document.getElementById('smart-search-input');
+      if (input) input.value = '';
+      if (window.load) await window.load();
+      if (window.showToast) window.showToast('Barang "' + productName + '" berhasil dihapus.', 'success');
+    } catch (err) {
+      alert('Gagal menghapus barang: ' + err.message);
+    }
   };
 
   // Auto-start initialization loop
