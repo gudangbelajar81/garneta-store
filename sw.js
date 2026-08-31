@@ -1,4 +1,4 @@
-const CACHE_NAME = 'garneta-store-v10-1788158200';
+const CACHE_NAME = 'garneta-store-v11-1788158900';
 const ASSETS = [
   '/',
   '/index.html',
