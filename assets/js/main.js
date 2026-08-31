@@ -171,11 +171,34 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
     };
 
     async function load() {
-      state.data = await gas("bootstrap", {}, true);
-      startSyncPolling();
-      renderShell();
-      render();
-      if (window.initSmartSearch) setTimeout(window.initSmartSearch, 50);
+      const token = localStorage.getItem("jwt_token");
+      if (!token) {
+        document.getElementById("gateway-screen").classList.remove("hidden");
+        document.querySelector(".app").classList.add("hidden");
+        return;
+      }
+      
+      try {
+        state.data = await gas("bootstrap", {}, true);
+        startSyncPolling();
+        
+        document.getElementById("gateway-screen").classList.add("hidden");
+        document.querySelector(".app").classList.remove("hidden");
+        
+        renderShell();
+        render();
+        if (window.initSmartSearch) setTimeout(window.initSmartSearch, 50);
+      } catch (err) {
+        if (err.message.includes("Akses ditolak") || err.message.includes("login")) {
+           localStorage.removeItem("jwt_token");
+           localStorage.removeItem("role");
+           localStorage.removeItem("currentUser");
+           document.getElementById("gateway-screen").classList.remove("hidden");
+           document.querySelector(".app").classList.add("hidden");
+        } else {
+           window.showToast("Gagal memuat data: " + err.message, "error");
+        }
+      }
     }
 
     window.showPage = function(route) {

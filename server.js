@@ -225,7 +225,7 @@ app.use((req, res, next) => {
 
 // [SECURITY] Actions yang tidak perlu auth (public) — DIPERKECIL
 // DIHAPUS dari public: resetAdmin (BACKDOOR!), getSetting, setSetting, modules
-const PUBLIC_ACTIONS = new Set(["login", "verifySuperAdmin", "bootstrap", "dashboard", "requestMagicLink", 
+const PUBLIC_ACTIONS = new Set(["login", "loginKaryawan", "getEmployeesList", "verifySuperAdmin", "requestMagicLink", 
 "verifyMagicLink", "generateAuthOptions", "verifyAuth", "setupSuperAdmin", "requestResetOTP", "verifyReset"]);
 
 // Setting keys yang boleh dibaca publik (untuk branding toko di login screen)
@@ -236,9 +236,8 @@ function verifyToken(req, res, next) {
   const action = req.body?.action;
 
   // [SECURITY] Terapkan login rate limiter khusus
-  if (action === "login") {
+  if (action === "login" || action === "loginKaryawan") {
     return loginLimiter(req, res, () => {
-      // Tetap lanjut tanpa token untuk action login
       return next();
     });
   }
@@ -249,25 +248,6 @@ function verifyToken(req, res, next) {
   if (action === "getSetting") {
     const key = req.body?.payload?.key;
     if (PUBLIC_SETTING_KEYS.has(key)) return next();
-    // Kunci lain butuh auth — lanjutkan ke pengecekan token di bawah
-  }
-
-  // Beri akses ke Kasir untuk collection tertentu tanpa perlu login
-  // [SECURITY] Tetap izinkan add/update untuk kasir, tapi list hanya field publik
-  if (["add", "update", "remove"].includes(action)) {
-    const collection = req.body?.payload?.collection;
-    if (KASIR_COLLECTIONS.has(collection)) {
-      return next();
-    }
-  }
-
-  // [SECURITY] list untuk kasir: tandai sebagai akses publik untuk filter field
-  if (action === "list") {
-    const collection = req.body?.payload?.collection;
-    if (KASIR_COLLECTIONS.has(collection)) {
-      req.isPublicKasir = true;
-      return next();
-    }
   }
 
   const authHeader = req.headers["authorization"] || "";
@@ -276,7 +256,28 @@ function verifyToken(req, res, next) {
 
   try {
     req.user = jwt.verify(token, JWT_SECRET);
-    next();
+    
+    if (req.user.role === "Super Admin") {
+      return next();
+    }
+    
+    if (req.user.role === "Karyawan") {
+      if (["add", "update", "remove", "list"].includes(action)) {
+        const collection = req.body?.payload?.collection;
+        if (KASIR_COLLECTIONS.has(collection)) {
+          if (action === "list") req.isPublicKasir = true;
+          return next();
+        }
+        return res.status(401).json({ ok: false, message: `Akses ditolak. Karyawan tidak diizinkan mengubah data ${collection}.` });
+      }
+      
+      // Allow general dashboard access
+      if (["bootstrap", "sync", "dashboard"].includes(action)) return next();
+      
+      return res.status(401).json({ ok: false, message: "Akses ditolak. Fitur ini khusus Super Admin." });
+    }
+
+    return res.status(401).json({ ok: false, message: "Peran tidak dikenali." });
   } catch (err) {
     return res.status(401).json({ ok: false, message: "Akses ditolak. Session tidak valid atau sudah kedaluwarsa." });
   }
@@ -413,13 +414,15 @@ app.use(errorHandler);
 
 async function handleAction(action, payload, req) {
   const coreActions = {
+    loginKaryawan: () => loginKaryawan(payload.employeeId, payload.pin),
+    getEmployeesList: () => getEmployeesList(),
     sync: () => ({ appVersion: APP_VERSION, dataVersion: globalDataVersion }),
     bootstrap: () => bootstrap(),
     dashboard: () => dashboard(),
     list: () => listRows(payload.collection, req),
-    add: () => addRow(payload.collection, payload.item),
+    add: () => addRow(payload.collection, payload.item, req),
     setupSuperAdmin: () => addRow("users", payload),
-    update: () => updateRow(payload.collection, payload.id, payload.item),
+    update: () => updateRow(payload.collection, payload.id, payload.item, req),
     remove: () => removeRow(payload.collection, payload.id),
     login: () => loginUser(payload.name, payload.password, req),
     verifySuperAdmin: () => verifySuperAdmin(payload.adminId, payload.password, req),
@@ -944,7 +947,7 @@ async function listRows(collection, req = null) {
   throw new Error("Collection belum dibuat handler list.");
 }
 
-async function addRow(collection, item = {}) {
+async function addRow(collection, item = {}, req = null) {
   assertCollection(collection);
   globalDataVersion = Date.now();
 
@@ -959,9 +962,13 @@ async function addRow(collection, item = {}) {
   }
 
   if (collection === "ngitungSales") {
+    let finalCustomerName = item.customerName || 'Pelanggan Umum';
+    if (req && req.user && req.user.role === 'Karyawan') {
+      finalCustomerName = `[Kasir: ${req.user.name}] ` + finalCustomerName;
+    }
     const [result] = await db.query(
       `INSERT INTO ngitung_sales (date, customer_name, total_amount, paid_amount, status, items, installments) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [item.date || new Date(), item.customerName || null, item.totalAmount || 0, item.paidAmount || 0, item.status || 'Lunas', JSON.stringify(item.items || []), JSON.stringify(item.installments || [])]
+      [item.date || new Date(), finalCustomerName, item.totalAmount || 0, item.paidAmount || 0, item.status || 'Lunas', JSON.stringify(item.items || []), JSON.stringify(item.installments || [])]
     );
     return findRow("ngitungSales", result.insertId);
   }
@@ -1084,6 +1091,9 @@ async function addRow(collection, item = {}) {
       throw new Error(`Stok tidak mencukupi. Stok tersedia: ${stockRow.stock}, dibutuhkan: ${quantitySold}.`);
     }
 
+    if (req && req.user && req.user.role === 'Karyawan') {
+      payload.notes = `[Kasir: ${req.user.name}] ` + (payload.notes || "");
+    }
     const [result] = await db.query(`
       INSERT INTO sales (user_id, product_id, sold_at, unit_sold, unit_content, cost_price, sale_price, notes)
       VALUES (:userId, :productId, :date, :unitSold, :unitContent, :costPrice, :salePrice, :notes)
@@ -1180,7 +1190,7 @@ async function addRow(collection, item = {}) {
   throw new Error("Collection belum dibuat handler tambah.");
 }
 
-async function updateRow(collection, id, item = {}) {
+async function updateRow(collection, id, item = {}, req = null) {
   assertCollection(collection);
   globalDataVersion = Date.now();
   if (!id) throw new Error("ID wajib dikirim.");
@@ -2780,3 +2790,29 @@ setTimeout(async () => {
   } catch(e) {}
 }, 5000);
 
+
+
+async function getEmployeesList() {
+  const [rows] = await db.query("SELECT id, name FROM employees WHERE status = 'Aktif' ORDER BY name ASC");
+  return rows;
+}
+
+async function loginKaryawan(employeeId, pin) {
+  if (!employeeId || !pin) throw new Error("ID Karyawan dan PIN wajib diisi.");
+  
+  // Ambil PIN karyawan dari pengaturan (default: 1180)
+  const [settings] = await db.query("SELECT setting_value FROM app_settings WHERE setting_key = 'EMPLOYEE_PIN' LIMIT 1");
+  const validPin = settings.length ? settings[0].setting_value : "1180";
+  
+  if (String(pin) !== String(validPin)) {
+    throw new Error("PIN Karyawan salah.");
+  }
+  
+  const [rows] = await db.query("SELECT id, name FROM employees WHERE id = ? AND status = 'Aktif' LIMIT 1", [employeeId]);
+  if (rows.length === 0) throw new Error("Karyawan tidak ditemukan atau tidak aktif.");
+  
+  const emp = rows[0];
+  const token = jwt.sign({ id: emp.id, name: emp.name, role: "Karyawan", isEmployee: true }, JWT_SECRET, { expiresIn: JWT_EXPIRY });
+  
+  return { token, name: emp.name, role: "Karyawan", isSuperAdmin: false };
+}

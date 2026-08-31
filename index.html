@@ -667,6 +667,43 @@
   <script src='assets/js/audio.js' defer></script>
 </head>
 <body>
+  <div id="gateway-screen" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:999999; background: var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center;">
+      <div style="margin-bottom: 40px;">
+         <img src="/assets/images/garneta-logo-g.svg" style="height: 100px; margin-bottom: 20px;">
+         <h1 id="gateway-store-name" style="font-size: 26px; font-weight: 900; text-transform: uppercase; margin:0;">GARNETA STORE</h1>
+         <p class="muted" style="margin-top:5px; font-size:15px;">Sistem Point of Sale Terpusat</p>
+      </div>
+
+      <div class="grid" id="gateway-options" style="width: 100%; max-width: 360px; gap: 16px;">
+         <button class="btn primary" id="btn-gateway-karyawan" style="padding: 16px; font-size: 16px; border-radius: 14px; background: linear-gradient(135deg, #00ffcc 0%, #0099ff 100%); display:flex; justify-content:center; align-items:center; gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Masuk sebagai Karyawan
+         </button>
+         <button class="btn soft" id="btn-gateway-super" style="padding: 16px; font-size: 16px; border-radius: 14px; display:flex; justify-content:center; align-items:center; gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16h20V4H2zm2 2h16v12H4V6zm4 3v2h8V9H8zm0 4v2h5v-2H8z"/></svg>
+            Masuk sebagai Super Admin
+         </button>
+      </div>
+
+      <div id="gateway-karyawan-panel" class="hidden card grid" style="width: 100%; max-width: 360px; border-radius: 16px; text-align:left; padding: 24px;">
+         <h3 style="margin-top:0; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:16px;">Otorisasi Karyawan</h3>
+         <label>Nama Kasir / Karyawan
+            <select id="gateway-karyawan-select" style="margin-top:4px;">
+                <option value="">-- Sedang memuat nama... --</option>
+            </select>
+         </label>
+         <label>PIN Akses
+            <div style="display:grid; grid-template-columns:1fr auto; gap:8px; margin-top:4px;">
+               <input type="password" id="gateway-karyawan-pin" placeholder="Masukkan PIN" inputmode="numeric">
+               <button class="btn" id="btn-gateway-karyawan-showpin" type="button">Lihat</button>
+            </div>
+         </label>
+         <div class="actions" style="margin-top: 16px; justify-content:flex-end;">
+            <button class="btn soft" id="btn-gateway-karyawan-cancel">Kembali</button>
+            <button class="btn primary" id="btn-gateway-karyawan-submit">Masuk</button>
+         </div>
+      </div>
+  </div>
   <div class="app">
     <aside class="sidebar neural-sidebar">
       <div class="brand" onclick="if(window.toggleAppDrawer) window.toggleAppDrawer()" style="cursor: pointer;" title="Buka Menu">
