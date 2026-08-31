@@ -232,7 +232,20 @@
 
   function openDropdown() {
     const dropdown = document.getElementById('smart-search-dropdown');
-    if (dropdown) dropdown.classList.remove('hidden');
+    if (!dropdown) return;
+
+    // On mobile (width <= 768), use fixed positioning anchored below the search input
+    if (window.innerWidth <= 768) {
+      const inputBox = document.querySelector('.smart-search-input-box');
+      if (inputBox) {
+        const rect = inputBox.getBoundingClientRect();
+        dropdown.style.top = (rect.bottom + 4) + 'px';
+      }
+    } else {
+      dropdown.style.top = '';
+    }
+
+    dropdown.classList.remove('hidden');
   }
 
   function closeDropdown() {

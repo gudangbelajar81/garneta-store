@@ -238,6 +238,52 @@
     display: none;
   }
   
+  /* === FULL WIDTH DROPDOWN ON MOBILE === */
+  .smart-search-dropdown {
+    /* Break out of the parent container */
+    position: fixed;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100vw !important;
+    top: auto; /* will be set dynamically */
+    margin-top: 0;
+    border-radius: 0 0 16px 16px;
+    border-left: none;
+    border-right: none;
+    max-height: 55vh;
+    z-index: 99999;
+  }
+
+  /* On mobile, actions always visible (no hover) — show them in a row below the name */
+  .hover-ninja-actions {
+    position: static;
+    transform: none !important;
+    opacity: 1 !important;
+    flex-wrap: wrap;
+    background: transparent;
+    box-shadow: none;
+    padding-left: 0;
+    margin-top: 8px;
+    gap: 4px;
+  }
+
+  .hover-ninja-container {
+    flex-direction: column;
+    align-items: flex-start;
+    overflow: visible;
+  }
+
+  .hover-ninja-content {
+    opacity: 1 !important;
+    width: 100%;
+  }
+
+  .hover-ninja-actions .btn {
+    font-size: 0.72rem;
+    padding: 4px 8px;
+    min-height: 28px;
+  }
+  
   .quick-action-buttons {
     flex-direction: column;
   }
