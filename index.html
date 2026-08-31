@@ -667,6 +667,51 @@
   <script src='assets/js/audio.js' defer></script>
 </head>
 <body>
+
+  <!-- ====== PWA AUTO-UPDATE BANNER ====== -->
+  <div id="pwa-update-banner" style="
+    display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+    z-index:9999999; background:linear-gradient(135deg,#00ffcc,#0099ff);
+    color:#000; font-weight:700; padding:14px 24px; border-radius:40px;
+    box-shadow:0 8px 32px rgba(0,255,204,0.4); align-items:center; gap:12px;
+    font-size:14px; cursor:pointer; max-width:360px; width:90%; text-align:center;
+    animation: pulse-update 1.5s infinite;
+  " onclick="window.location.reload(true)">
+    🚀 Versi Baru Tersedia! Ketuk untuk Update Sekarang
+  </div>
+  <style>
+    @keyframes pulse-update {
+      0%,100% { box-shadow:0 8px 32px rgba(0,255,204,0.4); }
+      50% { box-shadow:0 8px 48px rgba(0,255,204,0.8); transform:translateX(-50%) scale(1.02); }
+    }
+  </style>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SW_UPDATED') {
+          const banner = document.getElementById('pwa-update-banner');
+          if (banner) banner.style.display = 'flex';
+        }
+      });
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        reg.update();
+        setInterval(() => reg.update(), 30000);
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing;
+          if (newSW) {
+            newSW.addEventListener('statechange', () => {
+              if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                const banner = document.getElementById('pwa-update-banner');
+                if (banner) banner.style.display = 'flex';
+              }
+            });
+          }
+        });
+      });
+    }
+  </script>
+  <!-- ====== END PWA AUTO-UPDATE BANNER ====== -->
+
   <div id="gateway-screen" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:999999; background: var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center;">
       <div style="margin-bottom: 40px;">
          <img src="/assets/images/garneta-logo-g.svg" style="height: 100px; margin-bottom: 20px;">
