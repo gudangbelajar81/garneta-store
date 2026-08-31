@@ -80,7 +80,7 @@
 
 /* Results Container */
 .smart-search-results {
-  padding: 10px;
+  padding: 10px; padding-bottom: 120px;
 }
 
 /* Section */
