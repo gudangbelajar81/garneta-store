@@ -5048,7 +5048,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
             <input name="${namePrice}" type="text" inputmode="numeric" oninput="formatNumberInput(this); ${extraPriceOnInput} window.triggerMarginDependency(this);" style="flex:1" placeholder="Rp">
             <span style="display:flex; align-items:center; font-weight:bold; color:var(--muted)">/</span>
             <input name="${nameUnit}" type="text" list="${dataListId}" placeholder="${unitPlaceholder}" style="width:70px; padding-left:4px; padding-right:4px; text-align:center;">
-            <datalist id="${dataListId}">${listOptions.map(o => \`<option value="${o}">\`).join("")}</datalist>
+            <datalist id="${dataListId}">${listOptions.map(o => `<option value="${o}">`).join("")}</datalist>
           </div>
         </label>`;
       }
@@ -9699,3 +9699,4 @@ document.addEventListener("DOMContentLoaded", () => {
       };
   }
 });
+
