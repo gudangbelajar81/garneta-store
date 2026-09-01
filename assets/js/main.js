@@ -3669,7 +3669,7 @@ Beras Premium 1"></textarea>
          
       } else if (activeTopWorkspace === 'expres') {
          if (!window.expresCart || window.expresCart.length !== 20) {
-             window.expresCart = window.getInitialExpresCart(true);
+             window.expresCart = window.getInitialExpresCart(false);
               window.saveExpresCart();
          }
          const expresRows = window.expresCart;
@@ -9756,7 +9756,7 @@ window.deleteManualCashflow = async function(id) {
 };
 
     window.toggleExpresItem = function(id, checked) {
-        if (!window.expresCart) window.expresCart = window.getInitialExpresCart(true);
+        if (!window.expresCart) window.expresCart = window.getInitialExpresCart(false);
         const product = (window.state && window.state.data && window.state.data.products || []).find(p => String(p.id) === String(id));
         if (!product) return;
         
@@ -9808,7 +9808,7 @@ document.addEventListener("DOMContentLoaded", () => {
   
   if (document.getElementById("btn-gateway-super")) {
       document.getElementById("btn-gateway-super").addEventListener("click", () => {
-         document.getElementById("login-modal").classList.remove("hidden");
+         document.getElementById("gateway-modal")?.classList.add("hidden"); document.getElementById("login-modal").classList.remove("hidden");
       });
   }
   
