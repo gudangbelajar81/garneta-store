@@ -3891,7 +3891,29 @@ Beras Premium 1"></textarea>
     };
 
         window.getInitialExpresCart = function() {
+        // Muat dari localStorage jika ada (checkbox daftar barang permanen sampai dilepas manual)
+        try {
+            const saved = JSON.parse(localStorage.getItem('expresCart') || 'null');
+            if (Array.isArray(saved) && saved.length >= 20) {
+                return saved.map(r => ({
+                    name: r.name || '',
+                    qty: r.qty !== undefined ? r.qty : '',
+                    isi: r.isi !== undefined ? r.isi : 1,
+                    cuanEcer: r.cuanEcer !== undefined ? r.cuanEcer : 0,
+                    profit: r.profit !== undefined ? r.profit : 0,
+                    productId: r.productId
+                }));
+            }
+        } catch (e) {}
         return Array.from({length: 20}, () => ({ name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0 }));
+    };
+
+    // Simpan expresCart ke localStorage - fungsi ini SEMPAT HILANG sehingga
+    // checkbox daftar barang tidak pernah tersimpan (hilang saat refresh).
+    window.saveExpresCart = function() {
+        try {
+            localStorage.setItem('expresCart', JSON.stringify(window.expresCart || []));
+        } catch (e) {}
     };
 
     window.eksekusiCuan = async function() {
@@ -7659,6 +7681,11 @@ function doPost(e) {
       localStorage.setItem("role", state.role);
       localStorage.setItem("currentUser", JSON.stringify(user));
       el("login-modal").classList.add("hidden");
+      // Sembunyikan gateway-screen agar tidak menutupi aplikasi setelah login
+      const gateway = document.getElementById("gateway-screen");
+      if (gateway) gateway.classList.add("hidden");
+      const appWrap = document.querySelector(".app");
+      if (appWrap) appWrap.classList.remove("hidden");
       renderShell();
       render();
     }
@@ -9676,7 +9703,6 @@ window.deleteManualCashflow = async function(id) {
 
     window.toggleExpresItem = function(id, checked) {
         if (!window.expresCart) window.expresCart = window.getInitialExpresCart(true);
-              window.saveExpresCart();
         const product = (window.state && window.state.data && window.state.data.products || []).find(p => String(p.id) === String(id));
         if (!product) return;
         
@@ -9717,6 +9743,7 @@ window.deleteManualCashflow = async function(id) {
                 }
             }
         }
+        window.saveExpresCart();
     };
 
 
