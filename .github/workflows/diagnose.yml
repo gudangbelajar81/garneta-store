@@ -1,0 +1,37 @@
+name: Diagnose VPS App Directory
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    name: Diagnose struktur aplikasi di VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Diagnose via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: 22
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 120s
+          script: |
+            echo "=== APP_DIR contents ==="
+            ls -la /data/coolify/applications/qy8o93x6nlmon1xo7lrnpf3r/ 2>/dev/null | head -30
+            echo ""
+            echo "=== Docker compose file? ==="
+            ls /data/coolify/applications/qy8o93x6nlmon1xo7lrnpf3r/docker-compose*.yml 2>/dev/null || echo "tidak ada"
+            echo ""
+            echo "=== Docker compose content ==="
+            cat /data/coolify/applications/qy8o93x6nlmon1xo7lrnpf3r/docker-compose*.yml 2>/dev/null | head -60 || echo "tidak ada"
+            echo ""
+            echo "=== Container details ==="
+            docker ps --format '{{.ID}} {{.Names}} {{.Image}} {{.Status}}' | grep -i "qy8o93x" || docker ps --format '{{.ID}} {{.Names}} {{.Image}} {{.Status}}' | head -10
+            echo ""
+            echo "=== All coolify apps dir ==="
+            ls /data/coolify/applications/ 2>/dev/null | head -20
+            echo ""
+            echo "=== Coolify DB container ==="
+            docker ps --format '{{.Names}}' | grep -i coolify
