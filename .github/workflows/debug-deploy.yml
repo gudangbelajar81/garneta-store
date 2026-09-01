@@ -1,0 +1,52 @@
+name: Debug Coolify Server Error
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    name: Debug Server Error Coolify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Debug via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: 22
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 300s
+          script: |
+            echo "=== [1] Cek log Coolify container (error terakhir) ==="
+            docker logs coolify --tail 50 2>&1 | grep -iE "error|exception|failed" | tail -20
+            echo ""
+            echo "=== [2] Cek deployment queue terakhir ==="
+            docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT id, application_id, deployment_uuid, status, created_at FROM application_deployment_queues ORDER BY id DESC LIMIT 5;" 2>&1 | head -10
+            echo ""
+            echo "=== [3] Cek app config lengkap ==="
+            docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT id, uuid, name, status, fqdn, git_repository, git_branch, build_pack, dockerfile_location, base_directory, ports_exposes, watch_paths FROM applications WHERE uuid='qy8o93x6nlmon1xo7lrnpf3r';" 2>&1 | head -5
+            echo ""
+            echo "=== [4] Cek GitHub app token / source ==="
+            docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT id, uuid, name, html_url, html_url, is_public, app_id, installation_id FROM github_apps;" 2>&1 | head -5
+            echo ""
+            echo "=== [5] Cek sourcess (git credentials) ==="
+            docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT id, name, type, html_url, is_public FROM sources;" 2>&1 | head -5
+            echo ""
+            echo "=== [6] Coba lihat log realtime saat deploy ==="
+            # Trigger deploy lagi dan tangkap log
+            TOKEN=$(cat /tmp/gh_deploy_token.txt 2>/dev/null)
+            if [ -n "$TOKEN" ]; then
+              echo "Trigger deploy..."
+              curl -s -X GET "http://localhost:8000/api/v1/deploy?uuid=qy8o93x6nlmon1xo7lrnpf3r&force=true" \
+                -H "Authorization: Bearer $TOKEN" -H "Accept: application/json" 2>&1
+              echo ""
+              sleep 10
+              echo "=== Log Coolify setelah deploy ==="
+              docker logs coolify --tail 100 2>&1 | grep -iE "error|exception|deploy|queue" | tail -30
+              echo ""
+              echo "=== Deployment queue status ==="
+              docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT id, application_id, deployment_uuid, status, created_at FROM application_deployment_queues ORDER BY id DESC LIMIT 3;" 2>&1 | head -5
+            else
+              echo "Token tidak ada di /tmp"
+            fi
