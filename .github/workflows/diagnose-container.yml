@@ -5,11 +5,9 @@ on:
 
 jobs:
   diagnose:
-    name: Cek Container & Logs
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Diagnosa via SSH
+      - name: Diagnosa Lengkap
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -18,14 +16,39 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           command_timeout: 300s
           script: |
-            echo "=== Container status ==="
-            docker ps -a --format '{{.Names}} | {{.Image}} | {{.Status}}' | grep qy8o93x
+            echo "=== [1] Status Container ==="
+            docker ps -a --format '{{.Names}} | {{.Image}} | {{.Status}}' | grep qy8o93x || echo "TIDAK ADA"
+
             echo ""
-            echo "=== Apakah port 3000 merespons sekarang? ==="
-            curl -s -o /dev/null -w "localhost:3000 -> HTTP %{http_code}\n" http://localhost:3000 || echo "tidak merespons"
+            echo "=== [2] Docker images terbaru ==="
+            docker images | grep qy8o93x | head -8
+
             echo ""
-            echo "=== Log container (50 baris terakhir) ==="
-            docker logs qy8o93x6nlmon1xo7lrnpf3r-132135139387 --tail 50 2>&1 || echo "tidak bisa baca log"
+            echo "=== [3] Log container (40 baris terakhir) ==="
+            docker logs qy8o93x6nlmon1xo7lrnpf3r-132135139387 --tail 40 2>&1 || true
+
             echo ""
-            echo "=== Images tersedia ==="
-            docker images | grep qy8o93x
+            echo "=== [4] Cek .env (ukuran + var penting, TANPA isi sensitif) ==="
+            cd /data/coolify/applications/qy8o93x6nlmon1xo7lrnpf3r
+            if [ -f .env ]; then
+              echo "Ukuran .env: $(wc -c < .env) bytes, $(wc -l < .env) baris"
+              echo "Kunci-kunci yang ADA:"
+              grep -oE '^[A-Z_]+' .env | sort | tr '\n' ' '
+              echo ""
+              echo "DATABASE_URL ada? $(grep -c '^DATABASE_URL=' .env)"
+              echo "SOURCE_COMMIT = $(grep '^SOURCE_COMMIT=' .env | cut -d= -f2)"
+            else
+              echo "⚠️ .env TIDAK ADA!"
+            fi
+
+            echo ""
+            echo "=== [5] Cek dari DALAM container (node fetch localhost:3000) ==="
+            docker exec qy8o93x6nlmon1xo7lrnpf3r-132135139387 node -e "fetch('http://localhost:3000/').then(r=>{console.log('HTTP',r.status);process.exit(r.status===200?0:1)}).catch(e=>{console.log('ERR:',e.message);process.exit(1)})" 2>&1 || echo "Gagal fetch dari dalam container"
+
+            echo ""
+            echo "=== [6] Domain publik ==="
+            curl -s -o /dev/null -w "HTTP %{http_code} (%{time_total}s)\n" https://toko.alvezadigital.com || echo "Gagal"
+
+            echo ""
+            echo "=== [7] Restart count container ==="
+            docker inspect -f 'RestartCount={{.RestartCount}} Status={{.State.Status}} StartedAt={{.State.StartedAt}}' qy8o93x6nlmon1xo7lrnpf3r-132135139387 2>&1 || true
