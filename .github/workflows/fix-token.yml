@@ -1,11 +1,11 @@
-name: Fix Coolify Token dan Deploy
+name: Fix Coolify Token v2
 
 on:
   workflow_dispatch:
 
 jobs:
-  fix-token:
-    name: Fix token Coolify & trigger build
+  fix-token-v2:
+    name: Fix token Coolify v2 (dengan team_id)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -18,37 +18,32 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           command_timeout: 300s
           script: |
-            echo "=== [1] Cek struktur tabel personal_access_tokens ==="
-            docker exec coolify-db psql -U coolify -d coolify -t -A -c "\d personal_access_tokens" 2>&1 | head -20
+            echo "=== [1] Cek teams ==="
+            docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT id, name FROM teams ORDER BY id;" 2>&1 | head -10
             echo ""
-            echo "=== [2] Cek user admin ==="
-            docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT id, name, email FROM users ORDER BY id LIMIT 5;" 2>&1 | head -5
+            echo "=== [2] Cek team_user ==="
+            docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT * FROM team_user ORDER BY id;" 2>&1 | head -10
             echo ""
-            echo "=== [3] Cek token yang ada ==="
-            docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT id, tokenable_type, tokenable_id, name, left(token, 20) as token_prefix FROM personal_access_tokens ORDER BY id;" 2>&1 | head -10
-            echo ""
-            echo "=== [4] Cek aplikasi ==="
-            docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT id, uuid, name, status, fqdn, git_repository, build_pack, dockerfile_location, base_directory FROM applications WHERE uuid='qy8o93x6nlmon1xo7lrnpf3r';" 2>&1 | head -5
-            echo ""
-            echo "=== [5] Buat token baru (hash sha256) ==="
+            echo "=== [3] Insert token dengan team_id ==="
             PLAIN_TOKEN="ct_gh_$(openssl rand -hex 16)"
             echo "Plain token: $PLAIN_TOKEN"
-            # Laravel Sanctum: token disimpan sebagai hash sha256 dari plain token
             TOKEN_HASH=$(printf '%s' "$PLAIN_TOKEN" | sha256sum | awk '{print $1}')
             echo "Hash: ${TOKEN_HASH:0:16}..."
-            USER_ID=$(docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT id FROM users ORDER BY id LIMIT 1;" 2>&1 | head -1 | tr -d '[:space:]')
-            echo "User ID: $USER_ID"
+            TEAM_ID=$(docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT id FROM teams ORDER BY id LIMIT 1;" 2>&1 | head -1 | tr -d '[:space:]')
+            echo "Team ID: $TEAM_ID"
             docker exec coolify-db psql -U coolify -d coolify -c "DELETE FROM personal_access_tokens WHERE name='gh-actions-deploy';" 2>&1
-            docker exec coolify-db psql -U coolify -d coolify -c "INSERT INTO personal_access_tokens (tokenable_type, tokenable_id, name, token, abilities, created_at, updated_at) VALUES ('App\\\\Models\\\\User', '$USER_ID', 'gh-actions-deploy', '$TOKEN_HASH', '[\"read\",\"write\"]', NOW(), NOW());" 2>&1
+            docker exec coolify-db psql -U coolify -d coolify -c "INSERT INTO personal_access_tokens (tokenable_type, tokenable_id, name, token, team_id, abilities, created_at, updated_at) VALUES ('App\\\\Models\\\\User', '0', 'gh-actions-deploy', '$TOKEN_HASH', '$TEAM_ID', '[\"read\",\"write\"]', NOW(), NOW());" 2>&1
             echo ""
-            echo "=== [6] Trigger deploy ==="
+            echo "=== [4] Verifikasi token ==="
+            docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT id, name, team_id, left(token, 16) as token_prefix FROM personal_access_tokens WHERE name='gh-actions-deploy';" 2>&1 | head -3
+            echo ""
+            echo "=== [5] Trigger deploy ==="
             RESP=$(curl -s -X GET "http://localhost:8000/api/v1/deploy?uuid=qy8o93x6nlmon1xo7lrnpf3r&force=true" \
               -H "Authorization: Bearer $PLAIN_TOKEN" \
               -H "Accept: application/json" \
               -H "Content-Type: application/json" 2>&1)
             echo "Response: $RESP"
             echo ""
-            echo "=== [7] Simpan plain token untuk verifikasi ==="
-            echo "$PLAIN_TOKEN" > /tmp/gh_deploy_token.txt
-            chmod 600 /tmp/gh_deploy_token.txt
-            echo "Token tersimpan di /tmp/gh_deploy_token.txt"
+            echo "=== [6] Cek status deploy (5 detik kemudian) ==="
+            sleep 5
+            docker exec coolify-db psql -U coolify -d coolify -t -A -c "SELECT id, application_id, status, created_at FROM application_deployment_queues WHERE application_id=8 ORDER BY id DESC LIMIT 3;" 2>&1 | head -5 || echo "Tabel tidak ada, cek nama lain..."
