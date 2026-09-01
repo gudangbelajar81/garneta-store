@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // NOTEPAD PINTAR & MENU KENTANG MODULE
 // ==========================================
 
@@ -56,10 +56,10 @@ function kentang() {
     <div class="card fade-in">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div>
-          <h2>ðŸ¥” Grosir Kentang</h2>
+          <h2>🥔 Grosir Kentang</h2>
           <p class="muted">Menu khusus mencatat kulakan komoditas per karung (kentang, kacang, dll).</p>
         </div>
-        <button class="btn primary" onclick="window.openSmartNotepad('kentang')" style="font-size: 1.1rem;">ðŸ“¸ Notepad Pintar AI</button>
+        <button class="btn primary" onclick="window.openSmartNotepad('kentang')" style="font-size: 1.1rem;">📸 Notepad Pintar AI</button>
       </div>
 
       <div class="table-responsive">
@@ -93,7 +93,7 @@ function injectNotepadPintarToPembelian() {
       btn.style.right = "20px";
       btn.style.zIndex = "999";
       btn.style.boxShadow = "0 4px 12px rgba(0,255,200,0.5)";
-      btn.innerHTML = "ðŸ“¸ Notepad Pintar AI";
+      btn.innerHTML = "📸 Notepad Pintar AI";
       btn.onclick = () => window.openSmartNotepad('minimarket');
       document.body.appendChild(btn);
   }
@@ -117,7 +117,7 @@ window.openSmartNotepad = function(modeContext = 'minimarket') {
     <div id="smart-notepad-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; display:flex; flex-direction:column; padding:20px; overflow-y:auto; backdrop-filter:blur(5px);">
       <div style="background:var(--bg); border:1px solid var(--line); border-radius:16px; width:100%; max-width:800px; margin:auto; padding:24px; position:relative;">
         <button class="btn danger" onclick="document.getElementById('smart-notepad-modal').remove()" style="position:absolute; top:12px; right:12px;">X</button>
-        <h2 style="margin-top:0; color:var(--garneta-cyan);">ðŸ“¸ Notepad Pintar AI</h2>
+        <h2 style="margin-top:0; color:var(--garneta-cyan);">📸 Notepad Pintar AI</h2>
         <p class="muted">Upload foto nota tulisan tangan. AI kami akan membedah angka malas, mengkoreksi salah hitung matematis, dan memasukkannya ke Meja Operasi.</p>
         
         <div id="sn-step-1" style="text-align:center; padding: 40px; border: 2px dashed var(--line); border-radius:12px; margin-top:20px;">
@@ -134,7 +134,7 @@ window.openSmartNotepad = function(modeContext = 'minimarket') {
           <div id="sn-result-container"></div>
           <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px;">
             <button class="btn soft" onclick="document.getElementById('smart-notepad-modal').remove()">Batal</button>
-            <button class="btn primary" id="sn-btn-save" onclick="window.saveSmartNotepad()">ðŸ’¾ Simpan ke Database</button>
+            <button class="btn primary" id="sn-btn-save" onclick="window.saveSmartNotepad()">💾 Simpan ke Database</button>
           </div>
         </div>
 
@@ -198,7 +198,7 @@ function renderSmartNotepadResult(data) {
     `).join('');
 
     container.innerHTML = `
-      <h3 style="color:var(--garneta-cyan); margin-top:0;">ðŸ›’ Mode: Minimarket</h3>
+      <h3 style="color:var(--garneta-cyan); margin-top:0;">🛒 Mode: Minimarket</h3>
       <div style="display:flex; gap:12px; margin-bottom:12px;">
          <label>Suplier: <input type="text" id="sn-m-supplier" class="input" value="${data.supplier || ''}"></label>
          <label>Tanggal: <input type="date" id="sn-m-date" class="input" value="${data.date || new Date().toISOString().slice(0,10)}"></label>
@@ -225,7 +225,7 @@ function renderSmartNotepadResult(data) {
     `).join('');
 
     container.innerHTML = `
-      <h3 style="color:var(--garneta-cyan); margin-top:0;">ðŸ¥” Mode: Komoditas / Kentang</h3>
+      <h3 style="color:var(--garneta-cyan); margin-top:0;">🥔 Mode: Komoditas / Kentang</h3>
       <div style="display:flex; gap:12px; margin-bottom:12px;">
          <label>Petani/Suplier: <input type="text" id="sn-k-supplier" class="input" value="${data.supplier || ''}"></label>
          <label>Tanggal: <input type="date" id="sn-k-date" class="input" value="${data.date || new Date().toISOString().slice(0,10)}"></label>
@@ -288,18 +288,16 @@ window.saveSmartNotepad = async function() {
     document.getElementById('smart-notepad-modal').remove();
   } catch(err) {
     alert("Error menyimpan: " + err.message);
-    btn.innerHTML = "ðŸ’¾ Coba Lagi";
+    btn.innerHTML = "💾 Coba Lagi";
     btn.disabled = false;
   }
 };
 
 async function fetchKentangHistory() {
   try {
-    const res = await fetch("/api", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ action: "list", payload: { collection: "kentang_purchases" } })
-    });
-    const { data } = await res.json();
+    // Use gas to automatically include JWT token
+    const res = await gas("list", { collection: "kentang_purchases" });
+    const data = res || [];
     const tbody = document.getElementById('kentang-history-tbody');
     if(!tbody) return;
     

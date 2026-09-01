@@ -2324,7 +2324,7 @@ async function fetchWithTimeout(url, options, timeoutMs) {
 }
 
 function assertCollection(collection) {
-  if (!["products", "suppliers", "purchases", "sales", "users", "priceHistory", "auditLogs", "cashflowLogs"].includes(collection) && !["employees", "cashAdvances", "payrolls", "ngitungSales", "orders", "cuan_reports", "ppob_products"].includes(collection)) {
+  if (!["products", "suppliers", "purchases", "sales", "users", "priceHistory", "auditLogs", "cashflowLogs", "kentang_purchases"].includes(collection) && !["employees", "cashAdvances", "payrolls", "ngitungSales", "orders", "cuan_reports", "ppob_products"].includes(collection)) {
     throw new Error("Collection tidak dikenal.");
   }
 }
@@ -2345,6 +2345,7 @@ function tableName(collection) {
     orders: "orders",
     cuan_reports: "cuan_reports",
     ppob_products: "ppob_products",
+    kentang_purchases: "kentang_purchases",
     cashflowLogs: "cashflow_logs"
   };
   return tables[collection];

@@ -283,7 +283,16 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
         render();
       }
       
-      function gaji() {
+      
+function penjualan() { return `<div class="card"><h2>Penjualan</h2><p>Fitur ini dalam pengembangan.</p></div>`; }
+function laporan() { return `<div class="card"><h2>Laporan</h2><p>Fitur ini dalam pengembangan.</p></div>`; }
+function statistik() { return `<div class="card"><h2>Statistik</h2><p>Fitur ini dalam pengembangan.</p></div>`; }
+function audit() { return `<div class="card"><h2>Audit Log</h2><p>Fitur ini dalam pengembangan.</p></div>`; }
+function users() { return `<div class="card"><h2>Users</h2><p>Fitur ini dalam pengembangan.</p></div>`; }
+function settings() { return `<div class="card"><h2>Settings</h2><p>Fitur ini dalam pengembangan.</p></div>`; }
+function kasbon() { return `<div class="card"><h2>Kasbon</h2><p>Fitur ini dalam pengembangan.</p></div>`; }
+
+function gaji() {
   const activeEmpId = window.gajiActiveEmpId || null;
   
   if (!activeEmpId) {
@@ -1385,6 +1394,49 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
       render();
     }
     
+    function supplier() {
+      return `<style>
+        .supplier-table-compact table th,
+        .supplier-table-compact table td { padding: 4px 8px !important; font-size: 0.75rem !important; height: auto !important; }
+      </style>
+      <section class="grid" style="gap:12px;">
+        <div style="padding: 0 4px;"><h2 style="margin-bottom: 12px; font-size: 1.1rem; color:var(--nav-text);">Data Supplier</h2>${supplierForm()}</div>
+        <div class="supplier-table-compact" style="padding: 0 4px;"><h3 style="margin-bottom: 12px; font-size: 1rem; color:var(--nav-text);">Daftar Data Supplier</h3>${supplierRows()}</div>
+      </section>`;
+    }
+
+    function supplierForm() {
+      return `<style>
+        .shopee-compact-supplier .form-group { margin-bottom: 8px; }
+        .shopee-compact-supplier label { font-size: 0.75rem; margin-bottom: 2px; display: block; }
+        .shopee-compact-supplier input { padding: 6px 8px; font-size: 0.85rem; height: 30px; border-radius: 6px; }
+        .shopee-compact-supplier .actions { margin-top: 12px; }
+        .shopee-compact-supplier .actions .btn { padding: 6px 16px; font-size: 0.85rem; height: 32px; }
+        .supplier-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .supplier-grid-2 .form-group { margin-bottom: 0; }
+      </style>
+      <form data-form="suppliers" class="card shopee-compact-supplier" style="padding: 12px; border-radius: 8px;">
+        <input type="hidden" name="id" value="">
+        <div class="supplier-grid-2">
+            <div class="form-group"><label>Nama Supplier</label><input name="name" required autocomplete="off"></div>
+            <div class="form-group"><label>Kontak/No. HP</label><input name="contact" autocomplete="off"></div>
+        </div>
+        <div class="form-group"><label>Alamat Lengkap</label><input name="address" autocomplete="off"></div>
+        <div class="actions" style="justify-content: flex-end;">
+            <button type="reset" class="btn soft">Batal</button>
+            <button type="submit" class="btn primary">Simpan Supplier</button>
+        </div>
+      </form>`;
+    }
+
+    function supplierRows() {
+      const rows = state.data.suppliers || [];
+      if (!rows.length) return `<div class="card" style="padding:12px; text-align:center; font-size:0.85rem;"><p class="muted" style="margin:0;">Belum ada supplier.</p></div>`;
+      return actionTable(rows, ["Nama", "Kontak", "Alamat"], (row) => [
+        row.name || "-", row.contact || "-", row.address || "-"
+      ], "suppliers", false);
+    }
+
     function barang() {
       const subTabs = isSuperAdmin() ? [
         { id: 'ai-input', icon: '🤖', label: 'AI Input' },
@@ -3890,14 +3942,16 @@ Beras Premium 1"></textarea>
        render();
     };
 
-        window.getInitialExpresCart = function() {
-        // Muat dari localStorage jika ada (checkbox daftar barang permanen sampai dilepas manual)
+        window.getInitialExpresCart = function(forceReset = false) {
+        if (forceReset) {
+            return Array.from({length: 20}, () => ({ name: "", qty: "", isi: 1, cuanEcer: 0, profit: 0 }));
+        }
         try {
-            const saved = JSON.parse(localStorage.getItem('expresCart') || 'null');
+            const saved = JSON.parse(localStorage.getItem("expresCart") || "null");
             if (Array.isArray(saved) && saved.length >= 20) {
                 return saved.map(r => ({
-                    name: r.name || '',
-                    qty: r.qty !== undefined ? r.qty : '',
+                    name: r.name || "",
+                    qty: r.qty !== undefined ? r.qty : "",
                     isi: r.isi !== undefined ? r.isi : 1,
                     cuanEcer: r.cuanEcer !== undefined ? r.cuanEcer : 0,
                     profit: r.profit !== undefined ? r.profit : 0,
@@ -3905,7 +3959,7 @@ Beras Premium 1"></textarea>
                 }));
             }
         } catch (e) {}
-        return Array.from({length: 20}, () => ({ name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0 }));
+        return Array.from({length: 20}, () => ({ name: "", qty: "", isi: 1, cuanEcer: 0, profit: 0 }));
     };
 
     // Simpan expresCart ke localStorage - fungsi ini SEMPAT HILANG sehingga
