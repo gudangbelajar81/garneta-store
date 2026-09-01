@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    name: Build & Deploy via SSH
+    name: Build & Deploy via SSH (Auto-Rollback)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -24,6 +24,8 @@ jobs:
             APP_DIR="/data/coolify/applications/qy8o93x6nlmon1xo7lrnpf3r"
             IMAGE_NAME="qy8o93x6nlmon1xo7lrnpf3r"
             BUILD_DIR="/tmp/garneta-build"
+            MARKER="kentang"
+            FAILED=0
 
             echo "=== [1] Clone source terbaru dari GitHub ==="
             rm -rf "$BUILD_DIR"
@@ -33,18 +35,23 @@ jobs:
             echo "Commit terbaru: $COMMIT"
 
             echo ""
-            echo "=== [2] Build Docker image ==="
+            echo "=== [2] Catat image lama (untuk rollback) ==="
+            cd "$APP_DIR"
+            OLD_IMAGE=$(grep "image:" docker-compose.yaml | head -1 | sed "s/.*image: '\(.*\)'.*/\1/")
+            echo "Image lama: $OLD_IMAGE"
+            cp docker-compose.yaml docker-compose.yaml.bak
+
+            echo ""
+            echo "=== [3] Build Docker image baru ==="
             docker build -t "$IMAGE_NAME:$COMMIT" "$BUILD_DIR" 2>&1 | tail -5
 
             echo ""
-            echo "=== [3] Update docker-compose.yaml dengan image baru ==="
-            cd "$APP_DIR"
-            cp docker-compose.yaml docker-compose.yaml.bak
+            echo "=== [4] Update docker-compose.yaml dengan image baru ==="
             sed -i "s|image: '$IMAGE_NAME:.*'|image: '$IMAGE_NAME:$COMMIT'|" docker-compose.yaml
             grep "image:" docker-compose.yaml
 
             echo ""
-            echo "=== [4] Update SOURCE_COMMIT di .env ==="
+            echo "=== [5] Update SOURCE_COMMIT di .env ==="
             if grep -q "^SOURCE_COMMIT=" .env; then
               sed -i "s|^SOURCE_COMMIT=.*|SOURCE_COMMIT=$COMMIT|" .env
             else
@@ -53,26 +60,73 @@ jobs:
             grep "SOURCE_COMMIT" .env
 
             echo ""
-            echo "=== [5] Deploy container baru ==="
+            echo "=== [6] Deploy container baru ==="
             docker compose up -d 2>&1 | tail -10
 
             echo ""
-            echo "=== [6] Verifikasi container ==="
-            sleep 5
-            docker ps --format '{{.Names}} {{.Image}} {{.Status}}' | grep qy8o93x
+            echo "=== [7] Health Check: tunggu server siap (maks 60s) ==="
+            READY=0
+            for i in $(seq 1 20); do
+              sleep 3
+              CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || true)
+              echo "  percobaan $i: HTTP $CODE"
+              if [ "$CODE" = "200" ] || [ "$CODE" = "302" ] || [ "$CODE" = "301" ]; then
+                READY=1
+                break
+              fi
+            done
+
+            if [ "$READY" = "0" ]; then
+              echo "GAGAL: server tidak merespons setelah 60 detik!"
+              FAILED=1
+            else
+              echo "Server siap (HTTP OK)."
+            fi
 
             echo ""
-            echo "=== [7] Verifikasi HTTP local ==="
-            curl -s -o /dev/null -w "HTTP %{http_code}" http://localhost:3000 || echo "gagal"
+            echo "=== [8] Health Check: verifikasi konten penting ==="
+            if [ "$READY" = "1" ]; then
+              CONTENT=$(curl -s http://localhost:3000/ || true)
+              COUNT=$(echo "$CONTENT" | grep -c "$MARKER" || true)
+              echo "Kemunculan '$MARKER': $COUNT"
+              if [ "$COUNT" = "0" ]; then
+                echo "GAGAL: konten '$MARKER' tidak ditemukan!"
+                FAILED=1
+              fi
+            fi
 
             echo ""
-            echo "=== [8] Verifikasi konten kentang ==="
-            KENTANG=$(curl -s http://localhost:3000/ | grep -c "kentang\|Kentang" || true)
-            echo "Jumlah kemunculan kentang di index: $KENTANG"
+            echo "=== [9] Health Check: verifikasi domain publik ==="
+            if [ "$READY" = "1" ]; then
+              sleep 3
+              PUB=$(curl -s -o /dev/null -w "%{http_code}" https://toko.alvezadigital.com || true)
+              echo "Domain publik: HTTP $PUB"
+              if [ "$PUB" != "200" ] && [ "$PUB" != "301" ] && [ "$PUB" != "302" ]; then
+                echo "GAGAL: domain publik tidak sehat!"
+                FAILED=1
+              fi
+            fi
 
             echo ""
-            echo "=== [9] Verifikasi via domain publik ==="
-            sleep 3
-            curl -s -o /dev/null -w "HTTP %{http_code}" https://toko.alvezadigital.com || echo "gagal"
-            echo ""
-            echo "DEPLOY SELESAI ✅"
+            echo "=== [10] Finalisasi ==="
+            if [ "$FAILED" = "0" ]; then
+              echo "DEPLOY SUKSES ✅ (commit $COMMIT)"
+              docker ps --format '{{.Names}} {{.Image}} {{.Status}}' | grep qy8o93x
+            else
+              echo "DEPLOY GAGAL ❌ — MELAKUKAN ROLLBACK OTOMATIS..."
+              sed -i "s|image: '$IMAGE_NAME:.*'|image: '$OLD_IMAGE'|" docker-compose.yaml
+              echo "Mengembalikan ke image lama: $OLD_IMAGE"
+              grep "image:" docker-compose.yaml
+              docker compose up -d 2>&1 | tail -5
+              sleep 8
+              ROLLBACK_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || true)
+              echo "Status setelah rollback: HTTP $ROLLBACK_CODE"
+              if [ "$ROLLBACK_CODE" = "200" ] || [ "$ROLLBACK_CODE" = "301" ] || [ "$ROLLBACK_CODE" = "302" ]; then
+                echo "ROLLBACK BERHASIL ✅ — website kembali normal (versi lama)"
+                docker ps --format '{{.Names}} {{.Image}} {{.Status}}' | grep qy8o93x
+                exit 0
+              else
+                echo "⚠️ ROLLBACK TIDAK SEMPURNA — PERLU INTERVENSI MANUAL!"
+                exit 1
+              fi
+            fi
