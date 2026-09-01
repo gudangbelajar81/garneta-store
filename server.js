@@ -437,6 +437,10 @@ async function handleAction(action, payload, req) {
     backupData: () => backupData(),
     restoreData: () => restoreData(payload.backup),
     clearAuditLogs: () => clearAuditLogs(),
+    saveBulkPurchases: () => saveBulkPurchases(payload),
+    saveBulkKentang: () => saveBulkKentang(payload),
+      saveExpresCart: () => saveExpresCart(payload),
+      saveAppSetting: () => saveAppSetting(payload.key, payload.value),
     generateRegOptions: () => generateRegistrationOptionsWebAuthn(req),
     verifyReg: () => verifyRegistrationWebAuthn(payload, req),
     generateAuthOptions: () => generateAuthenticationOptionsWebAuthn(payload, req),
@@ -768,14 +772,20 @@ function actionNotFoundMessage(action) {
 }
 
 async function bootstrap() {
-  const [products, suppliers, purchases, sales, users, priceHistory, auditLogs, stats, employees, cashAdvances, payrolls, ngitungSales, orders, cuanReports] = await Promise.all([
+  const [products, suppliers, purchases, sales, users, priceHistory, auditLogs, stats, employees, cashAdvances, payrolls, ngitungSales, orders, cuanReports, expresCartStr, masterKategori] = await Promise.all([
     listRows("products"), listRows("suppliers"), listRows("purchases"), listRows("sales"),
     listRows("users"), listRows("priceHistory"), listRows("auditLogs"), dashboard(),
     listRows("employees"), listRows("cashAdvances"), listRows("payrolls"), listRows("ngitungSales"),
-    listRows("orders").catch(()=>[]), listRows("cuan_reports").catch(()=>[])
+    listRows("orders").catch(()=>[]), listRows("cuan_reports").catch(()=>[]), getSetting('EXPRES_CART', null),
+    getSetting('MASTER_KATEGORI', 'Umum\nSembako\nRokok\nMinuman\nSnack\nBumbu Dapur\nAlat Mandi')
   ]);
+  
+  let expresCart = null;
+  if (expresCartStr) {
+      try { expresCart = JSON.parse(expresCartStr); } catch(e) {}
+  }
 
-  return { products, suppliers, purchases, sales, users, priceHistory, auditLogs, employees, cashAdvances, payrolls, ngitungSales, orders, cuan_reports: cuanReports, dashboard: stats };
+  return { products, suppliers, purchases, sales, users, priceHistory, auditLogs, employees, cashAdvances, payrolls, ngitungSales, orders, cuan_reports: cuanReports, dashboard: stats, expresCart, masterKategori };
 }
 
 
@@ -2815,4 +2825,22 @@ async function loginKaryawan(employeeId, pin) {
   const token = jwt.sign({ id: emp.id, name: emp.name, role: "Karyawan", isEmployee: true }, JWT_SECRET, { expiresIn: JWT_EXPIRY });
   
   return { token, name: emp.name, role: "Karyawan", isSuperAdmin: false };
+}
+
+async function saveExpresCart(cart) {
+  try {
+    await setSetting('EXPRES_CART', JSON.stringify(cart));
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, message: e.message };
+  }
+}
+
+async function saveAppSetting(key, value) {
+  try {
+    await setSetting(key, value);
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, message: e.message };
+  }
 }
