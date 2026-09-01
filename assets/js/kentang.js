@@ -83,7 +83,7 @@ function kentang() {
 
 // Injects the floating button into Pembelian Menu
 function injectNotepadPintarToPembelian() {
-  const container = document.querySelector("#app-content h2:contains('Pembelian')")?.parentElement;
+  const container = Array.from(document.querySelectorAll('#app-content h2')).find(el => el.textContent.includes('Pembelian'))?.parentElement;
   if (!document.getElementById("btn-notepad-pintar-pembelian")) {
       const btn = document.createElement("button");
       btn.id = "btn-notepad-pintar-pembelian";

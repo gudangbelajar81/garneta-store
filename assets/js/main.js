@@ -37,6 +37,10 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
     
     // Expose state to window for Smart Search
     window.state = state;
+    window.getCategoriesList = function() {
+    if (!window.state || !window.state.data || !window.state.data.products) return [];
+    return [...new Set(window.state.data.products.map(p => (p.category || '').trim()).filter(Boolean))].sort();
+};
     let scannerStream = null;
     let scannerActive = false;
     let invoiceStream = null;
