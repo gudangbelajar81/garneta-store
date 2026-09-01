@@ -5,11 +5,16 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Anti-tabrakan: hanya SATU deploy boleh jalan. Yang baru menunggu giliran.
+concurrency:
+  group: garneta-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Build & Deploy via SSH (Auto-Rollback)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Build & Deploy di VPS
         uses: appleboy/ssh-action@v1.2.0
@@ -18,7 +23,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           port: 22
           key: ${{ secrets.VPS_SSH_KEY }}
-          command_timeout: 900s
+          command_timeout: 1200s
           script: |
             set -e
             APP_DIR="/data/coolify/applications/qy8o93x6nlmon1xo7lrnpf3r"
@@ -64,9 +69,9 @@ jobs:
             docker compose up -d 2>&1 | tail -10
 
             echo ""
-            echo "=== [7] Health Check: tunggu server siap (maks 60s) ==="
+            echo "=== [7] Health Check: tunggu server siap (maks 120s) ==="
             READY=0
-            for i in $(seq 1 20); do
+            for i in $(seq 1 40); do
               sleep 3
               CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || true)
               echo "  percobaan $i: HTTP $CODE"
@@ -74,11 +79,22 @@ jobs:
                 READY=1
                 break
               fi
+              # Jika container mati/restart, berhenti lebih cepat
+              STATE=$(docker inspect -f '{{.State.Status}}' qy8o93x6nlmon1xo7lrnpf3r-132135139387 2>/dev/null || echo "hilang")
+              if [ "$STATE" != "running" ]; then
+                echo "  PERINGATAN: container status = $STATE"
+                if [ "$STATE" = "exited" ] || [ "$STATE" = "dead" ]; then
+                  echo "  Container mati! Berhenti menunggu..."
+                  break
+                fi
+              fi
             done
 
             if [ "$READY" = "0" ]; then
-              echo "GAGAL: server tidak merespons setelah 60 detik!"
+              echo "GAGAL: server tidak merespons setelah 120 detik!"
               FAILED=1
+              echo "--- Log container (30 baris terakhir) ---"
+              docker logs qy8o93x6nlmon1xo7lrnpf3r-132135139387 --tail 30 2>&1 || true
             else
               echo "Server siap (HTTP OK)."
             fi
@@ -118,15 +134,24 @@ jobs:
               echo "Mengembalikan ke image lama: $OLD_IMAGE"
               grep "image:" docker-compose.yaml
               docker compose up -d 2>&1 | tail -5
-              sleep 8
-              ROLLBACK_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || true)
-              echo "Status setelah rollback: HTTP $ROLLBACK_CODE"
-              if [ "$ROLLBACK_CODE" = "200" ] || [ "$ROLLBACK_CODE" = "301" ] || [ "$ROLLBACK_CODE" = "302" ]; then
+              echo "Menunggu rollback siap (maks 60s)..."
+              RB_OK=0
+              for i in $(seq 1 20); do
+                sleep 3
+                RB_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || true)
+                echo "  rollback percobaan $i: HTTP $RB_CODE"
+                if [ "$RB_CODE" = "200" ] || [ "$RB_CODE" = "301" ] || [ "$RB_CODE" = "302" ]; then
+                  RB_OK=1
+                  break
+                fi
+              done
+              if [ "$RB_OK" = "1" ]; then
                 echo "ROLLBACK BERHASIL ✅ — website kembali normal (versi lama)"
                 docker ps --format '{{.Names}} {{.Image}} {{.Status}}' | grep qy8o93x
                 exit 0
               else
                 echo "⚠️ ROLLBACK TIDAK SEMPURNA — PERLU INTERVENSI MANUAL!"
+                docker logs qy8o93x6nlmon1xo7lrnpf3r-132135139387 --tail 20 2>&1 || true
                 exit 1
               fi
             fi
