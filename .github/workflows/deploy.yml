@@ -18,51 +18,86 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           port: 22
           key: ${{ secrets.VPS_SSH_KEY }}
-          script_timeout: 600s
+          command_timeout: 600s
           script: |
             set -e
-            echo "=== [1/4] Lokasi direktori aplikasi di Coolify ==="
-            APP_DIR="/data/coolify/apps/qy8o93x6nlmon1xo7lrnpf3r"
-            if [ ! -d "$APP_DIR" ]; then
-              # Coba lokasi alternatif
-              APP_DIR=$(find /data/coolify/apps -maxdepth 2 -name "qy8o93x6nlmon1xo7lrnpf3r*" -type d 2>/dev/null | head -1)
+            echo "=== [1/5] Menemukan direktori aplikasi Coolify ==="
+            APP_DIR=""
+            # Coba beberapa lokasi umum Coolify
+            for dir in \
+              "/data/coolify/apps/qy8o93x6nlmon1xo7lrnpf3r" \
+              "/var/lib/coolify/apps/qy8o93x6nlmon1xo7lrnpf3r" \
+              "/data/coolify/applications/qy8o93x6nlmon1xo7lrnpf3r" \
+              "/opt/coolify/apps/qy8o93x6nlmon1xo7lrnpf3r"; do
+              if [ -d "$dir" ]; then
+                APP_DIR="$dir"
+                break
+              fi
+            done
+            # Fallback: cari via docker inspect source
+            if [ -z "$APP_DIR" ]; then
+              echo "Mencari via docker inspect..."
+              CONTAINER_ID=$(docker ps --format '{{.ID}} {{.Image}}' | grep "qy8o93x6nlmon1xo7lrnpf3r" | awk '{print $1}' | head -1)
+              if [ -n "$CONTAINER_ID" ]; then
+                echo "Container: $CONTAINER_ID"
+                docker inspect "$CONTAINER_ID" --format '{{range .Mounts}}{{.Source}}{{"\n"}}{{end}}' 2>/dev/null | head -10 || true
+                APP_DIR=$(docker inspect "$CONTAINER_ID" --format '{{range .Mounts}}{{.Source}}{{"\n"}}{{end}}' 2>/dev/null | grep -i "qy8o93x6nlmon1xo7lrnpf3r" | head -1)
+              fi
             fi
-            if [ -z "$APP_DIR" ] || [ ! -d "$APP_DIR" ]; then
+            if [ -z "$APP_DIR" ]; then
+              echo "Mencari via find..."
+              APP_DIR=$(find /data /var/lib /opt /root -maxdepth 5 -type d -name "qy8o93x6nlmon1xo7lrnpf3r*" 2>/dev/null | head -1)
+            fi
+            if [ -z "$APP_DIR" ]; then
               echo "❌ Direktori aplikasi tidak ditemukan!"
-              ls /data/coolify/apps/ 2>/dev/null || echo "Tidak ada /data/coolify/apps"
+              echo "--- Isi /data/coolify ---"
+              ls -la /data/coolify/ 2>/dev/null || echo "Tidak ada /data/coolify"
+              echo "--- Isi /var/lib/coolify ---"
+              ls -la /var/lib/coolify/ 2>/dev/null || echo "Tidak ada /var/lib/coolify"
+              echo "--- Semua container ---"
+              docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null || true
               exit 1
             fi
             echo "✅ APP_DIR = $APP_DIR"
             cd "$APP_DIR"
 
-            echo "=== [2/4] Update kode dari GitHub ==="
-            git fetch origin main 2>&1 || true
-            git reset --hard origin/main 2>&1 || true
-            git log --oneline -1
+            echo "=== [2/5] Update kode dari GitHub ==="
+            git fetch origin main 2>&1 || echo "(fetch gagal, coba pull)"
+            git reset --hard origin/main 2>&1 || git pull origin main 2>&1 || echo "(git update gagal - mungkin bukan repo git)"
+            git log --oneline -1 2>/dev/null || true
 
-            echo "=== [3/4] Trigger deploy via Coolify lokal ==="
-            # Coba dapatkan token dari database Coolify (postgres)
+            echo "=== [3/5] Trigger deploy via Coolify API lokal ==="
             TOKEN=""
             DB_CONTAINER=$(docker ps --format '{{.Names}}' | grep -i coolify-db | head -1)
             if [ -n "$DB_CONTAINER" ]; then
-              TOKEN=$(docker exec "$DB_CONTAINER" psql -U coolify -d coolify -t -A -c "SELECT token FROM personal_access_tokens ORDER BY id LIMIT 1;" 2>/dev/null | head -1)
+              TOKEN=$(docker exec "$DB_CONTAINER" psql -U coolify -d coolify -t -A -c "SELECT token FROM personal_access_tokens ORDER BY id LIMIT 1;" 2>/dev/null | head -1 | tr -d '[:space:]')
             fi
-
             if [ -n "$TOKEN" ]; then
-              echo "✅ Token API Coolify ditemukan, trigger deploy..."
+              echo "✅ Token Coolify ditemukan, trigger deploy..."
               curl -s -X GET "http://localhost:8000/api/v1/deploy?uuid=qy8o93x6nlmon1xo7lrnpf3r" \
                 -H "Authorization: Bearer $TOKEN" | head -c 500 || true
               echo ""
             else
-              echo "⚠️ Token tidak ditemukan, fallback ke build manual..."
+              echo "⚠️ Token tidak ditemukan di DB, coba file .env Coolify..."
+              for envfile in /data/coolify/source/.env /data/coolify/.env /var/lib/coolify/.env; do
+                if [ -f "$envfile" ]; then
+                  echo "Ditemukan env: $envfile"
+                  grep -E "COOLIFY_APP_KEY|DB_PASSWORD|COOLIFY_DATABASE" "$envfile" | head -5 || true
+                fi
+              done
             fi
 
-            echo "=== [4/4] Fallback: build manual jika perlu ==="
-            # Cek apakah container masih berjalan dengan image lama
+            echo "=== [4/5] Restart container ==="
             CONTAINER_ID=$(docker ps --format '{{.ID}} {{.Image}}' | grep "qy8o93x6nlmon1xo7lrnpf3r" | awk '{print $1}' | head -1)
             if [ -n "$CONTAINER_ID" ]; then
               echo "✅ Container berjalan: $CONTAINER_ID"
-              # Restart container untuk memuat kode baru (kalau volume mount source)
+              IMAGE=$(docker inspect "$CONTAINER_ID" --format '{{.Image}}' 2>/dev/null)
+              echo "Image: $IMAGE"
+              # Cek apakah ada volume mount source kode
+              MOUNTS=$(docker inspect "$CONTAINER_ID" --format '{{range .Mounts}}Type={{.Type}} Source={{.Source}} Dest={{.Destination}}{{"\n"}}{{end}}' 2>/dev/null)
+              echo "Mounts:"
+              echo "$MOUNTS" | head -10
+              # Restart supaya muat kode baru (jika mount source)
               docker restart "$CONTAINER_ID" 2>&1 || true
               echo "Container di-restart."
             else
@@ -72,4 +107,7 @@ jobs:
               fi
             fi
 
+            echo "=== [5/5] Verifikasi ==="
+            sleep 5
+            curl -s -o /dev/null -w "HTTP %{http_code} - %{time_total}s\n" https://toko.alvezadigital.com 2>/dev/null || echo "Site belum merespons"
             echo "=== DEPLOY SELESAI ==="
