@@ -7,107 +7,72 @@ on:
 
 jobs:
   deploy:
-    name: Deploy via SSH ke Hetzner VPS
+    name: Build & Deploy via SSH
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: Deploy melalui SSH
+      - name: Build & Deploy di VPS
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           port: 22
           key: ${{ secrets.VPS_SSH_KEY }}
-          command_timeout: 600s
+          command_timeout: 900s
           script: |
             set -e
-            echo "=== [1/5] Menemukan direktori aplikasi Coolify ==="
-            APP_DIR=""
-            # Coba beberapa lokasi umum Coolify
-            for dir in \
-              "/data/coolify/apps/qy8o93x6nlmon1xo7lrnpf3r" \
-              "/var/lib/coolify/apps/qy8o93x6nlmon1xo7lrnpf3r" \
-              "/data/coolify/applications/qy8o93x6nlmon1xo7lrnpf3r" \
-              "/opt/coolify/apps/qy8o93x6nlmon1xo7lrnpf3r"; do
-              if [ -d "$dir" ]; then
-                APP_DIR="$dir"
-                break
-              fi
-            done
-            # Fallback: cari via docker inspect source
-            if [ -z "$APP_DIR" ]; then
-              echo "Mencari via docker inspect..."
-              CONTAINER_ID=$(docker ps --format '{{.ID}} {{.Image}}' | grep "qy8o93x6nlmon1xo7lrnpf3r" | awk '{print $1}' | head -1)
-              if [ -n "$CONTAINER_ID" ]; then
-                echo "Container: $CONTAINER_ID"
-                docker inspect "$CONTAINER_ID" --format '{{range .Mounts}}{{.Source}}{{"\n"}}{{end}}' 2>/dev/null | head -10 || true
-                APP_DIR=$(docker inspect "$CONTAINER_ID" --format '{{range .Mounts}}{{.Source}}{{"\n"}}{{end}}' 2>/dev/null | grep -i "qy8o93x6nlmon1xo7lrnpf3r" | head -1)
-              fi
-            fi
-            if [ -z "$APP_DIR" ]; then
-              echo "Mencari via find..."
-              APP_DIR=$(find /data /var/lib /opt /root -maxdepth 5 -type d -name "qy8o93x6nlmon1xo7lrnpf3r*" 2>/dev/null | head -1)
-            fi
-            if [ -z "$APP_DIR" ]; then
-              echo "❌ Direktori aplikasi tidak ditemukan!"
-              echo "--- Isi /data/coolify ---"
-              ls -la /data/coolify/ 2>/dev/null || echo "Tidak ada /data/coolify"
-              echo "--- Isi /var/lib/coolify ---"
-              ls -la /var/lib/coolify/ 2>/dev/null || echo "Tidak ada /var/lib/coolify"
-              echo "--- Semua container ---"
-              docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null || true
-              exit 1
-            fi
-            echo "✅ APP_DIR = $APP_DIR"
+            APP_DIR="/data/coolify/applications/qy8o93x6nlmon1xo7lrnpf3r"
+            IMAGE_NAME="qy8o93x6nlmon1xo7lrnpf3r"
+            BUILD_DIR="/tmp/garneta-build"
+
+            echo "=== [1] Clone source terbaru dari GitHub ==="
+            rm -rf "$BUILD_DIR"
+            git clone --depth 1 https://github.com/gudangbelajar81/garneta-store "$BUILD_DIR"
+            cd "$BUILD_DIR"
+            COMMIT=$(git rev-parse HEAD)
+            echo "Commit terbaru: $COMMIT"
+
+            echo ""
+            echo "=== [2] Build Docker image ==="
+            docker build -t "$IMAGE_NAME:$COMMIT" "$BUILD_DIR" 2>&1 | tail -5
+
+            echo ""
+            echo "=== [3] Update docker-compose.yaml dengan image baru ==="
             cd "$APP_DIR"
+            cp docker-compose.yaml docker-compose.yaml.bak
+            sed -i "s|image: '$IMAGE_NAME:.*'|image: '$IMAGE_NAME:$COMMIT'|" docker-compose.yaml
+            grep "image:" docker-compose.yaml
 
-            echo "=== [2/5] Update kode dari GitHub ==="
-            git fetch origin main 2>&1 || echo "(fetch gagal, coba pull)"
-            git reset --hard origin/main 2>&1 || git pull origin main 2>&1 || echo "(git update gagal - mungkin bukan repo git)"
-            git log --oneline -1 2>/dev/null || true
-
-            echo "=== [3/5] Trigger deploy via Coolify API lokal ==="
-            TOKEN=""
-            DB_CONTAINER=$(docker ps --format '{{.Names}}' | grep -i coolify-db | head -1)
-            if [ -n "$DB_CONTAINER" ]; then
-              TOKEN=$(docker exec "$DB_CONTAINER" psql -U coolify -d coolify -t -A -c "SELECT token FROM personal_access_tokens ORDER BY id LIMIT 1;" 2>/dev/null | head -1 | tr -d '[:space:]')
-            fi
-            if [ -n "$TOKEN" ]; then
-              echo "✅ Token Coolify ditemukan, trigger deploy..."
-              curl -s -X GET "http://localhost:8000/api/v1/deploy?uuid=qy8o93x6nlmon1xo7lrnpf3r" \
-                -H "Authorization: Bearer $TOKEN" | head -c 500 || true
-              echo ""
+            echo ""
+            echo "=== [4] Update SOURCE_COMMIT di .env ==="
+            if grep -q "^SOURCE_COMMIT=" .env; then
+              sed -i "s|^SOURCE_COMMIT=.*|SOURCE_COMMIT=$COMMIT|" .env
             else
-              echo "⚠️ Token tidak ditemukan di DB, coba file .env Coolify..."
-              for envfile in /data/coolify/source/.env /data/coolify/.env /var/lib/coolify/.env; do
-                if [ -f "$envfile" ]; then
-                  echo "Ditemukan env: $envfile"
-                  grep -E "COOLIFY_APP_KEY|DB_PASSWORD|COOLIFY_DATABASE" "$envfile" | head -5 || true
-                fi
-              done
+              echo "SOURCE_COMMIT=$COMMIT" >> .env
             fi
+            grep "SOURCE_COMMIT" .env
 
-            echo "=== [4/5] Restart container ==="
-            CONTAINER_ID=$(docker ps --format '{{.ID}} {{.Image}}' | grep "qy8o93x6nlmon1xo7lrnpf3r" | awk '{print $1}' | head -1)
-            if [ -n "$CONTAINER_ID" ]; then
-              echo "✅ Container berjalan: $CONTAINER_ID"
-              IMAGE=$(docker inspect "$CONTAINER_ID" --format '{{.Image}}' 2>/dev/null)
-              echo "Image: $IMAGE"
-              # Cek apakah ada volume mount source kode
-              MOUNTS=$(docker inspect "$CONTAINER_ID" --format '{{range .Mounts}}Type={{.Type}} Source={{.Source}} Dest={{.Destination}}{{"\n"}}{{end}}' 2>/dev/null)
-              echo "Mounts:"
-              echo "$MOUNTS" | head -10
-              # Restart supaya muat kode baru (jika mount source)
-              docker restart "$CONTAINER_ID" 2>&1 || true
-              echo "Container di-restart."
-            else
-              echo "⚠️ Container tidak ditemukan, coba docker compose..."
-              if [ -f "docker-compose.yml" ]; then
-                docker compose up -d --build 2>&1 || true
-              fi
-            fi
+            echo ""
+            echo "=== [5] Deploy container baru ==="
+            docker compose up -d 2>&1 | tail -10
 
-            echo "=== [5/5] Verifikasi ==="
+            echo ""
+            echo "=== [6] Verifikasi container ==="
             sleep 5
-            curl -s -o /dev/null -w "HTTP %{http_code} - %{time_total}s\n" https://toko.alvezadigital.com 2>/dev/null || echo "Site belum merespons"
-            echo "=== DEPLOY SELESAI ==="
+            docker ps --format '{{.Names}} {{.Image}} {{.Status}}' | grep qy8o93x
+
+            echo ""
+            echo "=== [7] Verifikasi HTTP local ==="
+            curl -s -o /dev/null -w "HTTP %{http_code}" http://localhost:3000 || echo "gagal"
+
+            echo ""
+            echo "=== [8] Verifikasi konten kentang ==="
+            KENTANG=$(curl -s http://localhost:3000/ | grep -c "kentang\|Kentang" || true)
+            echo "Jumlah kemunculan kentang di index: $KENTANG"
+
+            echo ""
+            echo "=== [9] Verifikasi via domain publik ==="
+            sleep 3
+            curl -s -o /dev/null -w "HTTP %{http_code}" https://toko.alvezadigital.com || echo "gagal"
+            echo ""
+            echo "DEPLOY SELESAI ✅"
