@@ -30,8 +30,10 @@
 │     tangan) — lihat di: https://github.com/gudangbelajar81/     │
 │     garneta-store/actions                                        │
 │  3. Sistem verifikasi otomatis:                                  │
-│     ✅ HTTP 200 di lokal VPS                                     │
 │     ✅ Domain publik toko.alvezadigital.com merespons 200        │
+│        (Traefik hanya balas 200 jika app benar-benar sehat)      │
+│     ✅ Konten penting (marker "kentang") ditemukan di halaman    │
+│     ✅ Container memakai image commit baru                       │
 │     ❌ Jika GAGAL → ROLLBACK OTOMATIS ke versi sebelumnya        │
 │  4. Cek hasilnya di https://toko.alvezadigital.com               │
 └─────────────────────────────────────────────────────────────────┘
