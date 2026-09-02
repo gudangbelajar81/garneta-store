@@ -38,9 +38,15 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
     // Expose state to window for Smart Search
     window.state = state;
     window.getCategoriesList = function() {
-    if (!window.state || !window.state.data || !window.state.data.products) return [];
-    return [...new Set(window.state.data.products.map(p => (p.category || '').trim()).filter(Boolean))].sort();
-};
+      if (!window.state || !window.state.data) return [];
+      
+      if (window.state.data.masterKategori && window.state.data.masterKategori.trim()) {
+         return [...new Set(window.state.data.masterKategori.split('\n').map(c => c.trim()).filter(Boolean))];
+      }
+      
+      if (!window.state.data.products) return [];
+      return [...new Set(window.state.data.products.map(p => (p.category || '').trim()).filter(Boolean))].sort();
+    };
     let scannerStream = null;
     let scannerActive = false;
     let invoiceStream = null;
@@ -4872,7 +4878,7 @@ ${tab === "bluetooth" ? `
         ${hiddenId()}
         
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; grid-column: 1/-1;">
-          <label>Kategori Barang<input name="category" type="text" list="category-list" onchange="window.checkNewCategory(this.value)">
+          <label>Kategori Barang<input name="category" type="text" list="category-list">
             <datalist id="category-list">${cats.map(opt => `<option value="${escapeAttr(opt)}">`).join("")}</datalist>
           </label>
           ${input("name", "Nama Barang", true)}
@@ -4965,7 +4971,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
           
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; grid-column: 1/-1;">
             ${input("date", "Tanggal", true, "date", today())}
-            <label>Kategori Barang<input name="category" type="text" list="category-list" onchange="window.checkNewCategory(this.value)">
+            <label>Kategori Barang<input name="category" type="text" list="category-list">
               <datalist id="category-list">${cats.map(opt => `<option value="${escapeAttr(opt)}">`).join("")}</datalist>
             </label>
           </div>
