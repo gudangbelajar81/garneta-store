@@ -2307,9 +2307,12 @@ Minyak Goreng 3 45000"></textarea>
            sisaTagihan = total - dp;
         }
         
+        const kasirName = state.role === "Super Admin" ? "Umum" : "Admin " + (state.currentUser?.name || "");
+        
         let receiptData = {
            id: "TRX-" + Date.now(),
            customer: customer || "Umum",
+           operator: kasirName,
            date: new Date().toLocaleString("id-ID"),
            paymentType: window.ngitungPaymentType,
            items: validRows,
@@ -2382,7 +2385,9 @@ Minyak Goreng 3 45000"></textarea>
       };
       
       window.ngitungPrintWhatsApp = function(data) {
+         let opName = data.operator || (state.role === "Super Admin" ? "Umum" : "Admin " + (state.currentUser?.name || ""));
          let msg = "*STRUK PEMBELIAN - " + data.date + "*\n";
+         msg += "Kasir: " + opName + "\n";
          msg += "Pelanggan: " + data.customer + "\n";
          msg += "Status: " + (data.paymentType === "tunai" ? "LUNAS" : "KASBON") + "\n";
          msg += "------------------------\n";
@@ -2421,6 +2426,7 @@ Minyak Goreng 3 45000"></textarea>
          }).join("");
          
          let rupiah = (num) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(num);
+         let opName = data.operator || (state.role === "Super Admin" ? "Umum" : "Admin " + (state.currentUser?.name || ""));
          
          let receiptHtml = `
           <!DOCTYPE html>
@@ -2460,7 +2466,7 @@ Minyak Goreng 3 45000"></textarea>
                 <h2 style="font-size: 22px; margin-bottom: 2px;">Toko GARNETA STORE</h2>
                 <div>085123871118</div>
                 <div>${data.date}</div>
-                <div>Kasir: ${data.operator}</div>
+                <div>Kasir: ${opName}</div>
                 <div>Pelanggan: ${data.customer}</div>
                 <div>Status: ${data.paymentType === "tunai" ? "LUNAS" : "KASBON"}</div>
               </div>
@@ -2594,7 +2600,7 @@ window.globalBluetoothDevice = device;
             }
 
             
-            let tOperator = data.operator || (window.state && window.state.user && window.state.user.username ? window.state.user.username : 'Kasir Utama');
+            let tOperator = data.operator || (state.role === "Super Admin" ? "Umum" : "Admin " + (state.currentUser?.name || ""));
             let tTotal = data.total !== undefined ? data.total : (data.grandTotal !== undefined ? data.grandTotal : (data.subtotal || 0));
             let tBayar = data.bayar !== undefined ? data.bayar : (data.dp !== undefined ? data.dp : tTotal);
             let tKembali = data.kembalian !== undefined ? data.kembalian : (tBayar > tTotal ? tBayar - tTotal : 0);
@@ -2706,7 +2712,7 @@ window.globalBluetoothDevice = device;
           if (storeAddress) text += storeAddress + "\n";
           text += "-".repeat(paperSize) + "\n";
           text += "\x1b\x61\x00" + (data.date || new Date().toLocaleString('id-ID')) + "\n";
-          text += "Kasir: " + (data.operator || 'Kasir') + "\n";
+          text += "Kasir: " + (data.operator || (state.role === "Super Admin" ? "Umum" : "Admin " + (state.currentUser?.name || "Kasir"))) + "\n";
           text += "Pelanggan: " + (data.customer || 'Umum') + "\n";
           text += "-".repeat(paperSize) + "\n";
           
