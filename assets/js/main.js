@@ -37,15 +37,25 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
     
     // Expose state to window for Smart Search
     window.state = state;
+    window.formatKategori = function(text) {
+       if (!text) return "";
+       return [...new Set(text.split('\n')
+          .map(c => c.trim().split(/\s+/).map(w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '').join(' '))
+          .filter(Boolean))].sort().join('\n');
+    };
+
     window.getCategoriesList = function() {
       if (!window.state || !window.state.data) return [];
       
       if (window.state.data.masterKategori && window.state.data.masterKategori.trim()) {
-         return [...new Set(window.state.data.masterKategori.split('\n').map(c => c.trim()).filter(Boolean))];
+         return window.formatKategori(window.state.data.masterKategori).split('\n');
       }
       
       if (!window.state.data.products) return [];
-      return [...new Set(window.state.data.products.map(p => (p.category || '').trim()).filter(Boolean))].sort();
+      return [...new Set(window.state.data.products.map(p => {
+         let c = (p.category || '').trim();
+         return c ? c.split(/\s+/).map(w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '').join(' ') : '';
+      }).filter(Boolean))].sort();
     };
     let scannerStream = null;
     let scannerActive = false;
@@ -4443,7 +4453,8 @@ Beras Premium 1"></textarea>
               <button class="btn primary" style="margin-top:16px; padding:12px 24px; font-weight:bold; font-size:14px;" onclick="
                 this.innerHTML = 'Menyimpan...';
                 this.disabled = true;
-                const val = document.getElementById('master-kategori-input').value;
+                let val = document.getElementById('master-kategori-input').value;
+                val = window.formatKategori(val);
                 state.data.masterKategori = val;
                 gas('saveAppSetting', { key: 'MASTER_KATEGORI', value: val }).then(() => {
                    window.showToast('Master Kategori berhasil disimpan!', 'success');
@@ -4878,7 +4889,7 @@ ${tab === "bluetooth" ? `
         ${hiddenId()}
         
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; grid-column: 1/-1;">
-          <label>Kategori Barang<input name="category" type="text" list="category-list">
+          <label>Kategori Barang<input name="category" type="text" list="category-list" onblur="this.value = window.formatKategori(this.value)">
             <datalist id="category-list">${cats.map(opt => `<option value="${escapeAttr(opt)}">`).join("")}</datalist>
           </label>
           ${input("name", "Nama Barang", true)}
@@ -4971,7 +4982,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
           
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; grid-column: 1/-1;">
             ${input("date", "Tanggal", true, "date", today())}
-            <label>Kategori Barang<input name="category" type="text" list="category-list">
+            <label>Kategori Barang<input name="category" type="text" list="category-list" onblur="this.value = window.formatKategori(this.value)">
               <datalist id="category-list">${cats.map(opt => `<option value="${escapeAttr(opt)}">`).join("")}</datalist>
             </label>
           </div>
@@ -6145,6 +6156,13 @@ function doPost(e) {
         if (input) input.value = "";
         window.searchPembelian("");
       };
+
+      function toTitleCase(str) {
+        if (!str) return "";
+        return str.replace(/\w\S*/g, function(txt) {
+          return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+        });
+      }
 
       function bindForms() {
         document.querySelectorAll('input[name="name"], input[name="category"]').forEach(el => {
