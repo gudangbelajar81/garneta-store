@@ -954,6 +954,16 @@ async function listRows(collection, req = null) {
     return rows;
   }
 
+  if (collection === "kentang_purchases") {
+    const [rows] = await db.query("SELECT * FROM kentang_purchases ORDER BY purchased_at DESC, id DESC LIMIT 500");
+    return rows;
+  }
+
+  if (collection === "kentang_purchase_details") {
+    const [rows] = await db.query("SELECT * FROM kentang_purchase_details ORDER BY id DESC LIMIT 1000");
+    return rows;
+  }
+
   throw new Error("Collection belum dibuat handler list.");
 }
 
@@ -2324,7 +2334,7 @@ async function fetchWithTimeout(url, options, timeoutMs) {
 }
 
 function assertCollection(collection) {
-  if (!["products", "suppliers", "purchases", "sales", "users", "priceHistory", "auditLogs", "cashflowLogs", "kentang_purchases"].includes(collection) && !["employees", "cashAdvances", "payrolls", "ngitungSales", "orders", "cuan_reports", "ppob_products"].includes(collection)) {
+  if (!["products", "suppliers", "purchases", "sales", "users", "priceHistory", "auditLogs", "cashflowLogs", "kentang_purchases", "kentang_purchase_details"].includes(collection) && !["employees", "cashAdvances", "payrolls", "ngitungSales", "orders", "cuan_reports", "ppob_products"].includes(collection)) {
     throw new Error("Collection tidak dikenal.");
   }
 }
@@ -2346,6 +2356,7 @@ function tableName(collection) {
     cuan_reports: "cuan_reports",
     ppob_products: "ppob_products",
     kentang_purchases: "kentang_purchases",
+    kentang_purchase_details: "kentang_purchase_details",
     cashflowLogs: "cashflow_logs"
   };
   return tables[collection];
@@ -2845,3 +2856,126 @@ async function saveAppSetting(key, value) {
     return { ok: false, message: e.message };
   }
 }
+
+
+// ==========================================
+// NOTEPAD PINTAR & MENU KENTANG ENDPOINTS
+// ==========================================
+
+// Simpan hasil scan Notepad (mode minimarket) ke Database Barang + Statistik Harga
+async function saveBulkPurchases(payload) {
+  const { items, supplier, date } = payload;
+  if (!Array.isArray(items) || items.length === 0) throw new Error("Tidak ada item untuk disimpan.");
+
+  const results = [];
+  const cleanedSupplier = String(supplier || "").trim() || null;
+
+  for (const item of items) {
+    const name = String(item.name || "").trim();
+    if (!name) continue;
+
+    const qty = number(item.qty);
+    const basePrice = number(item.basePrice);
+    const salePrice = number(item.salePrice);
+
+    const purchasePayload = {
+      name,
+      qty,
+      basePrice,
+      salePrice,
+      category: String(item.category || 'Umum').trim() || 'Umum',
+      unit: String(item.unit || 'pcs').trim() || 'pcs',
+      unitContent: number(item.unitContent) || 1,
+      total: qty * basePrice,
+      supplier: cleanedSupplier,
+      date: date || new Date()
+    };
+
+    try {
+      const saved = await addRow("purchases", purchasePayload);
+      results.push({ success: true, name, data: saved });
+    } catch(e) {
+      results.push({ success: false, name, error: e.message });
+    }
+  }
+
+  const failed = results.filter(r => !r.success);
+  if (failed.length > 0 && results.length === failed.length) {
+    throw new Error(`Gagal menyimpan semua item: ${failed[0].error}`);
+  }
+  return { results, savedCount: results.length - failed.length, failedCount: failed.length };
+}
+
+// Simpan hasil scan Notepad (mode kentang) ke Grosir Kentang
+// Transaksi: header + detail per grade + update produk + price_history
+async function saveBulkKentang(payload) {
+  const { supplierName, date, grades, totalPrice } = payload;
+  if (!Array.isArray(grades) || grades.length === 0) throw new Error("Tidak ada grade untuk disimpan.");
+
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    // 1. Insert header ke kentang_purchases
+    const [purchResult] = await connection.query(`
+      INSERT INTO kentang_purchases (supplier_name, total_price, purchased_at)
+      VALUES (?, ?, ?)
+    `, [String(supplierName || "").trim() || null, Number(totalPrice) || 0, date || new Date()]);
+    const purchaseId = purchResult.insertId;
+
+    let totalKentangKgGlobal = 0;
+
+    // 2. Proses tiap grade
+    for (const g of grades) {
+      const gradeName = String(g.grade || 'Umum').trim() || 'Umum';
+      const productName = `Kentang Grade ${gradeName}`;
+            const weights = Array.isArray(g.weights) ? g.weights.map(w => Number(w) || 0) : [];
+      const tKarung = weights.length > 0 ? weights.length : number(g.totalKarung);
+      const tKg = weights.length > 0 ? weights.reduce((a, b) => a + b, 0) : number(g.totalKg);
+      const priceKg = number(g.pricePerKg);
+      const sub = tKg * priceKg;
+      totalKentangKgGlobal += tKg;
+
+      // Insert detail
+      await connection.query(`
+        INSERT INTO kentang_purchase_details (purchase_id, grade, total_karung, total_kg, price_per_kg, subtotal, weight_details)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [purchaseId, gradeName, tKarung, tKg, priceKg, sub, JSON.stringify(weights)]);
+
+      // 3. Update atau Create produk utama
+      const [existingProducts] = await connection.query(`SELECT id FROM products WHERE name = ? LIMIT 1`, [productName]);
+      let productId = null;
+      if (existingProducts.length > 0) {
+        productId = existingProducts[0].id;
+        await connection.query(`
+          UPDATE products 
+          SET stock = stock + ?, base_price = ?
+          WHERE id = ?
+        `, [tKg, priceKg, productId]);
+      } else {
+        const [prodResult] = await connection.query(`
+          INSERT INTO products (category, name, unit, base_price, stock)
+          VALUES ('Sayuran', ?, 'kg', ?, ?)
+        `, [productName, priceKg, tKg]);
+        productId = prodResult.insertId;
+      }
+
+      // 4. Catat riwayat harga
+      await connection.query(`
+        INSERT INTO price_history (product_id, purchase_id, base_price, unit_content, sale_price, recorded_at)
+        VALUES (?, NULL, ?, 1, 0, ?)
+      `, [productId, purchaseId, priceKg, date || new Date()]);
+    }
+
+    await connection.commit();
+    await recordAudit(`Kulakan Kentang (${grades.length} Grade, Total: ${totalKentangKgGlobal} KG)`);
+    return { success: true, purchaseId };
+  } catch (err) {
+    if (connection) await connection.rollback();
+    throw err;
+  } finally {
+    if (connection) connection.release();
+  }
+}
+

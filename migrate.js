@@ -223,6 +223,44 @@ async function migrate() {
       logger.error('Migrasi tabel orders gagal', { error: e.message });
     }
 
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS kentang_purchases (
+          id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          supplier_name VARCHAR(120) NULL,
+          total_price DECIMAL(14,2) NOT NULL DEFAULT 0,
+          purchased_at DATE NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB
+      `);
+      logger.info(`Migrasi: Tabel kentang_purchases dipastikan ada`);
+    } catch (e) {
+      logger.error('Migrasi tabel kentang_purchases gagal', { error: e.message });
+    }
+
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS kentang_purchase_details (
+          id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          purchase_id BIGINT UNSIGNED NOT NULL,
+          grade VARCHAR(50) NOT NULL,
+          total_karung INT NOT NULL DEFAULT 0,
+          total_kg DECIMAL(14,2) NOT NULL DEFAULT 0,
+          price_per_kg DECIMAL(14,2) NOT NULL DEFAULT 0,
+          subtotal DECIMAL(14,2) NOT NULL DEFAULT 0,
+          weight_details JSON NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT fk_kentang_purchase_details_purchase
+            FOREIGN KEY (purchase_id) REFERENCES kentang_purchases(id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE
+        ) ENGINE=InnoDB
+      `);
+      logger.info(`Migrasi: Tabel kentang_purchase_details dipastikan ada`);
+    } catch (e) {
+      logger.error('Migrasi tabel kentang_purchase_details gagal', { error: e.message });
+    }
+
     logger.info(`Migrasi database sepenuhnya selesai: ${database}`);
   } finally {
     await connection.end();

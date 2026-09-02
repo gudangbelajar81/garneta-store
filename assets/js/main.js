@@ -1,4 +1,4 @@
-window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined") { Swal.fire({toast: true, position: "top-end", showConfirmButton: false, timer: 3000, title: msg, icon: icon}); } else { alert(msg); } };
+﻿window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined") { Swal.fire({toast: true, position: "top-end", showConfirmButton: false, timer: 3000, title: msg, icon: icon}); } else { alert(msg); } };
 
     // --- GLOBAL ERROR BOUNDARY ---
     window.addEventListener('error', function(e) {
@@ -125,7 +125,7 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
         if (window.appVersion !== syncData.appVersion) {
            window.hasPendingUpdate = true;
            window.appVersion = syncData.appVersion;
-           showToast("🚀 Pembaruan aplikasi tersedia! Refresh halaman untuk memuat versi terbaru.", "success");
+           showToast("ðŸš€ Pembaruan aplikasi tersedia! Refresh halaman untuk memuat versi terbaru.", "success");
            renderShell();
            return;
         }
@@ -154,7 +154,7 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
     // [SUPER HARD REFRESH] Clear Service Workers, Delete CacheStorage & Force Reload with Timestamp Buster
     window.forceSuperHardRefresh = async function() {
       try {
-        if (window.showToast) window.showToast("🔄 Membersihkan Cache & Memuat Versi Terbaru...", "info");
+        if (window.showToast) window.showToast("ðŸ”„ Membersihkan Cache & Memuat Versi Terbaru...", "info");
         
         if ('serviceWorker' in navigator) {
           const registrations = await navigator.serviceWorker.getRegistrations();
@@ -226,7 +226,7 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
       el("nav").innerHTML = currentMenus.map(([key, label]) => {
         const isActive = state.route === key ? "active" : "";
         const iconMatch = label.match(/([\uD800-\uDBFF][\uDC00-\uDFFF]|\S)/);
-        const icon = iconMatch ? iconMatch[0] : "📦";
+        const icon = iconMatch ? iconMatch[0] : "ðŸ“¦";
         const text = label.replace(icon, "").trim();
         return `<div class="neural-node ${isActive}" data-route="${key}">
           <div class="node-glow"></div>
@@ -256,7 +256,7 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
           grid.innerHTML = ""; // Force clear
           grid.innerHTML = currentMenus.map(([key, label]) => {
             const iconMatch = label.match(/([\uD800-\uDBFF][\uDC00-\uDFFF]|\S)/);
-            const icon = iconMatch ? iconMatch[0] : "📦";
+            const icon = iconMatch ? iconMatch[0] : "ðŸ“¦";
             const text = label.replace(icon, "").trim();
             const updateIndicator = window.hasPendingUpdate ? '<div style="width:8px; height:8px; background:var(--mint); border-radius:50%; position:absolute; top:0; right:0;"></div>' : '';
             return `
@@ -304,7 +304,7 @@ function gaji() {
     return `
     <section class="workspace">
       <div class="workspace-header">
-        <h2 class="workspace-title">👥 Data Karyawan & Gaji</h2>
+        <h2 class="workspace-title">ðŸ‘¥ Data Karyawan & Gaji</h2>
         <p class="subtitle">Pilih karyawan untuk mengelola profil, kasbon, dan penggajiannya.</p>
         <button class="btn primary" onclick="editEmployee('')" style="margin-top:1rem;">+ Karyawan Baru</button>
       </div>
@@ -323,7 +323,7 @@ function gaji() {
                     <td>${rupiah(e.baseSalary)}</td>
                     <td style="color: #f43f5e;">${totalBon > 0 ? rupiah(totalBon) : '-'}</td>
                     <td style="text-align:center;">
-                      <button class="btn" style="background:transparent; border:none; padding:4px; font-size:14px; opacity:0.7; cursor:pointer;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" onclick="event.stopPropagation(); window.hapusKaryawan('${e.id}')" title="Hapus Karyawan">🗑️</button>
+                      <button class="btn" style="background:transparent; border:none; padding:4px; font-size:14px; opacity:0.7; cursor:pointer;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" onclick="event.stopPropagation(); window.hapusKaryawan('${e.id}')" title="Hapus Karyawan">ðŸ—‘ï¸</button>
                     </td>
                   </tr>`;
                 }).join('')}
@@ -424,8 +424,8 @@ function gaji() {
                     <td style="padding:4px 8px; color:#f43f5e;">${rupiah(c.amount)}</td>
                     <td style="padding:4px 8px;">${c.notes || '-'}</td>
                     <td style="padding:4px 8px; text-align:right;">
-                      <button class="btn soft" style="padding:2px 4px;font-size:0.7rem;margin-right:2px; min-height:20px; height:22px; width:22px; display:inline-flex;" onclick="editBon('${c.id}')">✏️</button>
-                      <button class="btn soft" style="padding:2px 4px;font-size:0.7rem; min-height:20px; height:22px; width:22px; display:inline-flex;" onclick="hapusBon('${c.id}')">❌</button>
+                      <button class="btn soft" style="padding:2px 4px;font-size:0.7rem;margin-right:2px; min-height:20px; height:22px; width:22px; display:inline-flex;" onclick="editBon('${c.id}')">âœï¸</button>
+                      <button class="btn soft" style="padding:2px 4px;font-size:0.7rem; min-height:20px; height:22px; width:22px; display:inline-flex;" onclick="hapusBon('${c.id}')">âŒ</button>
                     </td>
                   </tr>`).join('')}
                 </tbody>
@@ -440,7 +440,7 @@ function gaji() {
         <!-- Panel Kanan: Hitung Gaji -->
         <div>
           <div class="card" style="border: 1px solid var(--primary); background: rgba(0, 240, 255, 0.02);">
-            <h3>💰 Hitung & Bayar Gaji</h3>
+            <h3>ðŸ’° Hitung & Bayar Gaji</h3>
             <form id="form-payroll" class="grid forms" style="grid-template-columns: 1fr;">
               <input type="hidden" name="employeeId" value="${emp.id}">
               <input type="hidden" name="totalBon" value="${totalBon}">
@@ -460,7 +460,7 @@ function gaji() {
                 <div style="display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center;">
                   <span style="font-weight:600; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
                     TOTAL GAJI
-                    <span style="cursor:pointer; font-size:14px;" onclick="const el = document.getElementById('payroll-basic-breakdown'); el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';">👁️</span>
+                    <span style="cursor:pointer; font-size:14px;" onclick="const el = document.getElementById('payroll-basic-breakdown'); el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';">ðŸ‘ï¸</span>
                   </span>
                   <strong id="payroll-basic-salary" style="font-size:1rem; text-align:right; font-weight:600;">Rp 0</strong>
                 </div>
@@ -495,7 +495,7 @@ function gaji() {
                   <label style="font-size:0.65rem; color:var(--soft-text); display:block; margin-bottom:0px;">Keterangan (Opsional)</label>
                   <input type="text" name="notes" style="height: 24px !important; min-height: 24px !important; max-height: 24px !important; padding: 0 6px !important; font-size: 0.7rem !important; border-radius: 4px !important; width: 100% !important; margin:0 !important;">
                 </div>
-                <button type="button" id="btn-wa-persetujuan" class="btn soft" style="height: 24px !important; min-height: 24px !important; max-height: 24px !important; padding: 0 8px !important; font-size: 0.65rem !important; border-radius: 4px !important; display:flex !important; align-items:center !important; justify-content:center !important; margin:0 !important; border: 1px solid var(--border) !important; background: var(--bg-card) !important; color: var(--text-color) !important;" title="Kirim Rincian ke WA">💬 WA</button>
+                <button type="button" id="btn-wa-persetujuan" class="btn soft" style="height: 24px !important; min-height: 24px !important; max-height: 24px !important; padding: 0 8px !important; font-size: 0.65rem !important; border-radius: 4px !important; display:flex !important; align-items:center !important; justify-content:center !important; margin:0 !important; border: 1px solid var(--border) !important; background: var(--bg-card) !important; color: var(--text-color) !important;" title="Kirim Rincian ke WA">ðŸ’¬ WA</button>
                 <button type="submit" class="btn success" style="height: 24px !important; min-height: 24px !important; max-height: 24px !important; padding: 0 12px !important; font-size: 0.65rem !important; border-radius: 4px !important; display:flex !important; align-items:center !important; justify-content:center !important; margin:0 !important;">Cairkan Gaji</button>
               </div>
               
@@ -534,8 +534,8 @@ function gaji() {
                         <td style="color:#f97316; font-weight:bold;">${rupiah(p.sisa_kasbon || 0)}</td>
                         <td style="text-align:right;">
                            <div style="display:flex; gap:4px; justify-content:flex-end;">
-                              <button type="button" class="btn soft" onclick="printGaji('${p.id}', 'wa')" title="Kirim WA" style="padding:2px 4px; height:22px; min-height:20px; width:22px; font-size:0.7rem; display:inline-flex;">💬</button>
-                              <button type="button" class="btn danger" onclick="hapusRiwayatGaji('${p.id}')" title="Hapus Riwayat" style="padding:2px 4px; height:22px; min-height:20px; width:22px; font-size:0.7rem; display:inline-flex;">🗑️</button>
+                              <button type="button" class="btn soft" onclick="printGaji('${p.id}', 'wa')" title="Kirim WA" style="padding:2px 4px; height:22px; min-height:20px; width:22px; font-size:0.7rem; display:inline-flex;">ðŸ’¬</button>
+                              <button type="button" class="btn danger" onclick="hapusRiwayatGaji('${p.id}')" title="Hapus Riwayat" style="padding:2px 4px; height:22px; min-height:20px; width:22px; font-size:0.7rem; display:inline-flex;">ðŸ—‘ï¸</button>
                            </div>
                         </td>
                         <td style="font-size:0.65rem; text-align:right;">${p.periodStart} s/d ${p.periodEnd}</td>
@@ -1012,7 +1012,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
                let bannerHTML = priceChanges.map(c => {
                   let isUp = c.diff > 0;
                   let color = isUp ? "#ef4444" : "#10b981";
-                  let icon = isUp ? "📈 NAIK" : "📉 TURUN";
+                  let icon = isUp ? "ðŸ“ˆ NAIK" : "ðŸ“‰ TURUN";
                   let diffStr = Math.abs(c.diff).toLocaleString('id-ID');
                   return `<div style="background:rgba(255,255,255,0.05); padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid ${color};">
                      <div style="font-size:0.95rem;"><strong>${c.name}</strong></div>
@@ -1028,7 +1028,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
                   existingIntelBanner.innerHTML = `
                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                         <div style="display:flex; align-items:center; gap:12px;">
-                           <div style="font-size:24px; filter:drop-shadow(0 0 8px #38bdf8);">🤖</div>
+                           <div style="font-size:24px; filter:drop-shadow(0 0 8px #38bdf8);">ðŸ¤–</div>
                            <h3 style="margin:0; font-size:16px; font-weight:800; letter-spacing:0.5px; color:#38bdf8; text-shadow:0 0 10px rgba(56,189,248,0.5);">INTEL HARGA PASAR</h3>
                         </div>
                         <button id="close-intel-btn" class="btn" style="background:rgba(255,255,255,0.1); color:white; border:none; border-radius:8px; padding:6px 14px; cursor:pointer; font-size:0.85rem; font-weight:bold; transition:all 0.2s;"><i class="fas fa-times"></i> Tutup</button>
@@ -1187,7 +1187,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
                      }
                      
                      existingGajiBanner.innerHTML = `
-                        <div style="font-size:32px; filter:drop-shadow(0 0 10px rgba(255,255,255,0.5));">💸</div>
+                        <div style="font-size:32px; filter:drop-shadow(0 0 10px rgba(255,255,255,0.5));">ðŸ’¸</div>
                         <div style="flex: 1;">
                            <h4 style="margin:0 0 6px 0; font-size:16px; font-weight:800; letter-spacing:0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">WAKTUNYA GAJIAN BOS!</h4>
                            <div style="margin:0; font-size:14px; line-height:1.4;">${bannerText}</div>
@@ -1248,13 +1248,13 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
       if (el("page-title")) el("page-title").textContent = label;
       // Set ikon topbar sesuai halaman aktif
       const routeIcons = {
-        dashboard: "🏠", barang: "📦", supplier: "🏢", pembelian: "🛒",
-        ngitung: "🧮", riwayat: "🧾", hutang: "📒", kalkulator: "📱",
-        penjualan: "💵", laporan: "📊", statistik: "📈", audit: "🕵️",
-        users: "👥", gaji: "💰", settings: "⚙️", "neural-hub": "🧠", kasbon: "💸"
+        dashboard: "ðŸ ", barang: "ðŸ“¦", supplier: "ðŸ¢", pembelian: "ðŸ›’",
+        ngitung: "ðŸ§®", riwayat: "ðŸ§¾", hutang: "ðŸ“’", kalkulator: "ðŸ“±",
+        penjualan: "ðŸ’µ", laporan: "ðŸ“Š", statistik: "ðŸ“ˆ", audit: "ðŸ•µï¸",
+        users: "ðŸ‘¥", gaji: "ðŸ’°", settings: "âš™ï¸", "neural-hub": "ðŸ§ ", kasbon: "ðŸ’¸"
       };
       const iconEl = document.getElementById("page-title-icon");
-      if (iconEl) iconEl.textContent = routeIcons[state.route] || "📌";
+      if (iconEl) iconEl.textContent = routeIcons[state.route] || "ðŸ“Œ";
       if (["laporan", "statistik", "audit", "settings"].includes(state.route) && state.role !== "Super Admin") {
         el("content").innerHTML = `<div class="card"><h2>Akses dibatasi</h2><p class="muted">Menu ini hanya bisa diakses Super Admin.</p></div>`;
         return;
@@ -1277,11 +1277,11 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
         console.error("Render Error:", err);
         el("content").innerHTML = `
           <div class="card error-boundary" style="text-align: center; padding: 40px 20px; border: 1px solid rgba(255, 71, 87, 0.3); background: rgba(255, 71, 87, 0.05); border-radius: 16px;">
-            <div style="font-size: 3rem; margin-bottom: 16px;">🔥</div>
+            <div style="font-size: 3rem; margin-bottom: 16px;">ðŸ”¥</div>
             <h2 style="color: #ff4757; margin-bottom: 12px;">Oops! Menu ini mengalami kendala.</h2>
             <p style="color: #aaa; margin-bottom: 24px; font-family: monospace; background: rgba(0,0,0,0.5); padding: 12px; border-radius: 8px;">${err.message}</p>
             <p style="margin-bottom: 24px; color: #ccc;">Sistem berhasil mengisolasi kerusakan ini sehingga aplikasi utama tidak mati.</p>
-            <button class="btn" onclick="navigate('dashboard')" style="background: var(--garneta-cyan); color: #000; font-weight: bold; padding: 10px 24px; border-radius: 8px;">← Kembali ke Dashboard</button>
+            <button class="btn" onclick="navigate('dashboard')" style="background: var(--garneta-cyan); color: #000; font-weight: bold; padding: 10px 24px; border-radius: 8px;">â† Kembali ke Dashboard</button>
           </div>
         `;
       }
@@ -1291,22 +1291,22 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
 
     function neuralHub() {
     const adminModules = [
-      { id: "barang", name: "Barang", icon: "📦", desc: "Manajemen produk", core: true },
-      { id: "penjualan", name: "Penjualan", icon: "💰", desc: "Input transaksi", core: true },
-      { id: "kalkulator", name: "Xpres", icon: "⚡", desc: "Kasir Cepat" },
-      { id: "pembelian", name: "Pembelian", icon: "🛒", desc: "Restock barang" }
+      { id: "barang", name: "Barang", icon: "ðŸ“¦", desc: "Manajemen produk", core: true },
+      { id: "penjualan", name: "Penjualan", icon: "ðŸ’°", desc: "Input transaksi", core: true },
+      { id: "kalkulator", name: "Xpres", icon: "âš¡", desc: "Kasir Cepat" },
+      { id: "pembelian", name: "Pembelian", icon: "ðŸ›’", desc: "Restock barang" }
     ];
       
       // Modul untuk Super Admin (semua)
       const superAdminModules = [
-        { id: "barang", name: "Barang", icon: "📦", desc: "Manajemen produk", core: true },
-        { id: "penjualan", name: "Penjualan", icon: "💵", desc: "Input transaksi", core: true },
-        { id: "pembelian", name: "Pembelian", icon: "🛒", desc: "Restock barang" },
-        { id: "kalkulator", name: "Xpres", icon: "⚡", desc: "Kasir Cepat" },
-        { id: "laporan", name: "Laporan", icon: "📈", desc: "Laporan harian" },
-        { id: "statistik", name: "Statistik", icon: "📊", desc: "Analisis data" },
-        { id: "audit", name: "Audit Log", icon: "📋", desc: "Riwayat aktivitas" },
-        { id: "settings", name: "Setting", icon: "⚙️", desc: "Pengaturan & User" }
+        { id: "barang", name: "Barang", icon: "ðŸ“¦", desc: "Manajemen produk", core: true },
+        { id: "penjualan", name: "Penjualan", icon: "ðŸ’µ", desc: "Input transaksi", core: true },
+        { id: "pembelian", name: "Pembelian", icon: "ðŸ›’", desc: "Restock barang" },
+        { id: "kalkulator", name: "Xpres", icon: "âš¡", desc: "Kasir Cepat" },
+        { id: "laporan", name: "Laporan", icon: "ðŸ“ˆ", desc: "Laporan harian" },
+        { id: "statistik", name: "Statistik", icon: "ðŸ“Š", desc: "Analisis data" },
+        { id: "audit", name: "Audit Log", icon: "ðŸ“‹", desc: "Riwayat aktivitas" },
+        { id: "settings", name: "Setting", icon: "âš™ï¸", desc: "Pengaturan & User" }
       ];
       
       const modules = isSuperAdmin() ? superAdminModules : adminModules;
@@ -1321,7 +1321,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
           ${isSuperAdmin() ? stat("Keuntungan", rupiah(d.totalProfit)) : ""}
         </div>
         <div class="card">
-          <h2>🧠 Neural Hub - AI Command Center</h2>
+          <h2>ðŸ§  Neural Hub - AI Command Center</h2>
           <p class="muted">Pusat kendali sistem - klik modul untuk navigasi cepat</p>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:16px;">
             ${modules.map(m => `
@@ -1443,10 +1443,10 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
 
     function barang() {
       const subTabs = isSuperAdmin() ? [
-        { id: 'ai-input', icon: '🤖', label: 'AI Input' },
-        { id: 'ai', icon: '🪄', label: 'AI Nota' },
-        { id: 'import', icon: '📥', label: 'Import' },
-        { id: 'scanner', icon: '📱', label: 'Scanner' }
+        { id: 'ai-input', icon: 'ðŸ¤–', label: 'AI Input' },
+        { id: 'ai', icon: 'ðŸª„', label: 'AI Nota' },
+        { id: 'import', icon: 'ðŸ“¥', label: 'Import' },
+        { id: 'scanner', icon: 'ðŸ“±', label: 'Scanner' }
       ] : [];
 
       const activeWorkspace = window.barangWorkspace || 'list';
@@ -1455,7 +1455,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
       const supplierBtn = `
           <button class="workspace-tab ${activeWorkspace === 'supplier' ? 'active' : ''}" 
                   onclick="switchBarangWorkspace('supplier')" style="flex:0 0 auto;">
-            <span class="workspace-icon">🚚</span>
+            <span class="workspace-icon">ðŸšš</span>
             <span class="workspace-label">Supplier</span>
           </button>
       `;
@@ -1463,7 +1463,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
       const formBtn = `
           <button class="workspace-tab ${activeWorkspace === 'form' ? 'active' : ''}" 
                   onclick="switchBarangWorkspace('form')" style="flex:0 0 auto;">
-            <span class="workspace-icon">📝</span>
+            <span class="workspace-icon">ðŸ“</span>
             <span class="workspace-label">Form</span>
           </button>
       `;
@@ -1471,7 +1471,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
       const daftarBtn = `
           <button class="workspace-tab ${activeWorkspace === 'list' ? 'active' : ''}" 
                   onclick="switchBarangWorkspace('list')" style="flex:0 0 auto;">
-            <span class="workspace-icon">📋</span>
+            <span class="workspace-icon">ðŸ“‹</span>
             <span class="workspace-label">Daftar</span>
           </button>
       `;
@@ -1479,7 +1479,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
       const searchBtn = `
           <button class="workspace-tab ${activeWorkspace === 'search' ? 'active' : ''}" 
                   onclick="switchBarangWorkspace('search')" style="flex:0 0 auto;">
-            <span class="workspace-icon">🔍</span>
+            <span class="workspace-icon">ðŸ”</span>
             <span class="workspace-label">Cari</span>
           </button>
       `;
@@ -1487,10 +1487,10 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
       const dropdownHtml = subTabs.length > 0 ? `
           <div class="workspace-tab ${isSubTabActive ? 'active' : ''}" style="padding:0; position:relative; display:flex; flex:1; justify-content:center; max-width:200px; margin:0 auto;">
              <select onchange="switchBarangWorkspace(this.value)" style="width:100%; height:100%; background:transparent; color:inherit; border:none; padding:2px 16px 2px 4px; appearance:none; -webkit-appearance:none; font-family:inherit; font-weight:inherit; font-size:inherit; cursor:pointer; z-index:2; text-align:center;">
-                 <option value="" disabled style="color:black;" ${isSubTabActive ? '' : 'selected'}>🛠️ Menu Data</option>
+                 <option value="" disabled style="color:black;" ${isSubTabActive ? '' : 'selected'}>ðŸ› ï¸ Menu Data</option>
                  ${subTabs.map(t => `<option value="${t.id}" style="color:black;" ${activeWorkspace === t.id ? 'selected' : ''}>${t.icon} ${t.label}</option>`).join('')}
              </select>
-             <div style="position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none; z-index:1; font-size:10px;">▼</div>
+             <div style="position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none; z-index:1; font-size:10px;">â–¼</div>
           </div>
       ` : '';
 
@@ -1508,7 +1508,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
         case 'search':
           workspaceContent = `<div class="workspace-content">
             <div class="card">
-              <h3>🔍 Pencarian Barang</h3>
+              <h3>ðŸ” Pencarian Barang</h3>
               <div class="search-container">
                 <input type="text" id="search-barang-input" placeholder="Cari nama, kategori, atau barcode..." oninput="searchBarang(this.value)">
                 <button class="btn soft" onclick="clearSearchBarang()">Clear</button>
@@ -1520,7 +1520,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
         case 'form':
           workspaceContent = `<div class="workspace-content">
             <div class="card">
-              <h3>📝 Form Barang</h3>
+              <h3>ðŸ“ Form Barang</h3>
               ${productForm()}
             </div>
           </div>`;
@@ -1537,7 +1537,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
         case 'ai':
           workspaceContent = `<div class="workspace-content">
             <div class="card">
-              <h3>🤖 AI Nota ke Barang</h3>
+              <h3>ðŸ¤– AI Nota ke Barang</h3>
               ${invoiceAiTools()}
             </div>
           </div>`;
@@ -1545,7 +1545,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
         case 'import':
           workspaceContent = `<div class="workspace-content">
             <div class="card">
-              <h3>📥 Import Barang</h3>
+              <h3>ðŸ“¥ Import Barang</h3>
               ${productImportTools()}
             </div>
           </div>`;
@@ -1553,7 +1553,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
         case 'scanner':
           workspaceContent = `<div class="workspace-content">
             <div class="card">
-              <h3>📷 Scanner HP</h3>
+              <h3>ðŸ“· Scanner HP</h3>
               ${productScannerTools()}
             </div>
           </div>`;
@@ -1571,16 +1571,16 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
           workspaceContent = `<div class="workspace-content">
             <div class="card">
               <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-                <h3 style="margin:0;">📋 Daftar Barang (${totalProductsCount})</h3>
+                <h3 style="margin:0;">ðŸ“‹ Daftar Barang (${totalProductsCount})</h3>
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                   <div style="position:relative; display:flex; align-items:center;">
                     <input type="text" 
                            id="daftar-barang-search-input" 
-                           placeholder="🔍 Cari barang, kategori..." 
+                           placeholder="ðŸ” Cari barang, kategori..." 
                            value="${escapeAttr(currentQuery)}"
                            oninput="window.handleProductSearchInput(this.value)"
                            style="padding:4px 26px 4px 8px; font-size:0.8rem; border-radius:6px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.3); color:#fff; width:190px;">
-                    ${currentQuery ? `<button onclick="window.handleProductSearchInput(''); const el = document.getElementById('daftar-barang-search-input'); if(el) el.value='';" style="position:absolute; right:6px; background:none; border:none; color:#aaa; cursor:pointer; font-size:12px; padding:0;" title="Clear">✕</button>` : ''}
+                    ${currentQuery ? `<button onclick="window.handleProductSearchInput(''); const el = document.getElementById('daftar-barang-search-input'); if(el) el.value='';" style="position:absolute; right:6px; background:none; border:none; color:#aaa; cursor:pointer; font-size:12px; padding:0;" title="Clear">âœ•</button>` : ''}
                   </div>
                   <div style="display:flex; gap:4px; opacity:0.75;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'">
                     <button class="btn soft" onclick="window.openAppsScriptExportModal()" style="font-size:0.68rem; padding:2px 8px; font-weight:600; border-radius:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.85);" title="Export Spreadsheet">
@@ -1616,9 +1616,9 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
     
     function pembelian() {
       const workspaces = [
-        { id: 'form', icon: '➕', label: 'Form' },
-        { id: 'wa', icon: '📱', label: 'Paste WA' },
-        { id: 'list', icon: '📋', label: 'Daftar' }
+        { id: 'form', icon: 'âž•', label: 'Form' },
+        { id: 'wa', icon: 'ðŸ“±', label: 'Paste WA' },
+        { id: 'list', icon: 'ðŸ“‹', label: 'Daftar' }
       ];
       
       const activeWorkspace = window.pembelianWorkspace || 'list';
@@ -1638,7 +1638,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
         case 'search':
           workspaceContent = `<div class="workspace-content">
             <div class="card">
-              <h3>🔍 Pencarian Pembelian</h3>
+              <h3>ðŸ” Pencarian Pembelian</h3>
               <div class="search-container">
                 <input type="text" id="search-pembelian-input" placeholder="Cari barang atau tanggal..." oninput="searchPembelian(this.value)">
                 <button class="btn soft" onclick="clearSearchPembelian()">Clear</button>
@@ -1650,7 +1650,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
         case 'form':
           workspaceContent = `<div class="workspace-content">
             <div class="card">
-              <h3>📝 Form Pembelian</h3>
+              <h3>ðŸ“ Form Pembelian</h3>
               ${purchaseForm()}
             </div>
           </div>`;
@@ -1658,7 +1658,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
         case 'wa':
           workspaceContent = `<div class="workspace-content">
             <div class="card">
-              <h3>📱 Paste dari WhatsApp</h3>
+              <h3>ðŸ“± Paste dari WhatsApp</h3>
               <label>Daftar Pembelian dari WA
                 <textarea id="pembelian-wa-text" class="input-area expandable" placeholder="Format: NamaBarang Qty Harga
 Contoh:
@@ -1682,15 +1682,15 @@ Minyak Goreng 3 45000"></textarea>
           workspaceContent = `<div class="workspace-content">
             <div class="card">
               <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-                <h3 style="margin:0;">📋 Daftar Pembelian (${totalPurchasesCount})</h3>
+                <h3 style="margin:0;">ðŸ“‹ Daftar Pembelian (${totalPurchasesCount})</h3>
                 <div style="position:relative; display:flex; align-items:center;">
                   <input type="text" 
                          id="daftar-pembelian-search-input" 
-                         placeholder="🔍 Cari barang, tanggal..." 
+                         placeholder="ðŸ” Cari barang, tanggal..." 
                          value="${escapeAttr(currentPembelianQuery)}"
                          oninput="window.handlePembelianSearchInput(this.value)"
                          style="padding:4px 26px 4px 8px; font-size:0.8rem; border-radius:6px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.3); color:#fff; width:200px;">
-                  ${currentPembelianQuery ? `<button onclick="window.handlePembelianSearchInput(''); const el = document.getElementById('daftar-pembelian-search-input'); if(el) el.value='';" style="position:absolute; right:6px; background:none; border:none; color:#aaa; cursor:pointer; font-size:12px; padding:0;" title="Clear">✕</button>` : ''}
+                  ${currentPembelianQuery ? `<button onclick="window.handlePembelianSearchInput(''); const el = document.getElementById('daftar-pembelian-search-input'); if(el) el.value='';" style="position:absolute; right:6px; background:none; border:none; color:#aaa; cursor:pointer; font-size:12px; padding:0;" title="Clear">âœ•</button>` : ''}
                 </div>
               </div>
               <div id="pembelian-rows-container">
@@ -1754,7 +1754,7 @@ Minyak Goreng 3 45000"></textarea>
       }
       
       display.innerText = state.current;
-      exprDiv.innerText = state.expr.replace(/\*/g, '×').replace(/\//g, '÷');
+      exprDiv.innerText = state.expr.replace(/\*/g, 'Ã—').replace(/\//g, 'Ã·');
     };
 
     window.ngitungRows = window.ngitungRows || [{ id: Date.now(), name: '', price: '', qty: '' }];
@@ -1824,7 +1824,7 @@ Minyak Goreng 3 45000"></textarea>
                 </div>
               </td>
               <td class="row-amount" style="vertical-align: middle; font-weight: 800; width: 25%; font-size: 0.8rem; padding: 0px 10px 0px 4px; text-align: right;">${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount)}</td>
-              <td style="width: 15%; text-align: right; vertical-align: middle; padding: 0px 0 0px 4px;"><button class="btn danger" onclick="ngitungRemoveRow(${row.id})" ${window.ngitungRows.length === 1 ? 'disabled' : ''} style="background: transparent; border: none; font-size: 1.05rem; color: rgba(255,71,87,0.7); padding: 0; box-shadow: none;">🗑️</button></td>
+              <td style="width: 15%; text-align: right; vertical-align: middle; padding: 0px 0 0px 4px;"><button class="btn danger" onclick="ngitungRemoveRow(${row.id})" ${window.ngitungRows.length === 1 ? 'disabled' : ''} style="background: transparent; border: none; font-size: 1.05rem; color: rgba(255,71,87,0.7); padding: 0; box-shadow: none;">ðŸ—‘ï¸</button></td>
             </tr>
         `;
       });
@@ -1989,7 +1989,7 @@ Minyak Goreng 3 45000"></textarea>
               </div>
             </td>
             <td class="row-amount" style="vertical-align: middle; font-weight: 800; width: 25%; font-size: 0.8rem; padding: 0px 10px 0px 4px; text-align: right;">Rp 0</td>
-            <td style="width: 15%; text-align: right; vertical-align: middle; padding: 0px 0 0px 4px;"><button class="btn danger" onclick="ngitungRemoveRow(${newId})" style="background: transparent; border: none; font-size: 1.05rem; color: rgba(255,71,87,0.7); padding: 0; box-shadow: none;" title="Hapus">🗑️</button></td>
+            <td style="width: 15%; text-align: right; vertical-align: middle; padding: 0px 0 0px 4px;"><button class="btn danger" onclick="ngitungRemoveRow(${newId})" style="background: transparent; border: none; font-size: 1.05rem; color: rgba(255,71,87,0.7); padding: 0; box-shadow: none;" title="Hapus">ðŸ—‘ï¸</button></td>
         `;
         tbody.appendChild(tr);
         setTimeout(() => {
@@ -2739,7 +2739,7 @@ window.ngitungClearAll = function() {
       }, 50);
       return `
         <div class="ngitung-container" style="max-width: 800px; margin: 1rem auto; padding-bottom: 50vh;">
-          <h2 class="hidden-on-mobile">🧮 NGITUNG (Kasir Cepat)</h2>
+          <h2 class="hidden-on-mobile">ðŸ§® NGITUNG (Kasir Cepat)</h2>
           
           <div class="table-wrap">
             <table class="data-table" id="ngitung-table" style="min-width: 0 !important; width: 100% !important; table-layout: fixed;">
@@ -2756,7 +2756,7 @@ window.ngitungClearAll = function() {
           </div>
           <datalist id="ngitung-history-list"></datalist>
 
-          <!-- INLINE POS CHECKOUT — PREMIUM REDESIGN -->
+          <!-- INLINE POS CHECKOUT â€” PREMIUM REDESIGN -->
           <div class="ngitung-inline-checkout" style="
               margin-top: 10px;
               background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
@@ -2771,7 +2771,7 @@ window.ngitungClearAll = function() {
                 <div style="color: rgba(255,255,255,0.4); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Total Belanja</div>
                 <div id="ngitung-inline-total" style="font-size: 1.35rem; font-weight: 900; color: #ff6b6b; letter-spacing: -0.5px;">Rp 0</div>
               </div>
-              <div style="width: 36px; height: 36px; background: rgba(238,77,45,0.12); border: 1px solid rgba(238,77,45,0.25); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem;">🛒</div>
+              <div style="width: 36px; height: 36px; background: rgba(238,77,45,0.12); border: 1px solid rgba(238,77,45,0.25); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem;">ðŸ›’</div>
             </div>
 
             <!-- DIVIDER -->
@@ -2834,35 +2834,35 @@ window.ngitungClearAll = function() {
                   color: #ff4757; font-weight: 800; font-size: 0.82rem;
                   text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
                   transition: all 0.2s;
-              ">🗑️ HAPUS MANUAL</button>
+              ">ðŸ—‘ï¸ HAPUS MANUAL</button>
 
               <button onclick="ngitungProcessCheckout('pdf')" title="Cetak PDF" style="
                   width: 36px; height: 36px; border: 1px solid rgba(0,168,255,0.4); border-radius: 10px;
                   background: rgba(0,168,255,0.15); color: #00a8ff; font-size: 1rem; cursor: pointer;
                   display: flex; align-items: center; justify-content: center;
                   transition: all 0.2s;
-              ">📄</button>
+              ">ðŸ“„</button>
 
               <button onclick="ngitungProcessCheckout('bluetooth')" title="Cetak Bluetooth" style="
                   width: 36px; height: 36px; border: 1px solid rgba(0,229,229,0.3); border-radius: 10px;
                   background: rgba(0,229,229,0.1); color: #00e5e5; font-size: 1rem; cursor: pointer;
                   display: flex; align-items: center; justify-content: center;
                   transition: all 0.2s;
-              ">🖨️</button>
+              ">ðŸ–¨ï¸</button>
               
               <button onclick="resetBluetoothPrinter()" title="Reset Printer BT" style="
                   width: 36px; height: 36px; border: 1px solid rgba(255,193,7,0.3); border-radius: 10px;
                   background: rgba(255,193,7,0.1); color: #ffc107; font-size: 1rem; cursor: pointer;
                   display: flex; align-items: center; justify-content: center;
                   transition: all 0.2s;
-              ">🔄</button>
+              ">ðŸ”„</button>
 
               <button onclick="ngitungProcessCheckout('wa')" title="Kirim via WhatsApp" style="
                   width: 36px; height: 36px; border: 1px solid rgba(37,211,102,0.35); border-radius: 10px;
                   background: rgba(37,211,102,0.12); color: #25D366; font-size: 1rem; cursor: pointer;
                   display: flex; align-items: center; justify-content: center;
                   transition: all 0.2s;
-              ">💬</button>
+              ">ðŸ’¬</button>
             </div>
           </div>
             
@@ -2901,17 +2901,17 @@ window.ngitungClearAll = function() {
         setTimeout(() => window.switchRiwayatTab(window.activeRiwayatTab || 'transaksi'), 50);
         return `
           <div style="display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px;">
-            <button id="btn-tab-transaksi" onclick="window.switchRiwayatTab('transaksi')" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: var(--garneta-cyan); color: #000; transition: all 0.3s; white-space: nowrap;">🕰️ Riwayat Transaksi</button>
-            <button id="btn-tab-hutang" onclick="window.switchRiwayatTab('hutang')" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">📒 Bon (Kasbon)</button>
-            <button onclick="showPage('laporan')" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">📊 Laporan Harian</button>
-            <button onclick="showPage('statistik')" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">📈 Statistik Harga</button>
+            <button id="btn-tab-transaksi" onclick="window.switchRiwayatTab('transaksi')" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: var(--garneta-cyan); color: #000; transition: all 0.3s; white-space: nowrap;">ðŸ•°ï¸ Riwayat Transaksi</button>
+            <button id="btn-tab-hutang" onclick="window.switchRiwayatTab('hutang')" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">ðŸ“’ Bon (Kasbon)</button>
+            <button onclick="showPage('laporan')" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">ðŸ“Š Laporan Harian</button>
+            <button onclick="showPage('statistik')" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">ðŸ“ˆ Statistik Harga</button>
           </div>
 
           <div id="tab-transaksi-content" class="card" style="padding-bottom: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h2 id="riwayat-title">🧾 Riwayat Transaksi</h2>
+              <h2 id="riwayat-title">ðŸ§¾ Riwayat Transaksi</h2>
               <div style="display: flex; gap: 8px;">
-                <button class="btn soft" id="btn-toggle-trash" onclick="window.toggleTrashView()" style="padding: 6px 12px; font-size: 0.8rem;">🗑️ Tempat Sampah</button>
+                <button class="btn soft" id="btn-toggle-trash" onclick="window.toggleTrashView()" style="padding: 6px 12px; font-size: 0.8rem;">ðŸ—‘ï¸ Tempat Sampah</button>
                 <button class="btn danger" id="btn-reset-riwayat" onclick="window.clearRiwayat()" style="padding: 6px 12px; font-size: 0.8rem;">Reset</button>
               </div>
             </div>
@@ -2937,7 +2937,7 @@ window.ngitungClearAll = function() {
           </div>
 
           <div id="tab-hutang-content" class="card" style="padding-bottom: 24px; display: none;">
-            <h2>💰 Riwayat Hutang (Kasbon)</h2>
+            <h2>ðŸ’° Riwayat Hutang (Kasbon)</h2>
             <div class="table-wrap">
               <table class="data-table">
                 <thead>
@@ -2964,13 +2964,13 @@ window.ngitungClearAll = function() {
         const btnReset = document.getElementById('btn-reset-riwayat');
         
         if (window.isTrashView) {
-           title.innerHTML = '🗑️ Tempat Sampah (Riwayat)';
-           btnToggle.innerHTML = '⬅️ Kembali';
+           title.innerHTML = 'ðŸ—‘ï¸ Tempat Sampah (Riwayat)';
+           btnToggle.innerHTML = 'â¬…ï¸ Kembali';
            btnReset.style.display = 'none';
            window.renderTrashTable();
         } else {
-           title.innerHTML = '🧾 Riwayat Transaksi';
-           btnToggle.innerHTML = '🗑️ Tempat Sampah';
+           title.innerHTML = 'ðŸ§¾ Riwayat Transaksi';
+           btnToggle.innerHTML = 'ðŸ—‘ï¸ Tempat Sampah';
            btnReset.style.display = 'inline-block';
            window.renderRiwayatTable();
         }
@@ -3002,7 +3002,7 @@ window.ngitungClearAll = function() {
               </span>
             </td>
             <td style="display: flex; gap: 4px;">
-               <button class="btn success" onclick="window.restoreRiwayatItem(${idx})" style="background: rgba(46,204,113,0.2); border: none; padding: 4px 8px; font-size: 0.8rem; color: #2ecc71; border-radius: 4px;" title="Kembalikan Transaksi">🔄 Restore</button>
+               <button class="btn success" onclick="window.restoreRiwayatItem(${idx})" style="background: rgba(46,204,113,0.2); border: none; padding: 4px 8px; font-size: 0.8rem; color: #2ecc71; border-radius: 4px;" title="Kembalikan Transaksi">ðŸ”„ Restore</button>
             </td>
           </tr>
         `}).join('');
@@ -3074,9 +3074,9 @@ window.ngitungClearAll = function() {
               </span>
             </td>
             <td style="display: flex; gap: 4px;">
-               <button class="btn" onclick="window.reprintRiwayat(${idx})" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem;" title="Cetak Ulang PDF">📄</button>
-               <button class="btn" onclick="window.reprintRiwayatBluetooth(${idx})" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; color: #3498db;" title="Cetak Ulang Bluetooth">🖨️</button>
-               <button class="btn danger" onclick="window.deleteRiwayatItem(${idx})" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; filter: none; box-shadow: none;" title="Hapus Transaksi">🗑️</button>
+               <button class="btn" onclick="window.reprintRiwayat(${idx})" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem;" title="Cetak Ulang PDF">ðŸ“„</button>
+               <button class="btn" onclick="window.reprintRiwayatBluetooth(${idx})" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; color: #3498db;" title="Cetak Ulang Bluetooth">ðŸ–¨ï¸</button>
+               <button class="btn danger" onclick="window.deleteRiwayatItem(${idx})" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; filter: none; box-shadow: none;" title="Hapus Transaksi">ðŸ—‘ï¸</button>
             </td>
           </tr>
         `).join('');
@@ -3172,7 +3172,7 @@ window.ngitungClearAll = function() {
         const aktifHutangs = hutangs.filter(h => h.sisaTagihan > 0);
         
         if (aktifHutangs.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color:#888;">Tidak ada kasbon aktif. Luar biasa! 🎉</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color:#888;">Tidak ada kasbon aktif. Luar biasa! ðŸŽ‰</td></tr>';
           return;
         }
         
@@ -3184,8 +3184,8 @@ window.ngitungClearAll = function() {
             <td style="display: flex; gap: 4px; align-items:center;">
                <button class="btn" onclick="window.bayarHutang('${h.id}', this)" style="background: var(--garneta-cyan); color: #000; padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; font-weight: bold;">LUNAS</button>
                <button class="btn" onclick="window.cicilHutang('${h.id}')" style="background: rgba(255,165,0,0.2); border: 1px solid rgba(255,165,0,0.5); color: #ffa502; padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; font-weight: bold;">CICIL</button>
-               <button class="btn" onclick="window.reprintHutang('${h.id}')" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem;" title="Cetak Ulang PDF">📄</button>
-               <button class="btn" onclick="window.reprintHutangBluetooth('${h.id}')" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; color: #3498db;" title="Cetak Ulang Bluetooth">🖨️</button>
+               <button class="btn" onclick="window.reprintHutang('${h.id}')" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem;" title="Cetak Ulang PDF">ðŸ“„</button>
+               <button class="btn" onclick="window.reprintHutangBluetooth('${h.id}')" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; color: #3498db;" title="Cetak Ulang Bluetooth">ðŸ–¨ï¸</button>
             </td>
           </tr>
         `).join('');
@@ -3269,9 +3269,9 @@ window.restoreRiwayatItem = function(idx) {
               </span>
             </td>
             <td style="display: flex; gap: 4px;">
-               <button class="btn" onclick="window.reprintRiwayat(${idx})" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem;" title="Cetak Ulang PDF">📄</button>
-               <button class="btn" onclick="window.reprintRiwayatBluetooth(${idx})" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; color: #3498db;" title="Cetak Ulang Bluetooth">🖨️</button>
-               <button class="btn danger" onclick="window.deleteRiwayatItem(${idx})" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; filter: none; box-shadow: none;" title="Hapus Transaksi">🗑️</button>
+               <button class="btn" onclick="window.reprintRiwayat(${idx})" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem;" title="Cetak Ulang PDF">ðŸ“„</button>
+               <button class="btn" onclick="window.reprintRiwayatBluetooth(${idx})" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; color: #3498db;" title="Cetak Ulang Bluetooth">ðŸ–¨ï¸</button>
+               <button class="btn danger" onclick="window.deleteRiwayatItem(${idx})" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; filter: none; box-shadow: none;" title="Hapus Transaksi">ðŸ—‘ï¸</button>
             </td>
           </tr>
         `).join('');
@@ -3367,7 +3367,7 @@ window.restoreRiwayatItem = function(idx) {
         const aktifHutangs = hutangs.filter(h => h.sisaTagihan > 0);
         
         if (aktifHutangs.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color:#888;">Tidak ada kasbon aktif. Luar biasa! 🎉</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color:#888;">Tidak ada kasbon aktif. Luar biasa! ðŸŽ‰</td></tr>';
           return;
         }
         
@@ -3379,8 +3379,8 @@ window.restoreRiwayatItem = function(idx) {
             <td style="display: flex; gap: 4px; align-items:center;">
                <button class="btn" onclick="window.bayarHutang('${h.id}', this)" style="background: var(--garneta-cyan); color: #000; padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; font-weight: bold;">LUNAS</button>
                <button class="btn" onclick="window.cicilHutang('${h.id}')" style="background: rgba(255,165,0,0.2); border: 1px solid rgba(255,165,0,0.5); color: #ffa502; padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; font-weight: bold;">CICIL</button>
-               <button class="btn" onclick="window.reprintHutang('${h.id}')" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem;" title="Cetak Ulang PDF">📄</button>
-               <button class="btn" onclick="window.reprintHutangBluetooth('${h.id}')" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; color: #3498db;" title="Cetak Ulang Bluetooth">🖨️</button>
+               <button class="btn" onclick="window.reprintHutang('${h.id}')" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem;" title="Cetak Ulang PDF">ðŸ“„</button>
+               <button class="btn" onclick="window.reprintHutangBluetooth('${h.id}')" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; color: #3498db;" title="Cetak Ulang Bluetooth">ðŸ–¨ï¸</button>
             </td>
           </tr>
         `).join('');
@@ -3577,10 +3577,10 @@ window.restoreRiwayatItem = function(idx) {
       function kalkulator() {
 
       let topWorkspaces = [
-        { id: 'expres', icon: '🚀', label: 'Jual Expres' },
-        { id: 'orderan', icon: '📦', label: 'Orderan' },
-        { id: 'belanja', icon: '🛒', label: 'Belanja' },
-        { id: 'laporanA', icon: '🧾', label: 'Laporan A' }
+        { id: 'expres', icon: 'ðŸš€', label: 'Jual Expres' },
+        { id: 'orderan', icon: 'ðŸ“¦', label: 'Orderan' },
+        { id: 'belanja', icon: 'ðŸ›’', label: 'Belanja' },
+        { id: 'laporanA', icon: 'ðŸ§¾', label: 'Laporan A' }
       ];
       
       if (state.role !== "Super Admin") {
@@ -3606,10 +3606,10 @@ window.restoreRiwayatItem = function(idx) {
          const total = rows.reduce((sum, row) => sum + shoppingSubtotal(row), 0);
          
          const workspaces = [
-           { id: 'form', icon: '📝', label: 'Form' },
-           { id: 'ai-input', icon: '🤖', label: 'AI Input' },
-           { id: 'wa', icon: '📋', label: 'Copy WA' },
-           { id: 'list', icon: '📋', label: 'Daftar' }
+           { id: 'form', icon: 'ðŸ“', label: 'Form' },
+           { id: 'ai-input', icon: 'ðŸ¤–', label: 'AI Input' },
+           { id: 'wa', icon: 'ðŸ“‹', label: 'Copy WA' },
+           { id: 'list', icon: 'ðŸ“‹', label: 'Daftar' }
          ];
          
          const activeWorkspace = window.kalkulatorWorkspace || 'list';
@@ -3628,7 +3628,7 @@ window.restoreRiwayatItem = function(idx) {
          switch(activeWorkspace) {
             case 'form':
               belanjaContent = `<div class="workspace-content">
-                  <h3>⚡ Form Xpres</h3>
+                  <h3>âš¡ Form Xpres</h3>
                   <form id="shopping-form" class="grid forms">
                     ${hiddenId()}
                     <label>Nama Barang<input name="name" list="shopping-products" required placeholder="Contoh: Beras Premium"></label>
@@ -3649,7 +3649,7 @@ window.restoreRiwayatItem = function(idx) {
               break;
             case 'wa':
               belanjaContent = `<div class="workspace-content">
-                  <h3>📋 Copy Paste dari WA</h3>
+                  <h3>ðŸ“‹ Copy Paste dari WA</h3>
                   <label>Daftar Belanja
                     <textarea id="shopping-wa-text" class="input-area expandable" placeholder="Contoh:
 Payung 5
@@ -3665,7 +3665,7 @@ Beras Premium 1"></textarea>
             case 'list':
             default:
               belanjaContent = `<div class="workspace-content">
-                  <h3 style="margin-bottom:8px;">📋 Daftar Belanja - Total: ${rupiah(total)}</h3>
+                  <h3 style="margin-bottom:8px;">ðŸ“‹ Daftar Belanja - Total: ${rupiah(total)}</h3>
                   ${shoppingTable(rows)}
               </div>`;
          }
@@ -3701,7 +3701,7 @@ Beras Premium 1"></textarea>
          `;
 
          workspaceContent = `<div class="workspace-content" style="padding-top:8px;">
-             <h3 style="margin:0 0 8px 0; font-size:1rem;">🚀 Jual Expres</h3>
+             <h3 style="margin:0 0 8px 0; font-size:1rem;">ðŸš€ Jual Expres</h3>
              ${datalistHtml}
              ${formsHtml}
              <div style="padding:8px; background:rgba(0,255,204,0.1); border-radius:6px; margin-top:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.1);">
@@ -3711,7 +3711,7 @@ Beras Premium 1"></textarea>
                    <span id="expres-total" style="font-weight:bold; font-size:1rem; color:var(--garneta-cyan);">${rupiah(totalCuan)}</span>
                  </div>
                  ` : '<div></div>'}
-                 <button id="btn-eksekusi-cuan" class="btn" style="background:var(--garneta-cyan); color:#000; font-weight:bold; font-size:12px; padding:4px 12px; border-radius:4px; border:none; cursor:pointer; min-height: 32px;" onclick="window.eksekusiCuan()" ${totalCuan <= 0 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>🚀 Eksekusi</button>
+                 <button id="btn-eksekusi-cuan" class="btn" style="background:var(--garneta-cyan); color:#000; font-weight:bold; font-size:12px; padding:4px 12px; border-radius:4px; border:none; cursor:pointer; min-height: 32px;" onclick="window.eksekusiCuan()" ${totalCuan <= 0 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>ðŸš€ Eksekusi</button>
              </div>
          </div>`;
       } else if (activeTopWorkspace === 'orderan') {
@@ -3924,7 +3924,7 @@ Beras Premium 1"></textarea>
              </div>`;
 
              workspaceContent = `<div class="workspace-content">
-                 <h3 style="margin:0 0 8px 0; font-size:1rem;">🧾 Laporan Cuan</h3>
+                 <h3 style="margin:0 0 8px 0; font-size:1rem;">ðŸ§¾ Laporan Cuan</h3>
                  ${tabToolbar}
                  <div class="card" style="padding:0;">
                      <div class="table-wrap">
@@ -3986,7 +3986,7 @@ Beras Premium 1"></textarea>
         const btn = document.getElementById('btn-eksekusi-cuan');
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '⏳ Memproses...';
+            btn.innerHTML = 'â³ Memproses...';
             btn.style.opacity = '0.7';
         }
         try {
@@ -3998,7 +3998,7 @@ Beras Premium 1"></textarea>
               window.saveExpresCart();
             
             if (btn) {
-                btn.innerHTML = '✅ Berhasil!';
+                btn.innerHTML = 'âœ… Berhasil!';
                 btn.style.background = '#10b981';
                 btn.style.opacity = '1';
             }
@@ -4015,7 +4015,7 @@ Beras Premium 1"></textarea>
         } catch (e) {
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = '🚀 Eksekusi';
+                btn.innerHTML = 'ðŸš€ Eksekusi';
                 btn.style.opacity = '1';
             }
             showToast("Gagal eksekusi: " + e.message, "error");
@@ -4090,8 +4090,8 @@ Beras Premium 1"></textarea>
     
     function penjualan() {
       const workspaces = [
-        { id: 'pos', icon: '🛒', label: 'Mesin Kasir (POS)' },
-        { id: 'list', icon: '📅', label: 'Riwayat Transaksi' }
+        { id: 'pos', icon: 'ðŸ›’', label: 'Mesin Kasir (POS)' },
+        { id: 'list', icon: 'ðŸ“…', label: 'Riwayat Transaksi' }
       ];
       
       const activeWorkspace = window.penjualanWorkspace || 'pos';
@@ -4112,7 +4112,7 @@ Beras Premium 1"></textarea>
         const totalCuan = rows.reduce((acc, row) => acc + Number(row.cuan || 0), 0);
         workspaceContent = `<div class="workspace-content">
           <div class="card">
-            <h3>🛒 Mesin Kasir (POS)</h3>
+            <h3>ðŸ›’ Mesin Kasir (POS)</h3>
             ${saleForm()}
           </div>
           <div class="card">
@@ -4162,10 +4162,10 @@ Beras Premium 1"></textarea>
 
       return `<section class="grid">
         <div style="display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; grid-column: 1 / -1;">
-          <button onclick="showPage('riwayat'); setTimeout(() => window.switchRiwayatTab('transaksi'), 50);" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">🕰️ Riwayat Transaksi</button>
-          <button onclick="showPage('riwayat'); setTimeout(() => window.switchRiwayatTab('hutang'), 50);" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">📒 Bon (Kasbon)</button>
-          <button style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: var(--garneta-cyan); color: #000; transition: all 0.3s; white-space: nowrap;">📊 Laporan Harian</button>
-          <button onclick="showPage('statistik')" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">📈 Statistik Harga</button>
+          <button onclick="showPage('riwayat'); setTimeout(() => window.switchRiwayatTab('transaksi'), 50);" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">ðŸ•°ï¸ Riwayat Transaksi</button>
+          <button onclick="showPage('riwayat'); setTimeout(() => window.switchRiwayatTab('hutang'), 50);" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">ðŸ“’ Bon (Kasbon)</button>
+          <button style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: var(--garneta-cyan); color: #000; transition: all 0.3s; white-space: nowrap;">ðŸ“Š Laporan Harian</button>
+          <button onclick="showPage('statistik')" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">ðŸ“ˆ Statistik Harga</button>
         </div>
         
         <div class="card" style="grid-column: 1 / -1; padding-bottom: 8px;">
@@ -4202,9 +4202,9 @@ Beras Premium 1"></textarea>
         
         <div class="card" style="grid-column: 1 / -1; padding:0;">
            <div class="workspace-toolbar" style="background: rgba(0,0,0,0.2); border-bottom:1px solid rgba(255,255,255,0.05); display:flex; gap:4px; padding:8px;">
-             <button class="workspace-tab ${tab === 'sembako' ? 'active' : ''}" onclick="window.switchLaporanTab('sembako')" style="flex:1;">🛒 Toko Sembako</button>
-             <button class="workspace-tab ${tab === 'ppob' ? 'active' : ''}" onclick="window.switchLaporanTab('ppob')" style="flex:1;">📱 Transaksi PPOB</button>
-             <button class="workspace-tab ${tab === 'cashflow' ? 'active' : ''}" onclick="window.switchLaporanTab('cashflow')" style="flex:1;">💵 Buku Kas (Cashflow)</button>
+             <button class="workspace-tab ${tab === 'sembako' ? 'active' : ''}" onclick="window.switchLaporanTab('sembako')" style="flex:1;">ðŸ›’ Toko Sembako</button>
+             <button class="workspace-tab ${tab === 'ppob' ? 'active' : ''}" onclick="window.switchLaporanTab('ppob')" style="flex:1;">ðŸ“± Transaksi PPOB</button>
+             <button class="workspace-tab ${tab === 'cashflow' ? 'active' : ''}" onclick="window.switchLaporanTab('cashflow')" style="flex:1;">ðŸ’µ Buku Kas (Cashflow)</button>
            </div>
            <div style="padding: 16px;" id="laporan-content-area">
               <div style="text-align:center; padding: 40px; color:var(--garneta-text-muted);">
@@ -4239,10 +4239,10 @@ Beras Premium 1"></textarea>
       const max = prices.length ? Math.max(...prices) : 0;
       return `<section class="grid">
         <div style="display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; grid-column: 1 / -1;">
-          <button onclick="showPage('riwayat'); setTimeout(() => window.switchRiwayatTab('transaksi'), 50);" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">🕰️ Riwayat Transaksi</button>
-          <button onclick="showPage('riwayat'); setTimeout(() => window.switchRiwayatTab('hutang'), 50);" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">📒 Bon (Kasbon)</button>
-          <button onclick="showPage('laporan')" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">📊 Laporan Harian</button>
-          <button style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: var(--garneta-cyan); color: #000; transition: all 0.3s; white-space: nowrap;">📈 Statistik Harga</button>
+          <button onclick="showPage('riwayat'); setTimeout(() => window.switchRiwayatTab('transaksi'), 50);" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">ðŸ•°ï¸ Riwayat Transaksi</button>
+          <button onclick="showPage('riwayat'); setTimeout(() => window.switchRiwayatTab('hutang'), 50);" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">ðŸ“’ Bon (Kasbon)</button>
+          <button onclick="showPage('laporan')" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: transparent; color: var(--neural-text); transition: all 0.3s; white-space: nowrap;">ðŸ“Š Laporan Harian</button>
+          <button style="padding: 6px 16px; font-size: 0.85rem; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid var(--garneta-cyan); background: var(--garneta-cyan); color: #000; transition: all 0.3s; white-space: nowrap;">ðŸ“ˆ Statistik Harga</button>
         </div>
         <div class="card">
           <div class="actions" style="justify-content:space-between">
@@ -4271,7 +4271,7 @@ Beras Premium 1"></textarea>
         <div class="card">
           <h2 style="display:flex; justify-content:space-between; align-items:center;">
             Audit Log
-            <button class="btn danger" onclick="clearAuditLogs()">🗑 Hapus Log</button>
+            <button class="btn danger" onclick="clearAuditLogs()">ðŸ—‘ Hapus Log</button>
           </h2>
           <p class="muted">Riwayat tambah, edit, hapus, backup, dan restore.</p>
         </div>
@@ -4287,7 +4287,7 @@ Beras Premium 1"></textarea>
       const listKaryawan = employees().map(e => `
         <div class="expandable-row" style="padding:14px; background:rgba(255,255,255,0.03); border-radius:12px; display:flex; justify-content:space-between; align-items:center; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px;" onclick="window.openKasbonModal('${e.id}', '${e.name.replace(/'/g, "\\'")}')">
           <strong style="font-size:1rem;">${e.name}</strong>
-          <button class="btn primary" style="padding: 6px 14px; border-radius: 20px; font-size:0.75rem;">Ajukan ➔</button>
+          <button class="btn primary" style="padding: 6px 14px; border-radius: 20px; font-size:0.75rem;">Ajukan âž”</button>
         </div>
       `).join('');
 
@@ -4420,16 +4420,16 @@ Beras Premium 1"></textarea>
                    render();
                 }).catch(e => {
                    window.showToast('Gagal menyimpan: ' + e.message, 'error');
-                   this.innerHTML = '💾 Simpan Kategori';
+                   this.innerHTML = 'ðŸ’¾ Simpan Kategori';
                    this.disabled = false;
                 });
-              ">💾 Simpan Kategori</button>
+              ">ðŸ’¾ Simpan Kategori</button>
             </div>
           ` : ""}
           ${tab === "api" ? `
         <div class="api-center-card" style="max-width: 100%;">
           <div class="api-section-title" style="display:flex; justify-content:space-between; align-items:center;">
-            <span>🗝️ Omni-API Gateway & Key Rotator</span>
+            <span>ðŸ—ï¸ Omni-API Gateway & Key Rotator</span>
             <div style="display:flex; gap:6px;">
               <button class="btn soft" id="refresh-ai-settings" style="padding: 6px 12px; font-size:12px;">Reload</button>
               <button class="btn primary" id="add-new-api-key" style="padding: 6px 12px; font-size:12px;" onclick="document.getElementById('api-key-form-container').classList.toggle('hidden')">+ Tambah Key</button>
@@ -4474,7 +4474,7 @@ Beras Premium 1"></textarea>
           <p id="ai-settings-test-result" class="api-status-text"></p>
 
           <div class="api-help-card">
-            <strong>SISTEM FAILOVER AKTIF 🛡️</strong>
+            <strong>SISTEM FAILOVER AKTIF ðŸ›¡ï¸</strong>
             <ol>
               <li>Sistem akan menggunakan kunci berstatus <span style="color:var(--green); font-weight:bold;">ALIVE</span>.</li>
               <li>Jika terkena limit (429) atau error, kunci otomatis ditandai <span style="color:var(--orange); font-weight:bold;">DEAD</span> dan berpindah ke kunci berikutnya tanpa henti.</li>
@@ -4512,7 +4512,7 @@ Beras Premium 1"></textarea>
           <div class="api-section-title" style="color: #00ffcc;">Otentikasi Biometrik (Login Cepat)</div>
           <p class="muted">Daftarkan Sidik Jari atau Face ID di perangkat ini agar Anda bisa login instan tanpa password.</p>
           <button class="api-primary" onclick="window.registerPasskey()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-top: 12px; background: rgba(0, 255, 204, 0.1); border: 1px solid rgba(0, 255, 204, 0.4); color: #00ffcc;">
-            <span style="font-size:18px;">🛡️</span> DAFTARKAN PERANGKAT INI
+            <span style="font-size:18px;">ðŸ›¡ï¸</span> DAFTARKAN PERANGKAT INI
           </button>
         </div>
         <div class="theme-panel">
@@ -4566,7 +4566,7 @@ Beras Premium 1"></textarea>
                   <label>Digiflazz API Key
                       <div style="position:relative; width:100%; display:flex; align-items:center;">
                           <input type="password" id="digi-key" class="input" placeholder="Masukkan API Key" style="width:100%; border:1px solid #333; background:#111; color:#fff; padding:8px; padding-right:40px; text-transform:none;" autocapitalize="off" autocomplete="off" spellcheck="false" autocorrect="off">
-                          <button type="button" onclick="const k = document.getElementById('digi-key'); k.type = k.type === 'password' ? 'text' : 'password'; this.innerHTML = k.type === 'password' ? '👁️' : '🙈';" style="position:absolute; right:10px; background:transparent; border:none; color:#888; cursor:pointer; font-size:1.1rem; padding:0;">👁️</button>
+                          <button type="button" onclick="const k = document.getElementById('digi-key'); k.type = k.type === 'password' ? 'text' : 'password'; this.innerHTML = k.type === 'password' ? 'ðŸ‘ï¸' : 'ðŸ™ˆ';" style="position:absolute; right:10px; background:transparent; border:none; color:#888; cursor:pointer; font-size:1.1rem; padding:0;">ðŸ‘ï¸</button>
                       </div>
                   </label>
               </div>
@@ -4660,7 +4660,7 @@ ${tab === "bluetooth" ? `
               <div style="font-size:12px; color:#94a3b8;">${desc}</div>
             </div>
           </div>
-          ${isActive ? '<div style="text-align:center; padding:4px 12px; background:' + accentColor + '; color:#0f172a; border-radius:8px; font-size:12px; font-weight:700;">✓ AKTIF</div>' : '<div style="text-align:center; padding:4px 12px; background:rgba(148,163,184,.2); color:#94a3b8; border-radius:8px; font-size:12px;">Klik untuk aktifkan</div>'}
+          ${isActive ? '<div style="text-align:center; padding:4px 12px; background:' + accentColor + '; color:#0f172a; border-radius:8px; font-size:12px; font-weight:700;">âœ“ AKTIF</div>' : '<div style="text-align:center; padding:4px 12px; background:rgba(148,163,184,.2); color:#94a3b8; border-radius:8px; font-size:12px;">Klik untuk aktifkan</div>'}
         </div>
       `;
     }
@@ -4774,15 +4774,15 @@ ${tab === "bluetooth" ? `
       const current = localStorage.getItem('garneta_theme') || 'neural';
       const newTheme = (current === 'light') ? 'neural' : 'light';
       applyGarnetaTheme(newTheme);
-      if (window.showToast) window.showToast(`Mode ${newTheme === 'light' ? 'Terang (Light ☀️)' : 'Gelap (Dark 🌙)'} Aktif`, 'info');
+      if (window.showToast) window.showToast(`Mode ${newTheme === 'light' ? 'Terang (Light â˜€ï¸)' : 'Gelap (Dark ðŸŒ™)'} Aktif`, 'info');
     };
 
     function updateThemeToggleIcon(themeKey) {
       const btn = document.getElementById('theme-toggle-btn');
       if (btn) {
         const isLight = themeKey === 'light';
-        btn.innerHTML = isLight ? '☀️' : '🌙';
-        btn.title = isLight ? 'Beralih ke Mode Gelap (Dark 🌙)' : 'Beralih ke Mode Terang (Light ☀️)';
+        btn.innerHTML = isLight ? 'â˜€ï¸' : 'ðŸŒ™';
+        btn.title = isLight ? 'Beralih ke Mode Gelap (Dark ðŸŒ™)' : 'Beralih ke Mode Terang (Light â˜€ï¸)';
       }
     }
 
@@ -5205,12 +5205,12 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
 
     function actionTable(collection, rows, keys, labels, formatter) {
       const isProducts = collection === "products";
-      let finalLabels = isProducts ? ["☑️", "Aksi"].concat(labels) : labels.concat(["Aksi"]);
+      let finalLabels = isProducts ? ["â˜‘ï¸", "Aksi"].concat(labels) : labels.concat(["Aksi"]);
       return `<div data-collection="${collection}">${table(rows, finalLabels, (row) => {
-        const isChecked = (window.expresCart || window.getInitialExpresCart())?.some(r => (r.name || "").trim().toLowerCase() === (row.name || "").trim().toLowerCase()) ? "checked" : "";
+        const isChecked = (window.expresCart = window.expresCart || window.getInitialExpresCart(false))?.some(r => (r.name || "").trim().toLowerCase() === (row.name || "").trim().toLowerCase()) ? "checked" : "";
         const checkboxCell = `<td style="width:30px; text-align:center;"><input type="checkbox" style="width:16px; height:16px; cursor:pointer; accent-color:var(--garneta-cyan);" onchange="window.toggleExpresItem('${row.id}', this.checked)" ${isChecked}></td>`;
         const actionMenuPos = isProducts ? "left:36px;" : "right:36px;";
-        const actionsCell = `<td class="actions" style="position:relative; overflow:visible; width:40px; text-align:center;"><button class="btn soft kebab-toggle" onclick="document.querySelectorAll('.kebab-menu').forEach(m => m !== this.nextElementSibling && m.classList.add('hidden')); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();" style="padding: 2px 6px !important; font-size: 13px !important; min-height: 24px !important; line-height: 1 !important; border-radius: 4px !important;">⋮</button><div class="kebab-menu hidden" style="position:absolute; ${actionMenuPos} top:50%; transform:translateY(-50%); background:var(--card-bg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.8); z-index: 50; display:flex; flex-direction:row; gap:12px; min-width:unset;"><button onclick="event.stopPropagation(); window.handleMenuAction('duplicate', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none; display: ${isProducts ? 'inline-block' : 'none'};" title="Duplikat">📄</button><button onclick="event.stopPropagation(); window.handleMenuAction('edit', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">✏️</button><button onclick="event.stopPropagation(); window.handleMenuAction('delete', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">🗑️</button></div></td>`;
+        const actionsCell = `<td class="actions" style="position:relative; overflow:visible; width:40px; text-align:center;"><button class="btn soft kebab-toggle" onclick="document.querySelectorAll('.kebab-menu').forEach(m => m !== this.nextElementSibling && m.classList.add('hidden')); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();" style="padding: 2px 6px !important; font-size: 13px !important; min-height: 24px !important; line-height: 1 !important; border-radius: 4px !important;">â‹®</button><div class="kebab-menu hidden" style="position:absolute; ${actionMenuPos} top:50%; transform:translateY(-50%); background:var(--card-bg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.8); z-index: 50; display:flex; flex-direction:row; gap:12px; min-width:unset;"><button onclick="event.stopPropagation(); window.handleMenuAction('duplicate', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none; display: ${isProducts ? 'inline-block' : 'none'};" title="Duplikat">ðŸ“„</button><button onclick="event.stopPropagation(); window.handleMenuAction('edit', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">âœï¸</button><button onclick="event.stopPropagation(); window.handleMenuAction('delete', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">ðŸ—‘ï¸</button></div></td>`;
         const dataCells = keys.map((key) => td(formatter ? formatter(key, row[key]) : row[key], key)).join("");
         
         if (isProducts) {
@@ -5240,7 +5240,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       let eyeHtml = "";
       let styleAttr = "";
       if (type === "password") {
-        eyeHtml = `<button type="button" tabindex="-1" onclick="const i=this.previousElementSibling; if(i.type==='password'){i.type='text';this.textContent='🙈'}else{i.type='password';this.textContent='👁️'}" style="position:absolute; right:8px; top:20px; background:none; border:none; color:var(--soft-text); font-size:14px; cursor:pointer; padding:4px;">👁️</button>`;
+        eyeHtml = `<button type="button" tabindex="-1" onclick="const i=this.previousElementSibling; if(i.type==='password'){i.type='text';this.textContent='ðŸ™ˆ'}else{i.type='password';this.textContent='ðŸ‘ï¸'}" style="position:absolute; right:8px; top:20px; background:none; border:none; color:var(--soft-text); font-size:14px; cursor:pointer; padding:4px;">ðŸ‘ï¸</button>`;
         styleAttr = `style="padding-right: 32px;"`;
       }
       if (type === "number") {
@@ -5378,7 +5378,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
     };
 
     function formButtons(collection = "") {
-      return `<div class="actions" style="align-self:end"><button class="btn primary">Simpan</button><button class="btn" type="reset">Reset</button><button class="btn soft" type="button" onclick="window.handleBackFromForm('${collection}')" title="Kembali ke Daftar Data">🔙 Kembali</button></div>`;
+      return `<div class="actions" style="align-self:end"><button class="btn primary">Simpan</button><button class="btn" type="reset">Reset</button><button class="btn soft" type="button" onclick="window.handleBackFromForm('${collection}')" title="Kembali ke Daftar Data">ðŸ”™ Kembali</button></div>`;
     }
 
 
@@ -5506,7 +5506,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       }
 
       Swal.fire({
-        title: "📊 Export ke Google Spreadsheet",
+        title: "ðŸ“Š Export ke Google Spreadsheet",
         html: `
           <div style="text-align:left; font-size:0.85rem; display:flex; flex-direction:column; gap:12px; font-family:sans-serif;">
              <p style="margin:0; color:rgba(255,255,255,0.7);">Ekspor <strong>${products.length} barang</strong> secara otomatis via Google Apps Script atau salin format tabel.</p>
@@ -5514,17 +5514,17 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
              <div style="background:rgba(0,255,204,0.05); padding:10px; border-radius:8px; border:1px solid rgba(0,255,204,0.2);">
                 <label style="font-weight:bold; display:block; margin-bottom:4px; font-size:0.8rem; color:#00ffcc;">1. Sync Otomatis via Web App URL (Apps Script)</label>
                 <input type="text" id="swal-gas-url" value="${escapeAttr(savedUrl)}" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%; padding:6px; font-size:0.8rem; border-radius:6px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; margin-bottom:6px; box-sizing:border-box;">
-                <button class="btn primary" onclick="window.syncExportToGAS()" style="width:100%; padding:6px; font-size:0.8rem; cursor:pointer;">🚀 Sync Otomatis Ke Google Sheets</button>
+                <button class="btn primary" onclick="window.syncExportToGAS()" style="width:100%; padding:6px; font-size:0.8rem; cursor:pointer;">ðŸš€ Sync Otomatis Ke Google Sheets</button>
              </div>
 
              <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;">
-                 <button class="btn primary" onclick="window.downloadProductsExcel()" style="padding:8px 4px; font-size:0.75rem; cursor:pointer; background:linear-gradient(135deg, #107c41, #1f9a55); color:#fff; border:0;" title="Download File Excel (.xlsx)">📥 Download Excel (.xlsx)</button>
-                 <button class="btn soft" onclick="window.downloadProductsCSV()" style="padding:8px 4px; font-size:0.75rem; cursor:pointer;" title="Download CSV">📄 Download CSV</button>
-                 <button class="btn soft" onclick="window.copyProductsToClipboardTSV()" style="padding:8px 4px; font-size:0.75rem; cursor:pointer;" title="Salin Tabel">📋 Salin Tabel</button>
+                 <button class="btn primary" onclick="window.downloadProductsExcel()" style="padding:8px 4px; font-size:0.75rem; cursor:pointer; background:linear-gradient(135deg, #107c41, #1f9a55); color:#fff; border:0;" title="Download File Excel (.xlsx)">ðŸ“¥ Download Excel (.xlsx)</button>
+                 <button class="btn soft" onclick="window.downloadProductsCSV()" style="padding:8px 4px; font-size:0.75rem; cursor:pointer;" title="Download CSV">ðŸ“„ Download CSV</button>
+                 <button class="btn soft" onclick="window.copyProductsToClipboardTSV()" style="padding:8px 4px; font-size:0.75rem; cursor:pointer;" title="Salin Tabel">ðŸ“‹ Salin Tabel</button>
               </div>
 
               <div style="text-align:center; margin-top:4px;">
-                 <a href="#" onclick="window.showGASCodeTutorial(); return false;" style="color:#00ffcc; text-decoration:underline; font-size:0.75rem;">📜 Cara Buat Web App URL Google Apps Script (Tutorial)</a>
+                 <a href="#" onclick="window.showGASCodeTutorial(); return false;" style="color:#00ffcc; text-decoration:underline; font-size:0.75rem;">ðŸ“œ Cara Buat Web App URL Google Apps Script (Tutorial)</a>
               </div>
           </div>
         `,
@@ -5543,7 +5543,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       }
 
       Swal.fire({
-        title: "📊 Import dari Google Spreadsheet",
+        title: "ðŸ“Š Import dari Google Spreadsheet",
         html: `
           <div style="text-align:left; font-size:0.85rem; display:flex; flex-direction:column; gap:12px; font-family:sans-serif;">
              <p style="margin:0; color:rgba(255,255,255,0.7);">Tarik data barang dari Google Sheets atau tempel teks dari kolom Spreadsheet.</p>
@@ -5551,13 +5551,13 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
              <div style="background:rgba(0,255,204,0.05); padding:10px; border-radius:8px; border:1px solid rgba(0,255,204,0.2);">
                 <label style="font-weight:bold; display:block; margin-bottom:4px; font-size:0.8rem; color:#00ffcc;">1. Tarik Langsung via Web App URL (Apps Script)</label>
                 <input type="text" id="swal-gas-import-url" value="${escapeAttr(savedUrl)}" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%; padding:6px; font-size:0.8rem; border-radius:6px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; margin-bottom:6px; box-sizing:border-box;">
-                <button class="btn primary" onclick="window.syncImportFromGAS()" style="width:100%; padding:6px; font-size:0.8rem; cursor:pointer;">🔄 Tarik Data Dari Google Sheets</button>
+                <button class="btn primary" onclick="window.syncImportFromGAS()" style="width:100%; padding:6px; font-size:0.8rem; cursor:pointer;">ðŸ”„ Tarik Data Dari Google Sheets</button>
              </div>
 
              <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
                 <label style="font-weight:bold; display:block; margin-bottom:4px; font-size:0.8rem; color:#fff;">2. Tempel Teks Salinan Spreadsheet (TSV/CSV)</label>
                 <textarea id="swal-gas-import-text" rows="4" placeholder="Copy-paste sel/tabel dari Google Sheets / Excel di sini...&#10;Kolom: Nama | Kategori | Satuan | Isi | Harga Beli | Harga Jual | Stok" style="width:100%; padding:6px; font-size:0.75rem; border-radius:6px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; margin-bottom:6px; box-sizing:border-box;"></textarea>
-                <button class="btn soft" onclick="window.processTextImportGAS()" style="width:100%; padding:6px; font-size:0.8rem; cursor:pointer;">📥 Impor Data Teks Di Atas</button>
+                <button class="btn soft" onclick="window.processTextImportGAS()" style="width:100%; padding:6px; font-size:0.8rem; cursor:pointer;">ðŸ“¥ Impor Data Teks Di Atas</button>
              </div>
           </div>
         `,
@@ -5842,7 +5842,7 @@ function doPost(e) {
 }`;
 
       Swal.fire({
-        title: "📜 Kode Google Apps Script (GAS)",
+        title: "ðŸ“œ Kode Google Apps Script (GAS)",
         html: `
           <div style="text-align:left; font-size:0.8rem; font-family:sans-serif;">
              <ol style="padding-left:16px; margin-bottom:8px; line-height:1.4; color:rgba(255,255,255,0.85);">
@@ -5851,7 +5851,7 @@ function doPost(e) {
                 <li>Hapus kode bawaan, lalu <strong>Paste</strong> kode di bawah ini:</li>
              </ol>
              <textarea id="swal-gas-code" readonly rows="8" style="width:100%; font-family:monospace; font-size:0.7rem; padding:6px; background:#111; color:#00ffcc; border-radius:6px; border:1px solid #333; box-sizing:border-box;">${escapeHtml(gasCode)}</textarea>
-             <button class="btn primary" onclick="navigator.clipboard.writeText(document.getElementById('swal-gas-code').value); showToast('Kode Apps Script Berhasil Disalin!', 'success');" style="width:100%; margin-top:8px; padding:6px; cursor:pointer;">📋 Copy Kode Apps Script</button>
+             <button class="btn primary" onclick="navigator.clipboard.writeText(document.getElementById('swal-gas-code').value); showToast('Kode Apps Script Berhasil Disalin!', 'success');" style="width:100%; margin-top:8px; padding:6px; cursor:pointer;">ðŸ“‹ Copy Kode Apps Script</button>
              <ol start="4" style="padding-left:16px; margin-top:8px; line-height:1.4; color:rgba(255,255,255,0.85);">
                 <li>Klik <strong>Deploy &rarr; New deployment</strong>.</li>
                 <li>Pilih type: <strong>Web App</strong>.</li>
@@ -6012,25 +6012,25 @@ function doPost(e) {
 
     // Menu untuk Admin (5 menu)
     const adminMenus = [
-      ["dashboard", "🏠 Dashboard"],
-      ["barang", "📦 Barang"],
-      ["pembelian", "🛒 Pembelian"],
-      ["kalkulator", "⚡ Xpres"],
-      ["ngitung", "🧮 NGITUNG"],
-      ["riwayat", "🧾 Riwayat & Bon"],
-      ["ppob", "📱 PPOB"],
-      ["kasbon", "💸 Kasbon"]
-    , ["kentang", "🥔 Grosir Kentang"]];
+      ["dashboard", "ðŸ  Dashboard"],
+      ["barang", "ðŸ“¦ Barang"],
+      ["pembelian", "ðŸ›’ Pembelian"],
+      ["kalkulator", "âš¡ Xpres"],
+      ["ngitung", "ðŸ§® NGITUNG"],
+      ["riwayat", "ðŸ§¾ Riwayat & Bon"],
+      ["ppob", "ðŸ“± PPOB"],
+      ["kasbon", "ðŸ’¸ Kasbon"]
+    , ["kentang", "ðŸ¥” Grosir Kentang"]];
     
     // Menu untuk Super Admin (semua menu)
     const superAdminMenus = [
-      ["dashboard", "🏠 Dashboard"], ["barang", "📦 Barang"],
-      ["pembelian", "🛒 Pembelian"], ["ngitung", "🧮 NGITUNG"], ["kalkulator", "⚡ Xpres"], 
-      ["riwayat", "🧾 Riwayat & Bon"],
-      ["ppob", "📱 PPOB"],
-      ["kasbon", "💸 Kasbon"],
-      ["settings", "⚙️ Setting"]
-    , ["kentang", "🥔 Grosir Kentang"]];
+      ["dashboard", "ðŸ  Dashboard"], ["barang", "ðŸ“¦ Barang"],
+      ["pembelian", "ðŸ›’ Pembelian"], ["ngitung", "ðŸ§® NGITUNG"], ["kalkulator", "âš¡ Xpres"], 
+      ["riwayat", "ðŸ§¾ Riwayat & Bon"],
+      ["ppob", "ðŸ“± PPOB"],
+      ["kasbon", "ðŸ’¸ Kasbon"],
+      ["settings", "âš™ï¸ Setting"]
+    , ["kentang", "ðŸ¥” Grosir Kentang"]];
     
     // Pilih menu berdasarkan role
     const menus = isSuperAdmin() ? superAdminMenus : adminMenus;
@@ -6181,12 +6181,12 @@ function doPost(e) {
             }
             
             if (collection === "purchases") {
-              // ── Validasi nama barang ──
+              // â”€â”€ Validasi nama barang â”€â”€
               const namaBarang = (item.name || "").trim() || "Barang Tanpa Nama";
 
               const purchaseQty = Number(String(item.qty || 1).replace(/[^0-9]/g, '')) || 1;
 
-              // ── Kirim SATU kali ke server purchases ──
+              // â”€â”€ Kirim SATU kali ke server purchases â”€â”€
               // Server handle semuanya: upsert products + insert purchases + price_history
               const purchasePayload = {
                 name:         namaBarang,
@@ -6249,7 +6249,7 @@ function doPost(e) {
           const collection = button.dataset.delete;
           const id = button.dataset.id;
 
-          // ── Optimistic Delete: hapus dari state lokal DULU ──
+          // â”€â”€ Optimistic Delete: hapus dari state lokal DULU â”€â”€
           // UI langsung responsif tanpa tunggu server
           const collectionMap = {
             products: "products",
@@ -6269,7 +6269,7 @@ function doPost(e) {
             render(); // langsung re-render, user tidak perlu tunggu!
           }
 
-          // ── Sync ke server di background ──
+          // â”€â”€ Sync ke server di background â”€â”€
           try {
             await gas("remove", { collection, id });
           } catch (err) {
@@ -6841,7 +6841,7 @@ function doPost(e) {
           <div class="api-key-list">${providerRows}</div>
           <div class="api-key-box">
             <details>
-              <summary style="cursor:pointer; font-weight:bold; color:var(--mint); margin-bottom:8px;">▾ LIHAT DAFTAR API KEY LENGKAP</summary>
+              <summary style="cursor:pointer; font-weight:bold; color:var(--mint); margin-bottom:8px;">â–¾ LIHAT DAFTAR API KEY LENGKAP</summary>
               <div class="api-key-list">${keyRows}</div>
             </details>
           </div>
@@ -6890,7 +6890,7 @@ function doPost(e) {
         <div class="api-key-item" id="api-row-${key.id}" style="display:grid">
           <div class="api-key-display-row">
             <span>
-              <strong>${key.providerLabel}</strong> LAYER ${key.layer} · ${key.masked}<br>
+              <strong>${key.providerLabel}</strong> LAYER ${key.layer} Â· ${key.masked}<br>
               <small>Model otomatis: ${key.model}${key.message ? ` - ${key.message}` : ""}</small>
             </span>
             <span class="actions">
@@ -7930,7 +7930,7 @@ function doPost(e) {
       console.error("Load Error:", error);
       const msg = error?.message || String(error);
       if (msg.includes("Akses ditolak") || msg.includes("login") || msg.includes("401")) {
-        el("content").innerHTML = `<div class="card" style="text-align:center; padding: 40px; margin-top:20px;"><h2>Sesi Kedaluwarsa 🔒</h2><p>Akses ditolak karena sesi tidak valid. Silakan login kembali.</p></div>`;
+        el("content").innerHTML = `<div class="card" style="text-align:center; padding: 40px; margin-top:20px;"><h2>Sesi Kedaluwarsa ðŸ”’</h2><p>Akses ditolak karena sesi tidak valid. Silakan login kembali.</p></div>`;
         // [FIX] Auto-popup login dimatikan. Hanya muncul saat tombol MASUK SUPER ADMIN diklik.
       } else {
         el("content").innerHTML = `<div class="card"><h2>Error</h2><p>${error.message}</p></div>`;
@@ -7980,7 +7980,7 @@ if (el("webauthn-login")) {
   el("webauthn-login").onclick = async () => {
     const btn = el("webauthn-login");
     const oldText = btn.innerHTML;
-    btn.innerHTML = '<span class="icon">⏳</span> Memproses...';
+    btn.innerHTML = '<span class="icon">â³</span> Memproses...';
     try {
       const { startAuthentication } = window.SimpleWebAuthnBrowser || {};
       if (!startAuthentication) throw new Error("Library WebAuthn belum siap.");
@@ -8379,9 +8379,9 @@ window.printReceiptPDF = function() {
       ppobBrand = detected;
       ppobSelectedSku = '';
       updatePpobFooter();
-      const icons = { TELKOMSEL:'🔴', INDOSAT:'🟡', XL:'🔵', AXIS:'🟣', SMARTFREN:'🟢', TRI:'⚫' };
+      const icons = { TELKOMSEL:'ðŸ”´', INDOSAT:'ðŸŸ¡', XL:'ðŸ”µ', AXIS:'ðŸŸ£', SMARTFREN:'ðŸŸ¢', TRI:'âš«' };
       const bi = document.getElementById('ppob-brand-info');
-      if (bi) bi.innerHTML = detected ? `<span style="background:#FDE9EA; color:#E3222B; padding:3px 12px; border-radius:20px; font-size:13px;">${icons[detected]||'📱'} ${detected} Terdeteksi</span>` : '';
+      if (bi) bi.innerHTML = detected ? `<span style="background:#FDE9EA; color:#E3222B; padding:3px 12px; border-radius:20px; font-size:13px;">${icons[detected]||'ðŸ“±'} ${detected} Terdeteksi</span>` : '';
       renderBrandFilters();
       renderPpobGrid();
     }
@@ -8395,7 +8395,7 @@ window.printReceiptPDF = function() {
     if (recent.length === 0 || currentVal.length > 0) { c.innerHTML = ''; return; }
     c.innerHTML = `
       <div style="font-size:12px; color:var(--soft-text, #aaa); margin-bottom:8px; display:flex; justify-content:space-between;">
-        <span>📌 Pelanggan Tersimpan</span>
+        <span>ðŸ“Œ Pelanggan Tersimpan</span>
         <span onclick="alert('Fitur Buku Telepon Lengkap segera hadir!')" style="color:#E3222B;cursor:pointer;font-weight:600;">Lihat Semua</span>
       </div>
       <div style="display:flex; flex-wrap:wrap; gap:8px;">
@@ -8419,10 +8419,10 @@ window.printReceiptPDF = function() {
     if (ppobProducts.length === 0) {
       grid.innerHTML = `
         <div style="grid-column:1/-1; text-align:center; padding:32px 16px; background:rgba(255,255,255,0.03); border:1px dashed rgba(0,255,204,0.3); border-radius:16px;">
-          <div style="font-size:42px; margin-bottom:8px;">📱</div>
+          <div style="font-size:42px; margin-bottom:8px;">ðŸ“±</div>
           <div style="font-size:14px; font-weight:bold; color:var(--text, #e0f8f5);">Katalog PPOB Masih Kosong</div>
           <div style="font-size:12px; color:var(--soft-text, #94a3b8); margin-top:4px; margin-bottom:16px;">Klik tombol di bawah untuk mengunduh produk terbaru dari Digiflazz</div>
-          <button onclick="syncPpobProducts()" class="btn primary" style="padding:10px 20px; font-size:13px;">🔄 Sinkronkan Katalog Digiflazz Sekarang</button>
+          <button onclick="syncPpobProducts()" class="btn primary" style="padding:10px 20px; font-size:13px;">ðŸ”„ Sinkronkan Katalog Digiflazz Sekarang</button>
         </div>`;
       return;
     }
@@ -8457,7 +8457,7 @@ window.printReceiptPDF = function() {
     if (filtered.length === 0) {
       grid.innerHTML = `
         <div style="grid-column:1/-1; text-align:center; padding:40px 16px; color:var(--soft-text, #888);">
-          <div style="font-size:40px; margin-bottom:8px;">🔍</div>
+          <div style="font-size:40px; margin-bottom:8px;">ðŸ”</div>
           <div style="font-size:13px; font-weight:600;">Tidak ada produk untuk kategori/provider ini</div>
         </div>`;
       return;
@@ -8475,7 +8475,7 @@ window.printReceiptPDF = function() {
           <div style="font-size:15px; font-weight:bold; margin-bottom:10px; color:${gangguan ? '#bbb' : '#222'}; line-height:1.4;">${p.product_name}</div>
           <div style="color:${gangguan ? '#ccc' : '#E3222B'}; font-weight:bold; font-size:18px;">${rupiah(Math.round(Number(p.sale_price)))}</div>
           ${gangguan ? '<div style="position:absolute;top:6px;right:6px;background:#ff9800;color:#fff;padding:2px 7px;font-size:10px;border-radius:20px;font-weight:bold;">GANGGUAN</div>' : ''}
-          ${selected ? '<div style="position:absolute;top:6px;left:6px;font-size:14px;">✅</div>' : ''}
+          ${selected ? '<div style="position:absolute;top:6px;left:6px;font-size:14px;">âœ…</div>' : ''}
         </div>
       `;
     }).join('');
@@ -8501,7 +8501,7 @@ window.printReceiptPDF = function() {
       const isPasca = (typeof ppobMainType !== 'undefined' && ppobMainType === 'pascabayar');
       document.getElementById('ppob-total-text').innerHTML = isPasca ? '' : ('Total: <b style="color:#E3222B; font-size:20px;">' + rupiah(Math.round(Number(p.sale_price))) + '</b>');
       const btnCheck = document.getElementById('btn-ppob-checkout');
-      if (btnCheck) btnCheck.innerHTML = isPasca ? '🔍 Cek Tagihan' : '💳 Bayar Sekarang';
+      if (btnCheck) btnCheck.innerHTML = isPasca ? 'ðŸ” Cek Tagihan' : 'ðŸ’³ Bayar Sekarang';
     }
   };
 
@@ -8520,7 +8520,7 @@ window.printReceiptPDF = function() {
     el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
     el.innerHTML = `
       <div style="background:var(--card-bg, #fff);border-radius:16px;padding:28px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:ppobModalIn 0.2s ease;">
-        <div style="text-align:center;margin-bottom:20px;"><div style="font-size:44px;margin-bottom:6px;">🧾</div><h3 style="margin:0;font-size:18px;color:var(--text, #222);">Konfirmasi Pembayaran</h3></div>
+        <div style="text-align:center;margin-bottom:20px;"><div style="font-size:44px;margin-bottom:6px;">ðŸ§¾</div><h3 style="margin:0;font-size:18px;color:var(--text, #222);">Konfirmasi Pembayaran</h3></div>
         
         <div style="background:var(--bg, #fafafa);border-radius:16px;padding:16px;margin-bottom:18px;">
           <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;"><span style="color:var(--soft-text, #888);">Produk</span><span style="font-weight:600;text-align:right;max-width:180px;color:var(--text, #222);">${product.product_name}</span></div>
@@ -8537,7 +8537,7 @@ window.printReceiptPDF = function() {
         <p style="color:var(--soft-text, #aaa);font-size:12px;text-align:center;margin-bottom:16px;">Pastikan uang sudah diterima dari pelanggan sebelum melanjutkan.</p>
         <div style="display:flex;gap:10px;">
           <button onclick="document.getElementById('ppob-confirm-modal').remove();ppobIsProcessing=false;" style="flex:1;padding:13px;border:1px solid var(--border-color, #ddd);border-radius:16px;background:var(--card-bg, #fff);color:var(--text, #555);font-size:15px;cursor:pointer;font-weight:600;">Batal</button>
-          <button onclick="document.getElementById('ppob-confirm-modal').remove();window._ppobCb();" style="flex:2;padding:13px;border:none;border-radius:16px;background:#E3222B;color:#fff;font-size:15px;cursor:pointer;font-weight:bold;">✅ Proses Sekarang</button>
+          <button onclick="document.getElementById('ppob-confirm-modal').remove();window._ppobCb();" style="flex:2;padding:13px;border:none;border-radius:16px;background:#E3222B;color:#fff;font-size:15px;cursor:pointer;font-weight:bold;">âœ… Proses Sekarang</button>
         </div>
       </div>
     `;
@@ -8558,11 +8558,11 @@ window.printReceiptPDF = function() {
     
     ppobIsProcessing = true;
     const btn = document.getElementById('btn-ppob-checkout');
-    const oldBtnText = btn ? btn.innerHTML : "💳 Bayar Sekarang";
+    const oldBtnText = btn ? btn.innerHTML : "ðŸ’³ Bayar Sekarang";
 
     // == JIKA PASCABAYAR ==
     if (ppobMainType === 'pascabayar') {
-      if (btn) { btn.innerHTML = "⏳ Mengecek Tagihan..."; btn.disabled = true; }
+      if (btn) { btn.innerHTML = "â³ Mengecek Tagihan..."; btn.disabled = true; }
       try {
         const res = await gas('ppob_inquiry_pasca', { buyer_sku_code: p.buyer_sku_code, customer_no: custNo });
         if (btn) { btn.innerHTML = oldBtnText; btn.disabled = false; }
@@ -8582,7 +8582,7 @@ window.printReceiptPDF = function() {
         el.innerHTML = `
           <div style="background:var(--card-bg, #fff);border-radius:16px;padding:28px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:ppobModalIn 0.2s ease;">
             <div style="text-align:center;margin-bottom:20px;">
-              <div style="font-size:44px;margin-bottom:6px;">🧾</div>
+              <div style="font-size:44px;margin-bottom:6px;">ðŸ§¾</div>
               <h3 style="margin:0;font-size:18px;color:var(--text, #222);">Rincian Tagihan Pascabayar</h3>
               <div style="font-size:13px;color:var(--soft-text, #777);margin-top:4px;">${p.product_name}</div>
             </div>
@@ -8606,7 +8606,7 @@ window.printReceiptPDF = function() {
             <p style="color:var(--soft-text, #aaa);font-size:12px;text-align:center;margin-bottom:16px;">Pastikan Anda telah menerima uang dari pelanggan sebelum melunasi tagihan ini.</p>
             <div style="display:flex;gap:10px;">
               <button onclick="document.getElementById('ppob-pasca-modal').remove();ppobIsProcessing=false;" style="flex:1;padding:13px;border:1px solid var(--border-color, #ddd);border-radius:16px;background:var(--card-bg, #fff);color:var(--text, #555);font-size:15px;cursor:pointer;font-weight:600;">Batal</button>
-              <button id="btn-pay-pasca" style="flex:2;padding:13px;border:none;border-radius:16px;background:#E3222B;color:#fff;font-size:15px;cursor:pointer;font-weight:bold;">✅ Bayar Tagihan</button>
+              <button id="btn-pay-pasca" style="flex:2;padding:13px;border:none;border-radius:16px;background:#E3222B;color:#fff;font-size:15px;cursor:pointer;font-weight:bold;">âœ… Bayar Tagihan</button>
             </div>
           </div>
         `;
@@ -8615,7 +8615,7 @@ window.printReceiptPDF = function() {
         const payBtn = document.getElementById('btn-pay-pasca');
         if(payBtn) {
           payBtn.onclick = async () => {
-            payBtn.innerHTML = "⏳ Melunasi...";
+            payBtn.innerHTML = "â³ Melunasi...";
             payBtn.disabled = true;
             try {
               const payRes = await gas('ppob_pay_pasca', { buyer_sku_code: p.buyer_sku_code, customer_no: custNo, ref_id: refId });
@@ -8623,7 +8623,7 @@ window.printReceiptPDF = function() {
               document.getElementById('ppob-pasca-modal').remove();
               showPpobSuccessModal(p, custNo, payRes.data, tagihan);
             } catch (err) {
-              payBtn.innerHTML = "✅ Bayar Tagihan";
+              payBtn.innerHTML = "âœ… Bayar Tagihan";
               payBtn.disabled = false;
               showToast(err.message || "Pembayaran gagal", "error");
             }
@@ -8637,7 +8637,7 @@ window.printReceiptPDF = function() {
     } else {
       // == JIKA PRABAYAR ==
       showPpobConfirm(p, custNo, async function() {
-        if (btn) { btn.innerHTML = "⏳ Memproses..."; btn.disabled = true; }
+        if (btn) { btn.innerHTML = "â³ Memproses..."; btn.disabled = true; }
         try {
           const res = await gas('ppob_topup', { buyer_sku_code: p.buyer_sku_code, customer_no: custNo });
           savePpobRecent(custNo);
@@ -8655,9 +8655,9 @@ window.printReceiptPDF = function() {
   window.showPpobSuccessModal = function(p, custNo, data, total) {
     ppobIsProcessing = false;
     const btn = document.getElementById('btn-ppob-checkout');
-    if (btn) { btn.innerHTML = "💳 Bayar Sekarang"; btn.disabled = false; }
+    if (btn) { btn.innerHTML = "ðŸ’³ Bayar Sekarang"; btn.disabled = false; }
     
-    showToast("✅ Transaksi Berhasil!", "success");
+    showToast("âœ… Transaksi Berhasil!", "success");
 
     const sn = data?.sn || '-';
     const status = data?.status || 'Sukses';
@@ -8682,7 +8682,7 @@ window.printReceiptPDF = function() {
     sm.innerHTML = `
       <div style="background:var(--card-bg, #fff);border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:ppobModalIn 0.2s ease;">
         <div style="text-align:center;margin-bottom:20px;">
-          <div style="font-size:50px;margin-bottom:12px;">${isSukses ? '✅' : '⏳'}</div>
+          <div style="font-size:50px;margin-bottom:12px;">${isSukses ? 'âœ…' : 'â³'}</div>
           <div style="font-size:20px;font-weight:900;color:var(--text, #222);">${isSukses ? 'Transaksi Sukses!' : 'Transaksi Diproses'}</div>
           <div style="font-size:13px;color:var(--soft-text, #777);margin-top:4px;">${p.product_name}</div>
         </div>
@@ -8704,7 +8704,7 @@ window.printReceiptPDF = function() {
             <div style="font-size:11px;color:var(--soft-text, #666);margin-bottom:6px;text-align:center;text-transform:uppercase;letter-spacing:1px;">Serial Number (SN) / Token</div>
             <div style="display:flex;align-items:center;gap:8px;">
               <div id="modal-ppob-sn" style="background:var(--card-bg, #fff);color:var(--text, #222);border:1px solid var(--border-color, #ddd);border-radius:8px;padding:10px;font-size:15px;font-weight:bold;letter-spacing:1.5px;flex:1;text-align:center;word-break:break-all;">${sn}</div>
-              <button onclick="navigator.clipboard.writeText(document.getElementById('modal-ppob-sn').innerText).then(()=>showToast('SN disalin!','success'))" style="padding:10px 14px;background:#E3222B;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:13px;">📋 Salin</button>
+              <button onclick="navigator.clipboard.writeText(document.getElementById('modal-ppob-sn').innerText).then(()=>showToast('SN disalin!','success'))" style="padding:10px 14px;background:#E3222B;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:13px;">ðŸ“‹ Salin</button>
             </div>
           </div>
         </div>
@@ -8719,9 +8719,9 @@ window.printReceiptPDF = function() {
 
         <div style="display:flex;gap:10px;">
           <button onclick="this.closest('div[style*=fixed]').remove();" style="flex:1;padding:12px;border:1px solid #ddd;border-radius:16px;background:#fff;color:#555;font-size:14px;cursor:pointer;font-weight:600;">Tutup</button>
-          <button onclick="window.open('${waLink}', '_blank');" style="flex:1;padding:12px;background:#25D366;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;">💬 Kirim WA</button>
-          <button id="btn-modal-print-pdf" style="flex:1;padding:12px;background:#333;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;" title="Print ke PDF / Printer Biasa">🖨️ PDF</button>
-          <button id="btn-modal-print-thermal" style="flex:1;padding:12px;background:#0ea5e9;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;" title="Print ke Printer Bluetooth Thermal">🖨️ Thermal</button>
+          <button onclick="window.open('${waLink}', '_blank');" style="flex:1;padding:12px;background:#25D366;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;">ðŸ’¬ Kirim WA</button>
+          <button id="btn-modal-print-pdf" style="flex:1;padding:12px;background:#333;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;" title="Print ke PDF / Printer Biasa">ðŸ–¨ï¸ PDF</button>
+          <button id="btn-modal-print-thermal" style="flex:1;padding:12px;background:#0ea5e9;color:#fff;border:none;border-radius:16px;font-size:14px;cursor:pointer;font-weight:600;" title="Print ke Printer Bluetooth Thermal">ðŸ–¨ï¸ Thermal</button>
         </div>
       </div>
     `;
@@ -8995,9 +8995,9 @@ window.printReceiptPDF = function() {
       }
       
       device.gatt.disconnect();
-      showToast("✅ Berhasil mencetak struk PPOB!", "success");
+      showToast("âœ… Berhasil mencetak struk PPOB!", "success");
     } catch (err) {
-      showToast("❌ Gagal print Bluetooth: " + err.message, "error");
+      showToast("âŒ Gagal print Bluetooth: " + err.message, "error");
     }
   };
 
@@ -9006,13 +9006,13 @@ window.printReceiptPDF = function() {
     const btn = document.querySelector('button[onclick^="syncPpobProducts"]');
     if (!btn) return;
     const old = btn.innerHTML;
-    btn.innerHTML = "⏳ Sinkronisasi..."; btn.disabled = true;
+    btn.innerHTML = "â³ Sinkronisasi..."; btn.disabled = true;
     try {
       const res = await gas('ppob_sync', { cmd: 'all' });
-      showToast("✅ " + res.message, "success");
+      showToast("âœ… " + res.message, "success");
       await loadPpobProducts();
     } catch(err) {
-      showToast("❌ " + err.message, "error");
+      showToast("âŒ " + err.message, "error");
     } finally {
       btn.innerHTML = old; btn.disabled = false;
     }
@@ -9045,11 +9045,11 @@ window.printReceiptPDF = function() {
     setTimeout(async () => {
       const area = document.getElementById('ppob-history-area');
       if (!area) return;
-      area.innerHTML = '<div style="padding:40px;text-align:center;color:#aaa;">⏳ Memuat riwayat...</div>';
+      area.innerHTML = '<div style="padding:40px;text-align:center;color:#aaa;">â³ Memuat riwayat...</div>';
       try {
         const rows = await gas('ppob_history', {});
         if (!rows || rows.length === 0) {
-          area.innerHTML = '<div style="padding:60px;text-align:center;color:#bbb;"><div style="font-size:48px;margin-bottom:12px;">📋</div><div>Belum ada riwayat transaksi</div></div>';
+          area.innerHTML = '<div style="padding:60px;text-align:center;color:#bbb;"><div style="font-size:48px;margin-bottom:12px;">ðŸ“‹</div><div>Belum ada riwayat transaksi</div></div>';
           return;
         }
         area.innerHTML = `
@@ -9078,8 +9078,8 @@ window.printReceiptPDF = function() {
                       ${r.status === 'Pending' ? `<br><button onclick="window.checkPPOBStatus('${r.ref_id}')" style="margin-top:4px;padding:3px 8px;background:#f59e0b;color:#fff;border:none;border-radius:4px;font-size:10px;cursor:pointer;">Cek Status</button>` : ''}
                     </td>
                     <td style="padding:10px 12px;text-align:center;font-family:monospace;font-size:11px;">
-                      ${r.sn ? `<span style="max-width:120px;display:inline-block;word-break:break-all;">${r.sn}</span> <button onclick="navigator.clipboard.writeText('${r.sn}').then(()=>showToast('Disalin!','success'))" style="padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:10px;">📋</button>` : '-'}
-                      <button onclick="printPpobReceiptBluetooth('${(r.product_name||'').replace(/'/g,'\\u0027')}', '${r.customer_no}', '${r.sn||'-'}', '${r.status}', ${r.selling_price})" style="padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:10px;margin-left:4px;" title="Cetak Thermal">🖨️</button>
+                      ${r.sn ? `<span style="max-width:120px;display:inline-block;word-break:break-all;">${r.sn}</span> <button onclick="navigator.clipboard.writeText('${r.sn}').then(()=>showToast('Disalin!','success'))" style="padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:10px;">ðŸ“‹</button>` : '-'}
+                      <button onclick="printPpobReceiptBluetooth('${(r.product_name||'').replace(/'/g,'\\u0027')}', '${r.customer_no}', '${r.sn||'-'}', '${r.status}', ${r.selling_price})" style="padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:10px;margin-left:4px;" title="Cetak Thermal">ðŸ–¨ï¸</button>
                     </td>
                   </tr>`;
                 }).join('')}
@@ -9112,8 +9112,8 @@ window.printReceiptPDF = function() {
                     </div>
                     <div class="ppob-history-actions">
                       ${r.status === 'Pending' ? `<button class="ppob-mini-btn warning" onclick="window.checkPPOBStatus('${r.ref_id}')">Cek Status</button>` : ''}
-                      ${r.sn ? `<button class="ppob-mini-btn" onclick="navigator.clipboard.writeText('${r.sn}').then(()=>showToast('Disalin!','success'))">📋 Salin</button>` : ''}
-                      <button class="ppob-mini-btn" onclick="printPpobReceiptBluetooth('${(r.product_name||'').replace(/'/g,'\\u0027')}', '${r.customer_no}', '${r.sn||'-'}', '${r.status}', ${r.selling_price})">🖨️ Cetak</button>
+                      ${r.sn ? `<button class="ppob-mini-btn" onclick="navigator.clipboard.writeText('${r.sn}').then(()=>showToast('Disalin!','success'))">ðŸ“‹ Salin</button>` : ''}
+                      <button class="ppob-mini-btn" onclick="printPpobReceiptBluetooth('${(r.product_name||'').replace(/'/g,'\\u0027')}', '${r.customer_no}', '${r.sn||'-'}', '${r.status}', ${r.selling_price})">ðŸ–¨ï¸ Cetak</button>
                     </div>
                   </article>
                 `;
@@ -9173,90 +9173,90 @@ window.printReceiptPDF = function() {
       <section class="ppob-shell">
         <div class="ppob-panel">
 
-          <!-- ═ HEADER (inside panel, no dark sticky) ═ -->
+          <!-- â• HEADER (inside panel, no dark sticky) â• -->
           <div class="ppob-inner-hdr">
             <div style="display:flex;align-items:center;gap:6px;">
-              <span style="font-size:15px;font-weight:900;color:#E3222B;">📱 PPOB</span>
+              <span style="font-size:15px;font-weight:900;color:#E3222B;">ðŸ“± PPOB</span>
               <span class="ppob-digi-badge">DIGIFLAZZ</span>
             </div>
             <div style="display:flex;gap:6px;">
-              ${!isHistory ? `<button onclick="syncPpobProducts()" class="ppob-hdr-btn ppob-hdr-btn-outline">🔄 Update</button>` : ''}
+              ${!isHistory ? `<button onclick="syncPpobProducts()" class="ppob-hdr-btn ppob-hdr-btn-outline">ðŸ”„ Update</button>` : ''}
               <button onclick="${isHistory ? 'showPpobMain()' : 'showPpobHistory()'}" class="ppob-hdr-btn ppob-hdr-btn-ghost">
-                ${isHistory ? '← Back' : '📋 Riwayat'}
+                ${isHistory ? 'â† Back' : 'ðŸ“‹ Riwayat'}
               </button>
             </div>
           </div>
 
           ${isHistory ? `
-            <div style="padding:10px 12px;font-weight:700;font-size:13px;color:var(--text, #333);border-bottom:1px solid var(--border-color, #f5f5f5);">📋 Riwayat PPOB</div>
-            <div id="ppob-history-area" style="min-height:340px;"><div style="padding:40px;text-align:center;color:var(--soft-text, #aaa);">⏳ Memuat...</div></div>
+            <div style="padding:10px 12px;font-weight:700;font-size:13px;color:var(--text, #333);border-bottom:1px solid var(--border-color, #f5f5f5);">ðŸ“‹ Riwayat PPOB</div>
+            <div id="ppob-history-area" style="min-height:340px;"><div style="padding:40px;text-align:center;color:var(--soft-text, #aaa);">â³ Memuat...</div></div>
           ` : `
 
-            <!-- ═ PRABAYAR / PASCABAYAR PILL TOGGLE ═ -->
+            <!-- â• PRABAYAR / PASCABAYAR PILL TOGGLE â• -->
             <div id="ppob-main-tabs" style="display:flex;padding:8px 10px;gap:8px;background:var(--card-bg, #fff);border-bottom:1px solid var(--border-color, #f0f0f0);">
-              <button class="ppob-type-btn${ppobMainType === 'prabayar' ? ' ppob-type-active' : ''}" data-type="prabayar" onclick="switchPpobMainType('prabayar')">📲 Prabayar</button>
-              <button class="ppob-type-btn${ppobMainType === 'pascabayar' ? ' ppob-type-active' : ''}" data-type="pascabayar" onclick="switchPpobMainType('pascabayar')">🧾 Pascabayar</button>
+              <button class="ppob-type-btn${ppobMainType === 'prabayar' ? ' ppob-type-active' : ''}" data-type="prabayar" onclick="switchPpobMainType('prabayar')">ðŸ“² Prabayar</button>
+              <button class="ppob-type-btn${ppobMainType === 'pascabayar' ? ' ppob-type-active' : ''}" data-type="pascabayar" onclick="switchPpobMainType('pascabayar')">ðŸ§¾ Pascabayar</button>
             </div>
 
-            <!-- ═ CATEGORY ICON GRID — PRABAYAR ═ -->
+            <!-- â• CATEGORY ICON GRID â€” PRABAYAR â• -->
             <div id="ppob-pra-cats" class="ppob-cat-grid" style="display:${ppobMainType === 'prabayar' ? 'grid' : 'none'};">
-              ${catIcon('Pulsa','📱','#FFECE8','Pulsa')}
-              ${catIcon('Data','📶','#E8F4FF','Data')}
-              ${catIcon('PLN','💡','#FFFBE8','PLN')}
-              ${catIcon('Game','🎮','#EDE8FF','Game')}
-              ${catIcon('E-Money','💸','#E8FFF4','E-Wallet')}
-              ${catIcon('TV Streaming','📺','#FFE8F0','TV/Stream')}
-              ${catIcon('Voucher','🎟️','#FFF3E8','Voucher')}
-              ${catIcon('Internasional','🌏','#E8F0FF','Intl')}
+              ${catIcon('Pulsa','ðŸ“±','#FFECE8','Pulsa')}
+              ${catIcon('Data','ðŸ“¶','#E8F4FF','Data')}
+              ${catIcon('PLN','ðŸ’¡','#FFFBE8','PLN')}
+              ${catIcon('Game','ðŸŽ®','#EDE8FF','Game')}
+              ${catIcon('E-Money','ðŸ’¸','#E8FFF4','E-Wallet')}
+              ${catIcon('TV Streaming','ðŸ“º','#FFE8F0','TV/Stream')}
+              ${catIcon('Voucher','ðŸŽŸï¸','#FFF3E8','Voucher')}
+              ${catIcon('Internasional','ðŸŒ','#E8F0FF','Intl')}
             </div>
 
-            <!-- ═ CATEGORY ICON GRID — PASCABAYAR ═ -->
+            <!-- â• CATEGORY ICON GRID â€” PASCABAYAR â• -->
             <div id="ppob-pas-cats" class="ppob-cat-grid" style="display:${ppobMainType === 'pascabayar' ? 'grid' : 'none'};grid-template-columns:repeat(3,1fr);">
-              ${catIcon('PLN Pascabayar','💡','#FFFBE8','PLN')}
-              ${catIcon('PDAM','💧','#E8F4FF','PDAM')}
-              ${catIcon('HP Pascabayar','📱','#FFECE8','HP Pasca')}
-              ${catIcon('Internet Pascabayar','🌐','#E8FFF4','Internet')}
-              ${catIcon('BPJS','🏥','#FFE8F0','BPJS')}
-              ${catIcon('Multifinance','💳','#FFF3E8','Angsuran')}
+              ${catIcon('PLN Pascabayar','ðŸ’¡','#FFFBE8','PLN')}
+              ${catIcon('PDAM','ðŸ’§','#E8F4FF','PDAM')}
+              ${catIcon('HP Pascabayar','ðŸ“±','#FFECE8','HP Pasca')}
+              ${catIcon('Internet Pascabayar','ðŸŒ','#E8FFF4','Internet')}
+              ${catIcon('BPJS','ðŸ¥','#FFE8F0','BPJS')}
+              ${catIcon('Multifinance','ðŸ’³','#FFF3E8','Angsuran')}
             </div>
 
-            <!-- ═ PASCA WARNING ═ -->
+            <!-- â• PASCA WARNING â• -->
             <div id="ppob-pasca-info" style="display:${ppobMainType === 'pascabayar' ? 'block' : 'none'};padding:6px 12px;background:#FFF8E1;border-bottom:1px solid #FFE082;">
-              <span style="font-size:10px;color:#7C5C00;">⚠️ Masukkan ID Pelanggan / No. Meter sesuai jenis tagihan</span>
+              <span style="font-size:10px;color:#7C5C00;">âš ï¸ Masukkan ID Pelanggan / No. Meter sesuai jenis tagihan</span>
             </div>
 
-            <!-- ═ SHARED: INPUT ═ -->
+            <!-- â• SHARED: INPUT â• -->
             <div style="padding:9px 10px 5px;background:var(--card-bg, #fff);">
               <div style="position:relative;">
                 <input type="text" id="ppob-customer-no" autocomplete="off" inputmode="numeric"
                   oninput="detectPpobBrand()" placeholder="Nomor HP / ID Pelanggan..." maxlength="30"
                   style="width:100%;font-size:15px;padding:10px 38px 10px 12px;border:1.5px solid var(--border-color, #e5e5e5);border-radius:12px;outline:none;box-sizing:border-box;transition:border-color 0.18s;color:var(--text, #222);font-weight:600;background:var(--bg);"
                   onfocus="this.style.borderColor='#E3222B'" onblur="this.style.borderColor='var(--border-color, #e5e5e5)'">
-                <div style="position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:17px;cursor:pointer;color:#E3222B;" onclick="alert('Fitur Buku Kontak segera hadir!')">📖</div>
+                <div style="position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:17px;cursor:pointer;color:#E3222B;" onclick="alert('Fitur Buku Kontak segera hadir!')">ðŸ“–</div>
               </div>
               <div id="ppob-input-error" style="color:#E3222B;font-size:10px;margin-top:2px;min-height:12px;"></div>
               <div id="ppob-brand-info" style="margin-top:3px;"></div>
             </div>
 
-            <!-- ═ SHARED: RECENT ═ -->
+            <!-- â• SHARED: RECENT â• -->
             <div id="ppob-recent-numbers" style="padding:0 10px;"></div>
 
-            <!-- ═ SHARED: BRAND CHIPS ═ -->
+            <!-- â• SHARED: BRAND CHIPS â• -->
             <div id="ppob-brand-filters" style="padding:4px 10px 6px;display:flex;flex-wrap:nowrap;overflow-x:auto;gap:5px;scrollbar-width:none;-webkit-overflow-scrolling:touch;"></div>
 
-            <!-- ═ SHARED: PRODUCT GRID ═ -->
+            <!-- â• SHARED: PRODUCT GRID â• -->
             <div style="padding:0 8px 10px;">
               <div id="ppob-grid" class="ppob-product-grid">
                 ${skel(6)}
               </div>
             </div>
 
-            <!-- ═ SHARED: FOOTER BAYAR ═ -->
+            <!-- â• SHARED: FOOTER BAYAR â• -->
             <div id="ppob-footer" style="display:none;padding:10px 12px;background:var(--card-bg, #fff);border-top:1px solid var(--border-color, #f0f0f0);align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
               <div id="ppob-total-text" style="font-size:13px;color:var(--text, #444);">Total: <b style="color:#E3222B;font-size:17px;">Rp0</b></div>
               <button id="btn-ppob-checkout" onclick="processPpobCheckout()"
                 style="background:linear-gradient(135deg,#E3222B,#ED4B53);color:#fff;border:none;padding:10px 22px;font-size:13px;border-radius:12px;cursor:pointer;font-weight:900;box-shadow:0 3px 12px rgba(227,34,43,0.35);">
-                💳 Bayar Sekarang
+                ðŸ’³ Bayar Sekarang
               </button>
             </div>
           `}
@@ -9312,7 +9312,7 @@ window.printReceiptPDF = function() {
         banner.style.display = 'flex';
         banner.style.alignItems = 'center';
         banner.style.gap = '10px';
-        banner.innerHTML = '<span>🚀 Update sistem terbaru telah tersedia!</span> <span style="text-decoration: underline;">Klik untuk Memuat Ulang</span>';
+        banner.innerHTML = '<span>ðŸš€ Update sistem terbaru telah tersedia!</span> <span style="text-decoration: underline;">Klik untuk Memuat Ulang</span>';
         
         banner.onclick = () => {
           window.location.reload(true);
@@ -9542,7 +9542,7 @@ window.renderLaporanData = function() {
           <tbody>
             ${sembakoRows.map((row) => `
               <tr class="expandable-row" onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.arrow').classList.toggle('open');">
-                <td style="text-align:center"><span class="arrow" style="display:inline-block; transition:transform 0.2s;">▼</span></td>
+                <td style="text-align:center"><span class="arrow" style="display:inline-block; transition:transform 0.2s;">â–¼</span></td>
                 <td style="font-weight:bold">${row.date}</td>
                 <td style="text-align:right; font-weight:bold; color:var(--garneta-cyan);">${rupiah(row.omset)}</td>
                 <td style="text-align:right; font-weight:bold; color:${row.profit >= 0 ? '#10b981' : '#f43f5e'}">${rupiah(row.profit)}</td>
