@@ -119,15 +119,105 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
         await load();
         alert("Semua log aktivitas berhasil dihapus!");
       } catch (err) {
-          const msg = err.message || "";
-          const isInvalidSession = msg.includes("login terlebih dahulu") || msg.includes("tidak valid") || msg.includes("kedaluwarsa") || msg.includes("Sesi telah berakhir");
-          if (isInvalidSession) {
-             localStorage.removeItem("jwt_token");
-             localStorage.removeItem("role");
-             localStorage.removeItem("currentUser");
-             document.getElementById("gateway-screen").classList.remove("hidden");
-             document.querySelector(".app").classList.add("hidden");
-          } else {
+        alert("Gagal menghapus log: " + err.message);
+      }
+    }
+    window.clearAuditLogs = clearAuditLogs;
+
+    async function pollSync() {
+      if (!localStorage.getItem("jwt_token")) return;
+      try {
+        const syncData = await gas("sync", {}, true); // silentAuthError = true
+        if (!window.appVersion) {
+           window.appVersion = syncData.appVersion;
+           window.dataVersion = syncData.dataVersion;
+           return;
+        }
+        
+        if (window.appVersion !== syncData.appVersion) {
+           window.hasPendingUpdate = true;
+           window.appVersion = syncData.appVersion;
+           showToast("🚀 Pembaruan aplikasi tersedia! Refresh halaman untuk memuat versi terbaru.", "success");
+           renderShell();
+           return;
+        }
+
+        if (window.dataVersion !== syncData.dataVersion) {
+           window.dataVersion = syncData.dataVersion;
+           // Silently update state.data without toast and without forcing render
+           // to prevent disrupting the user while typing in forms
+           state.data = await gas("bootstrap", {}, true);
+           // Only re-render if on dashboard to avoid interrupting data entry
+           if (state.route === 'dashboard') {
+             render();
+           }
+        }
+      } catch(e) {}
+    }
+
+    function startSyncPolling() {
+      if (!window.syncInterval) {
+        pollSync();
+        window.syncInterval = setInterval(pollSync, 15000);
+      }
+    }
+
+    
+    // [SUPER HARD REFRESH] Clear Service Workers, Delete CacheStorage & Force Reload with Timestamp Buster
+    window.forceSuperHardRefresh = async function() {
+      try {
+        if (window.showToast) window.showToast("🔄 Membersihkan Cache & Memuat Versi Terbaru...", "info");
+        
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (let reg of registrations) {
+            await reg.unregister();
+          }
+        }
+        
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+        
+        try { sessionStorage.clear(); } catch(e) {}
+      } catch (e) {
+        console.error('Error during hard refresh:', e);
+      }
+      
+      const url = new URL(window.location.href);
+      url.searchParams.set('v', Date.now());
+      window.location.href = url.toString();
+    };
+
+    async function load() {
+      const token = localStorage.getItem("jwt_token");
+      if (!token) {
+        document.getElementById("gateway-screen").classList.remove("hidden");
+        document.querySelector(".app").classList.add("hidden");
+        return;
+      }
+      
+      try {
+        state.data = await gas("bootstrap", {}, true);
+        startSyncPolling();
+        
+        document.getElementById("gateway-screen").classList.add("hidden");
+        document.querySelector(".app").classList.remove("hidden");
+        
+        renderShell();
+        render();
+        if (window.initSmartSearch) setTimeout(window.initSmartSearch, 50);
+      } catch (err) {
+        const msg = err.message || "";
+        const isInvalidSession = msg.includes("login terlebih dahulu") || msg.includes("tidak valid") || msg.includes("kedaluwarsa") || msg.includes("Sesi telah berakhir");
+        if (isInvalidSession) {
+           localStorage.removeItem("jwt_token");
+           localStorage.removeItem("role");
+           localStorage.removeItem("currentUser");
+           document.getElementById("gateway-screen").classList.remove("hidden");
+           document.querySelector(".app").classList.add("hidden");
+        } else {
            window.showToast("Gagal memuat data: " + err.message, "error");
         }
       }
@@ -3871,28 +3961,28 @@ Beras Premium 1"></textarea>
     };
 
         window.getInitialExpresCart = function(forceReset = false) {
-          if (forceReset) {
-              return Array.from({length: 20}, () => ({ name: "", qty: "", isi: 1, cuanEcer: 0, profit: 0 }));
-          }
-          try {
-              const saved = JSON.parse(localStorage.getItem("expresCart") || "null");
-              if (Array.isArray(saved)) {
-                  let mapped = saved.map(r => ({
-                      name: r.name || "",
-                      qty: r.qty !== undefined ? r.qty : "",
-                      isi: r.isi !== undefined ? r.isi : 1,
-                      cuanEcer: r.cuanEcer !== undefined ? r.cuanEcer : 0,
-                      profit: r.profit !== undefined ? r.profit : 0,
-                      productId: r.productId
-                  }));
-                  while (mapped.length < 20) {
-                      mapped.push({ name: "", qty: "", isi: 1, cuanEcer: 0, profit: 0 });
-                  }
-                  return mapped;
-              }
-          } catch (e) {}
-          return Array.from({length: 20}, () => ({ name: "", qty: "", isi: 1, cuanEcer: 0, profit: 0 }));
-      };
+        if (forceReset) {
+            return Array.from({length: 20}, () => ({ name: "", qty: "", isi: 1, cuanEcer: 0, profit: 0 }));
+        }
+        try {
+            const saved = JSON.parse(localStorage.getItem("expresCart") || "null");
+            if (Array.isArray(saved)) {
+                let mapped = saved.map(r => ({
+                    name: r.name || "",
+                    qty: r.qty !== undefined ? r.qty : "",
+                    isi: r.isi !== undefined ? r.isi : 1,
+                    cuanEcer: r.cuanEcer !== undefined ? r.cuanEcer : 0,
+                    profit: r.profit !== undefined ? r.profit : 0,
+                    productId: r.productId
+                }));
+                while (mapped.length < 20) {
+                    mapped.push({ name: "", qty: "", isi: 1, cuanEcer: 0, profit: 0 });
+                }
+                return mapped;
+            }
+        } catch (e) {}
+        return Array.from({length: 20}, () => ({ name: "", qty: "", isi: 1, cuanEcer: 0, profit: 0 }));
+    };
 
     // Simpan expresCart ke localStorage - fungsi ini SEMPAT HILANG sehingga
     // checkbox daftar barang tidak pernah tersimpan (hilang saat refresh).
