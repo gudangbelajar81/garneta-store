@@ -2401,6 +2401,7 @@ Minyak Goreng 3 45000"></textarea>
       
       window.ngitungPrintWhatsApp = function(data) {
          let opName = data.operator || (state.role === "Super Admin" ? "Umum" : (state.currentUser?.name || "Kasir"));
+           opName = opName.replace(/^Admin\s+/i, '');
          let msg = "*STRUK PEMBELIAN - " + data.date + "*\n";
          msg += "Kasir: " + opName + "\n";
          msg += "Pelanggan: " + data.customer + "\n";
@@ -2442,6 +2443,7 @@ Minyak Goreng 3 45000"></textarea>
          
          let rupiah = (num) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(num);
          let opName = data.operator || (state.role === "Super Admin" ? "Umum" : (state.currentUser?.name || "Kasir"));
+           opName = opName.replace(/^Admin\s+/i, '');
          
          let receiptHtml = `
           <!DOCTYPE html>
@@ -2616,6 +2618,7 @@ window.globalBluetoothDevice = device;
 
             
             let tOperator = data.operator || (state.role === "Super Admin" ? "Umum" : (state.currentUser?.name || "Kasir"));
+            tOperator = tOperator.replace(/^Admin\s+/i, '');
             let tTotal = data.total !== undefined ? data.total : (data.grandTotal !== undefined ? data.grandTotal : (data.subtotal || 0));
             let tBayar = data.bayar !== undefined ? data.bayar : (data.dp !== undefined ? data.dp : tTotal);
             let tKembali = data.kembalian !== undefined ? data.kembalian : (tBayar > tTotal ? tBayar - tTotal : 0);
@@ -2727,7 +2730,8 @@ window.globalBluetoothDevice = device;
           if (storeAddress) text += storeAddress + "\n";
           text += "-".repeat(paperSize) + "\n";
           text += "\x1b\x61\x00" + (data.date || new Date().toLocaleString('id-ID')) + "\n";
-          text += "Kasir: " + (data.operator || (state.role === "Super Admin" ? "Umum" : (state.currentUser?.name || "Kasir"))) + "\n";
+          let rawOp = data.operator || (state.role === "Super Admin" ? "Umum" : (state.currentUser?.name || "Kasir"));
+            text += "Kasir: " + rawOp.replace(/^Admin\s+/i, '') + "\n";
           text += "Pelanggan: " + (data.customer || 'Umum') + "\n";
           text += "-".repeat(paperSize) + "\n";
           
@@ -6936,9 +6940,10 @@ function doPost(e) {
         <div class="api-key-item" id="api-row-${key.id}" style="display:grid">
           <div class="api-key-display-row">
             <span>
-              <strong>${key.providerLabel}</strong> LAYER ${key.layer} · ${key.masked}<br>
-              <small>Model otomatis: ${key.model}${key.message ? ` - ${key.message}` : ""}</small>
-            </span>
+  <strong>${key.providerLabel}</strong> LAYER ${key.layer} - ${key.name ? key.name : 'Tanpa Nama'}<br>
+  <small>Key: ${key.masked}</small><br>
+  <small>Model otomatis: ${key.model}${key.message ? ` - ${key.message}` : ''}</small>
+</span>
             <span class="actions">
               <button class="btn soft edit-ai-key" data-provider="${key.provider}" data-key-id="${key.id}" type="button">EDIT</button>
               <span class="api-badge ${key.status === "live" ? "ok" : "warn"}">${key.status.toUpperCase()}</span>
@@ -7666,7 +7671,7 @@ function doPost(e) {
         .replace(/>/g, "&gt;");
     }
 
-    el("super-login").onclick = () => {
+    if (el("super-login")) el("super-login").onclick = () => {
       const admins = superAdmins();
       el("login-users").innerHTML = admins.map((user) => `<option value="${user.name}"></option>`).join("");
       el("login-name").value = "";

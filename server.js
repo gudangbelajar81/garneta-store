@@ -1829,7 +1829,7 @@ async function restoreData(backup) {
 }
 
 const AI_PROVIDERS = ["gemini", "openai", "groq", "deepseek", "kie"];
-const VISION_PROVIDERS = ["gemini", "openai", "kie"];
+const VISION_PROVIDERS = ["gemini", "openai", "kie", "goapi", "custom"];
 const AI_KEY_LIMIT = 10;
 
 function providerLabel(provider) {
@@ -2247,7 +2247,7 @@ async function getVisionProviders() {
 
 async function executeVisionRequest(provider, keyRec, imageDataUrl, instruction) {
   if (provider === "gemini") return executeGeminiVision(keyRec, imageDataUrl, instruction);
-  if (provider === "openai" || provider === "kie") return executeOpenAiVision(keyRec, imageDataUrl, instruction, provider);
+  if (provider === "openai" || provider === "kie" || provider === "goapi" || provider === "custom") return executeOpenAiVision(keyRec, imageDataUrl, instruction, provider);
   throw new Error(`${providerLabel(provider)} belum mendukung analisa gambar di aplikasi ini.`);
 }
 

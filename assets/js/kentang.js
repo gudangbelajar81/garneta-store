@@ -192,7 +192,7 @@ window.handleSmartNotepadFile = function(e) {
       renderSmartNotepadResult(window._snResultData);
 
     } catch(err) {
-      alert("Error: " + err.message);
+      alert("GAGAL MEMPROSES FOTO: " + err.message + "\n\nPastikan API Key masih hidup, settingan Provider benar (Jika pakai GoAPI, pilih GoAPI), dan tidak error.");
       document.getElementById('sn-step-2').classList.add('hidden');
       document.getElementById('sn-step-1').classList.remove('hidden');
     }

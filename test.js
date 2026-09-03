@@ -1,1 +1,2 @@
-const txt = require('fs').readFileSync('assets/js/main.js', 'utf8'); const start = txt.indexOf('btn-ppob-checkout'); console.log(txt.substring(start - 200, start + 200));
+let expresCart = [{name: 'Beras', qty: 1}];
+console.log(JSON.stringify(expresCart));

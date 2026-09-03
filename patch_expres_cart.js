@@ -1,42 +1,22 @@
 const fs = require('fs');
-const file = 'assets/js/main.js';
-let content = fs.readFileSync(file, 'utf8');
+let mainJs = fs.readFileSync('assets/js/main.js', 'utf8');
 
-const targetArray = "Array.from({length: 20}, () => ({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0}))";
-content = content.replaceAll(targetArray, "window.getInitialExpresCart()");
+// 1. Fix the length check in Jual Expres
+mainJs = mainJs.replace('if (!window.expresCart || window.expresCart.length !== 20) {', 'if (!window.expresCart || window.expresCart.length < 20) {');
 
-const insertPoint = 'window.eksekusiCuan = async function() {';
-const functionCode = 
-    window.getInitialExpresCart = function() {
-        const defaultExpresItems = [
-            "Beras A", "Beras B", "Beras C", "Cakra", "Gula Pasir", "Gunung Agung", 
-            "Kacang A", "Kacang B", "Kacang C", "Kentang Besar", "Kentang Pl", "Kentang Siomay",
-            "Maizena", "Minyak Sawit", "Payung", "Segitiga", "Sphp", "Telur"
-        ];
-        const products = (window.state && window.state.data && window.state.data.products) ? window.state.data.products : [];
-        
-        return Array.from({length: 20}, (_, i) => {
-            let name = defaultExpresItems[i] || '';
-            let isi = 1;
-            let cuanEcer = 0;
-            
-            if (name && products.length > 0) {
-                const prod = products.find(p => (p.name || "").trim().toLowerCase() === name.toLowerCase());
-                if (prod) {
-                    isi = prod.unitContent || 1;
-                    const saleEcer = Number(String(prod.salePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
-                    const baseEcer = Number(String(prod.basePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
-                    cuanEcer = saleEcer - baseEcer;
-                }
-            }
-            
-            return { name: name, qty: '', isi: isi, cuanEcer: cuanEcer, profit: 0 };
-        });
-    };
+// 2. Fix the checkbox check to use productId as primary match
+let oldCheck = `const isChecked = (window.expresCart = window.expresCart || window.getInitialExpresCart(false))?.some(r => (r.name || "").trim().toLowerCase() === (row.name || "").trim().toLowerCase()) ? "checked" : "";`;
+let newCheck = `const isChecked = (window.expresCart = window.expresCart || window.getInitialExpresCart(false))?.some(r => r.productId ? String(r.productId) === String(row.id) : (r.name || "").trim().toLowerCase() === (row.name || "").trim().toLowerCase()) ? "checked" : "";`;
+mainJs = mainJs.replace(oldCheck, newCheck);
 
-    ;
+// 3. Fix toggleExpresItem to use productId
+let oldToggleFind = `const exists = window.expresCart.some(r => (r.name || "").trim().toLowerCase() === productName.toLowerCase());`;
+let newToggleFind = `const exists = window.expresCart.some(r => r.productId ? String(r.productId) === String(product.id) : (r.name || "").trim().toLowerCase() === productName.toLowerCase());`;
+mainJs = mainJs.replace(oldToggleFind, newToggleFind);
 
-content = content.replace(insertPoint, functionCode + insertPoint);
+let oldToggleRemove = `const idx = window.expresCart.findIndex(r => (r.name || "").trim().toLowerCase() === productName.toLowerCase());`;
+let newToggleRemove = `const idx = window.expresCart.findIndex(r => r.productId ? String(r.productId) === String(product.id) : (r.name || "").trim().toLowerCase() === productName.toLowerCase());`;
+mainJs = mainJs.replace(oldToggleRemove, newToggleRemove);
 
-fs.writeFileSync(file, content);
-console.log('PATCH EXPRESS CART DONE');
+fs.writeFileSync('assets/js/main.js', mainJs);
+console.log("Patched expresCart logic");
