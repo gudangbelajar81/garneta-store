@@ -3,9 +3,30 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
     // --- GLOBAL ERROR BOUNDARY ---
     window.addEventListener('error', function(e) {
       console.error("Global Error Caught:", e.error || e.message); console.log("Error siluman terdeteksi (suppressed)");
+      showFatalOverlay(e.error || e.message);
       // Optional: Prevent default so it doesn't show in standard console (uncomment if desired)
       // e.preventDefault(); 
     });
+    window.__fatalShown = false;
+    function showFatalOverlay(err) {
+      if (window.__fatalShown) return;
+      window.__fatalShown = true;
+      try {
+        const msg = (err && err.message) ? err.message : String(err || "Terjadi kesalahan tak terduga.");
+        let div = document.getElementById("fatal-error-overlay");
+        if (!div) {
+          div = document.createElement("div");
+          div.id = "fatal-error-overlay";
+          div.style.cssText = "position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(5,11,20,.97);backdrop-filter:blur(10px);font-family:Arial,sans-serif;padding:20px;";
+          div.innerHTML = '<div style="max-width:520px;width:100%;text-align:center;"><div style="font-size:52px;margin-bottom:8px;">🛠️</div><h2 style="color:#fff;margin:0 0 6px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">Oops, Terjadi Kesalahan</h2><p id="fatal-error-msg" style="color:#b3ffeb;font-size:14px;line-height:1.6;margin:10px 0 18px;word-break:break-word;"></p><button id="fatal-reload" style="border:0;border-radius:10px;padding:11px 22px;font-weight:800;font-size:14px;cursor:pointer;background:linear-gradient(135deg,#00ffcc,#b3ffeb);color:#000;box-shadow:0 10px 24px rgba(0,255,204,.35);">🔄 Muat Ulang Aplikasi</button><p style="color:#6b8a9e;font-size:11px;margin-top:14px;">Jika masih muncul, tekan Ctrl+Shift+R (Hard Refresh) atau bersihkan cache browser.</p></div>';
+          document.body.appendChild(div);
+          document.getElementById("fatal-reload").addEventListener("click", () => location.reload());
+        }
+        document.getElementById("fatal-error-msg").textContent = msg;
+        if (window.showToast) window.showToast("Terjadi kesalahan: " + msg, "error");
+      } catch (_) { /* jangan rekursif */ }
+    }
+    window.showFatalOverlay = showFatalOverlay;
     window.addEventListener('unhandledrejection', function(e) {
       console.error("Unhandled Promise Rejection Caught:", e.reason); console.log("Promise rejection (suppressed)");
     });
@@ -7002,16 +7023,27 @@ function doPost(e) {
       if (input) input.value = "";
     }
 
+    function normalizeProviderName(p) {
+      const s = String(p || "").toLowerCase().trim();
+      const map = { "gemini": "gemini", "openai": "openai", "groq": "groq", "deepseek": "deepseek", "kie": "kie", "kie ai": "kie", "goapi": "goapi", "custom": "custom" };
+      return map[s] || s;
+    }
+    window.normalizeProviderName = normalizeProviderName;
+
     async function saveEdit(id, provider) {
       const panel = el(`edit-mode-${id}`);
       const input = panel?.querySelector(".edit-ai-key-input");
+      const urlInput = panel?.querySelector(".edit-ai-key-url");
       const target = el("ai-settings-test-result");
       try {
         target.textContent = "Menyimpan edit API key...";
+        const finalProvider = normalizeProviderName(provider);
+        const baseUrl = urlInput?.value?.trim() || "";
         await gas("editAiKey", {
-          provider,
+          provider: finalProvider,
           keyId: id,
-          apiKey: input?.value || ""
+          apiKey: input?.value || "",
+          baseUrl
         });
         target.textContent = "API key berhasil diperbarui.";
         cancelEdit(id);

