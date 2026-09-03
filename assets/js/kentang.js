@@ -127,34 +127,7 @@ window.switchKentangWorkspace = function(tab) {
 };
 
 // Injects the floating button into Pembelian Menu
-function injectNotepadPintarToPembelian() {
-  const container = Array.from(document.querySelectorAll('#app-content h2')).find(el => el.textContent.includes('Pembelian'))?.parentElement;
-  if (!document.getElementById("btn-notepad-pintar-pembelian")) {
-      const btn = document.createElement("button");
-      btn.id = "btn-notepad-pintar-pembelian";
-      btn.className = "btn primary";
-      btn.style.position = "fixed";
-      btn.style.bottom = "20px";
-      btn.style.right = "20px";
-      btn.style.zIndex = "999";
-      btn.style.boxShadow = "0 4px 12px rgba(0,255,200,0.5)";
-      btn.innerHTML = "📸 Notepad Pintar AI";
-      btn.onclick = () => window.openSmartNotepad('minimarket', 'camera');
-      document.body.appendChild(btn);
-  }
-}
 
-// Hide the floating button when leaving Pembelian
-const originalNavigate = window.navigate;
-if(originalNavigate) {
-  window.navigate = function(route) {
-    const btn = document.getElementById("btn-notepad-pintar-pembelian");
-    if (btn) {
-       btn.style.display = (route === 'pembelian') ? 'block' : 'none';
-    }
-    originalNavigate(route);
-  };
-}
 
 // Global modal open — modeContext: 'minimarket' | 'kentang'; source: 'gallery' | 'camera'
 window.openSmartNotepad = function(modeContext = 'minimarket', source = 'gallery') {

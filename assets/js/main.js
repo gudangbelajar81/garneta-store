@@ -1293,7 +1293,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
       
       try {
         el("content").innerHTML = views[state.route] ? views[state.route]() : `<div class="card"><h2>Menu tidak ditemukan</h2><p class="muted">Route: ${state.route}</p></div>`; 
-        if(state.route === 'pembelian' && typeof injectNotepadPintarToPembelian === 'function') injectNotepadPintarToPembelian();
+        
       const globalBackBtn = document.getElementById('global-back-btn');
       if (globalBackBtn) {
           if (state.route === 'dashboard') {
@@ -4479,7 +4479,7 @@ Beras Premium 1"></textarea>
           <p class="muted">Kelola kunci API AI Anda dengan sistem rotasi otomatis (Failover) dan cegah limit 429.</p>
 
           <!-- Form Tambah Kunci -->
-          <div id="api-key-form-container" class="card hidden" style="margin-bottom: 16px; border-color: var(--green);">
+          <div id="api-key-form-container" class="card hidden" style="margin-bottom: 16px; border-color: var(--green); position: relative; z-index: 50; pointer-events: auto;">
             <h3 id="api-form-title" style="margin-top:0; color:var(--mint);">Tambah Kunci API</h3>
             <form id="api-key-form" class="grid forms" onsubmit="event.preventDefault(); window.saveOmniApiKey && window.saveOmniApiKey()">
               <input type="hidden" id="api-key-id">
@@ -4495,9 +4495,9 @@ Beras Premium 1"></textarea>
                   <option value="Custom">Custom / Lainnya</option>
                 </select>
               </label>
-              <label>Nama Akun / Visual<input id="api-key-name" placeholder="Misal: Akun Utama Bos" required></label>
-              <label>API Key<input id="api-key-value" type="password" placeholder="sk-..." required></label>
-              <label>Base URL Endpoint<input id="api-key-url" placeholder="https://..." required></label>
+              <label>Nama Akun / Visual<input id="api-key-name" placeholder="Misal: Akun Utama Bos" required style="pointer-events: auto !important;"></label>
+              <label>API Key<input id="api-key-value" type="text" placeholder="sk-..." required style="pointer-events: auto !important;"></label>
+              <label>Base URL Endpoint<input id="api-key-url" placeholder="https://..." required style="pointer-events: auto !important;"></label>
               <div class="actions" style="grid-column: 1/-1; justify-content: flex-end;">
                 <button type="button" class="btn soft" onclick="document.getElementById('api-key-form-container').classList.add('hidden')">Batal</button>
                 <button type="submit" class="btn primary">Simpan Kunci</button>
