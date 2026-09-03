@@ -1,66 +1,16 @@
-﻿import re
-
 with open('assets/js/main.js', 'r', encoding='utf-8') as f:
     content = f.read()
 
-# 1. Update getInitialExpresCart
-initial_old = r"""      window\.getInitialExpresCart = function\(\) \{\n          return Array\.from\(\{length: 20\}, \(\) => \(\{ name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0 \}\)\);\n      \};"""
-initial_new = """      window.saveExpresCart = function() {
-          if (window.expresCart) {
-              localStorage.setItem('expresCart', JSON.stringify(window.expresCart));
-          }
-      };
+old_html = '<h3 style=\"margin:0 0 8px 0; font-size:1rem;\">?? Jual Expres</h3>'
+new_html = '<h3 style=\"margin:0 0 8px 0; font-size:1rem; display:flex; justify-content:space-between; align-items:center;\"><span>?? Jual Expres</span><input type=\"date\" id=\"expres-date\" value=\"\" style=\"background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 4px; border-radius: 4px; font-size: 0.85rem;\" /></h3>'
 
-      window.getInitialExpresCart = function(forceReset = false) {
-          if (!forceReset) {
-              try {
-                  let saved = localStorage.getItem('expresCart');
-                  if (saved) {
-                      let parsed = JSON.parse(saved);
-                      if (Array.isArray(parsed) && parsed.length > 0) {
-                          while (parsed.length < 20) {
-                              parsed.push({ name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0 });
-                          }
-                          return parsed;
-                      }
-                  }
-              } catch(e) {}
-          }
-          return Array.from({length: 20}, () => ({ name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0 }));
-      };"""
-content = re.sub(initial_old, initial_new, content)
+content = content.replace(old_html, new_html)
 
-# 2. Add save to eksekusiCuan
-eksekusi_old = r"window\.expresCart = window\.getInitialExpresCart\(\);"
-eksekusi_new = r"window.expresCart = window.getInitialExpresCart(true);\n              window.saveExpresCart();"
-content = re.sub(eksekusi_old, eksekusi_new, content)
+old_eksekusi = 'const payload = { amount: total, executionDate: today() };'
+new_eksekusi = 'const executionDate = document.getElementById(\"expres-date\") ? document.getElementById(\"expres-date\").value : today();\n            const payload = { amount: total, executionDate: executionDate };'
 
-# 3. Add save to updateExpresRow
-update_old = r"btnEksekusi\.style\.display = totalCuan > 0 \? 'block' : 'none';\n         \}"
-update_new = r"btnEksekusi.style.display = totalCuan > 0 ? 'block' : 'none';\n         }\n         window.saveExpresCart();"
-content = re.sub(update_old, update_new, content)
-
-# 4. Add save to removeExpres
-remove_old = r"window\.expresCart\[index\] = \{name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0\};\n           render\(\);"
-remove_new = r"window.expresCart[index] = {name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0};\n           window.saveExpresCart();\n           render();"
-content = re.sub(remove_old, remove_new, content)
-
-# 5. Add save to toggleExpresItem
-# It ends with:
-#               }
-#           }
-#       };
-# We can find this by looking for the last line of toggleExpresItem.
-# Since it's tricky, let's just insert it at the very start of the `toggleExpresItem`'s return or just after the if/else.
-toggle_old = r"""                  if \(window\.expresCart\.length < 20\) \{\n                      window\.expresCart\.push\(\{name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0\}\);\n                  \}\n              \}\n          \}"""
-toggle_new = """                  if (window.expresCart.length < 20) {
-                      window.expresCart.push({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0});
-                  }
-              }
-          }
-          window.saveExpresCart();"""
-content = re.sub(toggle_old, toggle_new, content)
+content = content.replace(old_eksekusi, new_eksekusi)
 
 with open('assets/js/main.js', 'w', encoding='utf-8') as f:
     f.write(content)
-print("done")
+print("Done")

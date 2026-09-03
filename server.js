@@ -230,7 +230,7 @@ const PUBLIC_ACTIONS = new Set(["login", "loginKaryawan", "getEmployeesList", "v
 
 // Setting keys yang boleh dibaca publik (untuk branding toko di login screen)
 const PUBLIC_SETTING_KEYS = new Set(["STORE_NAME", "STORE_LOGO", "STORE_ADDRESS", "STORE_PHONE"]);
-const KASIR_COLLECTIONS = new Set(["products", "suppliers", "purchases", "sales", "priceHistory", "ngitungSales", "orders", "cuan_reports", "ppob_products"]);
+const KASIR_COLLECTIONS = new Set(["products", "suppliers", "purchases", "sales", "priceHistory", "ngitungSales", "orders", "cuan_reports", "ppob_products", "kentang_purchases", "kentang_purchase_details"]);
 
 function verifyToken(req, res, next) {
   const action = req.body?.action;
@@ -272,7 +272,7 @@ function verifyToken(req, res, next) {
       }
       
       // Allow general dashboard access
-      if (["bootstrap", "sync", "dashboard"].includes(action)) return next();
+      if (["bootstrap", "sync", "dashboard", "analyzeInvoiceImage", "saveBulkPurchases", "saveBulkKentang"].includes(action)) return next();
       
       return res.status(401).json({ ok: false, message: "Akses ditolak. Fitur ini khusus Super Admin." });
     }

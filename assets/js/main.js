@@ -3736,7 +3736,7 @@ Beras Premium 1"></textarea>
          `;
 
          workspaceContent = `<div class="workspace-content" style="padding-top:8px;">
-             <h3 style="margin:0 0 8px 0; font-size:1rem;">🚀 Jual Expres</h3>
+             <h3 style="margin:0 0 8px 0; font-size:1rem; display:flex; justify-content:space-between; align-items:center;"><span>🚀 Jual Expres</span><input type="date" id="expres-date" value="${today()}" style="background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 4px; border-radius: 4px; font-size: 0.85rem;" /></h3>
              ${datalistHtml}
              ${formsHtml}
              <div style="padding:8px; background:rgba(0,255,204,0.1); border-radius:6px; margin-top:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.1);">
@@ -4029,7 +4029,8 @@ Beras Premium 1"></textarea>
             btn.style.opacity = '0.7';
         }
         try {
-            const payload = { amount: total, executionDate: today() };
+            const executionDate = document.getElementById("expres-date") ? document.getElementById("expres-date").value : today();
+            const payload = { amount: total, executionDate: executionDate };
             await gas("add", { collection: "cuan_reports", item: payload });
             
             // Reset cart
