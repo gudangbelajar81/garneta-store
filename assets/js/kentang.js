@@ -172,7 +172,7 @@ window.handleSmartNotepadFile = function(e) {
     try {
       const response = await gas("analyzeInvoiceImage", {
         imageDataUrl: ev.target.result,
-        instruction: SMART_NOTEPAD_PROMPT
+        instruction: window._simulasiMode ? "SIMULASI" : SMART_NOTEPAD_PROMPT
       });
 
       const resData = response.data || response;

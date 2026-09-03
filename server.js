@@ -2094,6 +2094,18 @@ function healthCheckOptions(provider, apiKey) {
 }
 
 async function analyzeInvoiceImage(payload = {}) {
+    // MOCK RESPONSE FOR SIMULATION
+    if (payload.instruction === "SIMULASI") {
+        return { 
+            hasil: `[
+                {"name": "Beras Sania 5Kg", "qty": "2", "price": "75000"},
+                {"name": "Minyak Goreng Sunco 2L", "qty": "1", "price": "35000"},
+                {"name": "Telur Ayam Ras 1Kg", "qty": "1.5", "price": "28000"}
+            ]`, 
+            provider: "mock-ai", 
+            model: "mock-model" 
+        };
+    }
   const imageDataUrl = payload.imageDataUrl || payload.imageData || "";
   if (!imageDataUrl.startsWith("data:image/")) throw new Error("Foto nota wajib dikirim.");
   const instruction = payload.instruction || "Baca isi foto nota ini dengan teliti dan berikan hasil sesuai data yang terlihat.";
