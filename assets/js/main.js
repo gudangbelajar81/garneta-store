@@ -275,7 +275,7 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
       const superMode = state.role === "Super Admin";
       if (el("role-label")) el("role-label").textContent = superMode ? `Super Admin: ${state.currentUser?.name || ""}` : "Admin";
       if (el("super-login")) el("super-login").classList.toggle("hidden", superMode);
-      if (el("logout-super")) el("logout-super").classList.toggle("hidden", !superMode);
+      if (el("logout-super")) el("logout-super").classList.remove("hidden");
       
       window.toggleAppDrawer = function() {
         const modal = document.getElementById('app-drawer-modal');
@@ -4889,9 +4889,7 @@ ${tab === "bluetooth" ? `
         ${hiddenId()}
         
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; grid-column: 1/-1;">
-          <label>Kategori Barang<input name="category" type="text" list="category-list" onblur="this.value = window.formatKategori(this.value)">
-            <datalist id="category-list">${cats.map(opt => `<option value="${escapeAttr(opt)}">`).join("")}</datalist>
-          </label>
+          <label>Kategori Barang<select name="category"><option value="">Pilih Kategori...</option>${cats.map(opt => `<option value="${escapeAttr(opt)}">${escapeAttr(opt)}</option>`).join("")}</select></label>
           ${input("name", "Nama Barang", true)}
         </div>
         
@@ -4982,9 +4980,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
           
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; grid-column: 1/-1;">
             ${input("date", "Tanggal", true, "date", today())}
-            <label>Kategori Barang<input name="category" type="text" list="category-list" onblur="this.value = window.formatKategori(this.value)">
-              <datalist id="category-list">${cats.map(opt => `<option value="${escapeAttr(opt)}">`).join("")}</datalist>
-            </label>
+            <label>Kategori Barang<select name="category"><option value="">Pilih Kategori...</option>${cats.map(opt => `<option value="${escapeAttr(opt)}">${escapeAttr(opt)}</option>`).join("")}</select></label>
           </div>
 
           <div style="display:grid; grid-template-columns: ${isSuperAdmin() ? '2fr 1fr 1fr' : '2fr 1fr'}; gap:10px; grid-column: 1/-1;">
