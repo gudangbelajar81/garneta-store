@@ -3707,7 +3707,7 @@ Beras Premium 1"></textarea>
          workspaceContent = subToolbar + belanjaContent;
          
       } else if (activeTopWorkspace === 'expres') {
-         if (!window.expresCart || window.expresCart.length !== 20) {
+         if (!window.expresCart || window.expresCart.length < 20) {
              window.expresCart = window.getInitialExpresCart(false);
               window.saveExpresCart();
          }
@@ -4108,15 +4108,17 @@ Beras Premium 1"></textarea>
                btnEksekusi.disabled = true;
                btnEksekusi.style.opacity = '0.5';
                btnEksekusi.style.cursor = 'not-allowed';
-           }
-       }
+            }
+        }
+        window.saveExpresCart();
     };
     
     window.removeExpres = function(index) {
       if (window.expresCart && window.expresCart[index]) {
          window.expresCart[index] = {name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0};
-         render();
-      }
+           window.saveExpresCart();
+           render();
+        }
     };
 
     // Workspace state for Penjualan page
@@ -5244,7 +5246,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       const isProducts = collection === "products";
       let finalLabels = isProducts ? ["☑️", "Aksi"].concat(labels) : labels.concat(["Aksi"]);
       return `<div data-collection="${collection}">${table(rows, finalLabels, (row) => {
-        const isChecked = (window.expresCart = window.expresCart || window.getInitialExpresCart(false))?.some(r => (r.name || "").trim().toLowerCase() === (row.name || "").trim().toLowerCase()) ? "checked" : "";
+        const isChecked = (window.expresCart = window.expresCart || window.getInitialExpresCart(false))?.some(r => r.productId ? String(r.productId) === String(row.id) : (r.name || "").trim().toLowerCase() === (row.name || "").trim().toLowerCase()) ? "checked" : "";
         const checkboxCell = `<td style="width:30px; text-align:center;"><input type="checkbox" style="width:16px; height:16px; cursor:pointer; accent-color:var(--garneta-cyan);" onchange="window.toggleExpresItem('${row.id}', this.checked)" ${isChecked}></td>`;
         const actionMenuPos = isProducts ? "left:36px;" : "right:36px;";
         const actionsCell = `<td class="actions" style="position:relative; overflow:visible; width:40px; text-align:center;"><button class="btn soft kebab-toggle" onclick="document.querySelectorAll('.kebab-menu').forEach(m => m !== this.nextElementSibling && m.classList.add('hidden')); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();" style="padding: 2px 6px !important; font-size: 13px !important; min-height: 24px !important; line-height: 1 !important; border-radius: 4px !important;">⋮</button><div class="kebab-menu hidden" style="position:absolute; ${actionMenuPos} top:50%; transform:translateY(-50%); background:var(--card-bg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.8); z-index: 50; display:flex; flex-direction:row; gap:12px; min-width:unset;"><button onclick="event.stopPropagation(); window.handleMenuAction('duplicate', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none; display: ${isProducts ? 'inline-block' : 'none'};" title="Duplikat">📄</button><button onclick="event.stopPropagation(); window.handleMenuAction('edit', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">✏️</button><button onclick="event.stopPropagation(); window.handleMenuAction('delete', '${collection}', '${row.id}')" style="background:transparent; border:none; padding:0; margin:0; font-size: 11px; cursor:pointer; min-height:0; line-height:1; box-shadow:none; outline:none;">🗑️</button></div></td>`;
@@ -9812,7 +9814,7 @@ window.deleteManualCashflow = async function(id) {
         
         if (checked) {
             // Cek jika sudah ada
-            const exists = window.expresCart.some(r => (r.name || "").trim().toLowerCase() === productName.toLowerCase());
+            const exists = window.expresCart.some(r => r.productId ? String(r.productId) === String(product.id) : (r.name || "").trim().toLowerCase() === productName.toLowerCase());
             if (!exists) {
                 // Cari slot kosong pertama
                 let emptyIdx = window.expresCart.findIndex(r => !(r.name || "").trim());
@@ -9836,7 +9838,7 @@ window.deleteManualCashflow = async function(id) {
             }
         } else {
             // Hapus dari expresCart
-            const idx = window.expresCart.findIndex(r => (r.name || "").trim().toLowerCase() === productName.toLowerCase());
+            const idx = window.expresCart.findIndex(r => r.productId ? String(r.productId) === String(product.id) : (r.name || "").trim().toLowerCase() === productName.toLowerCase());
             if (idx !== -1) {
                 // Hapus dan geser ke bawah, lalu tambahkan baris kosong di akhir agar jumlah minimal tetap 20 jika diperlukan
                 window.expresCart.splice(idx, 1);
