@@ -1495,7 +1495,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
     function barang() {
       const subTabs = isSuperAdmin() ? [
         { id: 'ai-input', icon: '🤖', label: 'AI Input' },
-        { id: 'ai', icon: '🪄', label: 'AI Nota' },
+        { id: 'ai', icon: '🧠', label: 'Nota AI' },
         { id: 'import', icon: '📥', label: 'Import' },
         { id: 'scanner', icon: '📱', label: 'Scanner' }
       ] : [];
@@ -1588,8 +1588,17 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
         case 'ai':
           workspaceContent = `<div class="workspace-content">
             <div class="card">
-              <h3>🤖 AI Nota ke Barang</h3>
-              ${invoiceAiTools()}
+              <h3 style="display:flex; align-items:center; gap:10px; justify-content:space-between; flex-wrap:wrap;">
+                <span>🧠 Nota AI (Notepad Pintar)</span>
+                <button class="btn primary" onclick="window.openSmartNotepad('auto','gallery')">📸 Buka Nota AI</button>
+              </h3>
+              <div id="ai-nota-universal-entry" style="text-align:center; padding:36px 20px; border:2px dashed var(--line); border-radius:12px;">
+                <p class="muted" style="max-width:560px; margin:0 auto 18px;">Satu mesin, dua mode: 🛒 Minimarket (barang kelontong) &amp; 🥔 Komoditas/Kentang (timbangan karung). AI membaca foto nota, mengkoreksi salah hitung, dan hasilnya bisa diedit lalu diexport ke Database Barang + Statistik Harga.</p>
+                <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                  <button class="btn primary" onclick="window.openSmartNotepad('auto','gallery')" style="font-size:1.05rem; padding:12px 22px;">📁 Gambar Internal</button>
+                  <button class="btn primary" onclick="window.openSmartNotepad('auto','camera')" style="font-size:1.05rem; padding:12px 22px;">📷 Foto Kamera</button>
+                </div>
+              </div>
             </div>
           </div>`;
           break;
@@ -6018,6 +6027,14 @@ function doPost(e) {
         image.src = dataUrl;
       });
     }
+
+    // [KAWIN] Expose helper kompresi untuk Notepad Pintar (kentang.js)
+    window.readFileAsDataUrl = readFileAsDataUrl;
+    window.readAndCompressImage = readAndCompressImage;
+    window.compressImageFile = function(file, maxSize = 1280, quality = 0.72) {
+      return readAndCompressImage(file, maxSize, quality);
+    };
+    window.compressImageDataUrl = compressImageDataUrl;
 
     async function readProductFile(file) {
       const ext = file.name.split(".").pop().toLowerCase();

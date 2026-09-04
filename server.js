@@ -272,7 +272,7 @@ function verifyToken(req, res, next) {
       }
       
       // Allow general dashboard access
-      if (["bootstrap", "sync", "dashboard", "analyzeInvoiceImage", "saveBulkPurchases", "saveBulkKentang"].includes(action)) return next();
+      if (["bootstrap", "sync", "dashboard", "analyzeInvoiceImage", "verifyInvoiceText", "saveBulkPurchases", "saveBulkKentang"].includes(action)) return next();
       
       return res.status(401).json({ ok: false, message: "Akses ditolak. Fitur ini khusus Super Admin." });
     }
