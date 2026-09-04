@@ -434,6 +434,7 @@ async function handleAction(action, payload, req) {
     deleteAiKey: () => deleteAiKey(payload),
     testAiSettings: () => testAiSettings(payload.provider),
     analyzeInvoiceImage: () => analyzeInvoiceImage(payload),
+    verifyInvoiceText: () => verifyInvoiceText(payload.text),
     backupData: () => backupData(),
     restoreData: () => restoreData(payload.backup),
     clearAuditLogs: () => clearAuditLogs(),
@@ -1819,6 +1820,65 @@ async function restoreData(backup) {
 const AI_PROVIDERS = ["gemini", "openai", "groq", "deepseek", "kie", "goapi"];
 const VISION_PROVIDERS = ["gemini", "openai", "kie", "goapi", "custom"];
 const AI_KEY_LIMIT = 10;
+// [SERVER PATCH] Upgrade Auto-Recovery Key + 2-Pass Verifier
+// Digunakan oleh patch-upgrade.js. Semua marker berformat @MARKER:x.
+const AI_KEY_RECOVERY_COOLDOWN_MIN = 5;    // key mati baru boleh di-check ulang setelah 5 menit
+const AI_KEY_RECOVERY_MAX = 2;             // maksimal key yang di-recovery per request (tiap cek 12s timeout)
+const NOTEPAD_VERIFIER_SYSTEM = "Kamu adalah auditor nota yang sangat teliti dan konservatif. Kamu menerima hasil ekstraksi AI TAHAP 1 dari foto nota (belum tentu benar).\n\nTUGAS VERIFIKASI (WAJIB):\n1. Hitung ulang SETIAP perkalian (qty x harga) dan jumlahkan totalnya. Jika totalPrice yang ditulis AI tidak cocok dengan penjumlahan item, perbaiki HANYA bila terbukti dari data item yang ada.\n2. JANGAN mengubah angka yang sudah masuk akal. Jika ada angka yang diragukan karena tidak konsisten (misal qty desimal untuk barang satuan, harga terlalu murah/mahal, atau total tidak cocok tapi tidak jelas item mana yang salah), JANGAN asal koreksi - beri flag \"check\" pada item/grade tersebut beserta \"alasan\" singkat dalam bahasa Indonesia.\n3. Pertahankan struktur JSON yang SAMA dengan input (type, supplier, date, items ATAU grades, totalPrice, dst).\n4. Tambahkan field \"flag\" (\"ok\" atau \"check\") dan \"alasan\" pada SETIAP item (mode minimarket) atau SETIAP grade (mode kentang).\n5. Tambahkan \"warnings\" (array of string) di root untuk semua hal yang perlu dicek manual, dan \"verificationSummary\" (string 1 kalimat).\n\nKeluarkan HANYA JSON valid TANPA markdown fence, TANPA teks lain, TANPA komentar.";
+
+async function recoverStaleKeys(provider, budget) {
+  if (!budget || budget <= 0) return 0;
+  const cutoff = new Date(Date.now() - AI_KEY_RECOVERY_COOLDOWN_MIN * 60 * 1000);
+  const [rows] = await db.query(
+    "SELECT id, provider, name, api_key AS `key`, base_url AS baseUrl, status, used_count AS usedCount FROM pi_keys_manager WHERE provider = ? AND status IN ('Dead', 'Limit') AND updated_at <= ? ORDER BY updated_at ASC LIMIT ?",
+    [provider, cutoff, budget]
+  );
+
+  let checked = 0;
+  for (const keyRec of rows) {
+    checked++;
+    try {
+      const check = await checkApiKey(provider, { ...keyRec, baseUrl: keyRec.baseUrl || defaultBaseUrl(provider) });
+      if (check.status === 'live') {
+        await db.query("UPDATE pi_keys_manager SET status = 'Alive' WHERE id = ?", [keyRec.id]);
+        logger.info("Auto-recovery: key pulih dan diaktifkan kembali.", { provider, keyId: keyRec.id, name: keyRec.name });
+      }
+    } catch (e) {
+      logger.warn("Auto-recovery gagal.", { provider, keyId: keyRec.id, error: e.message });
+    }
+  }
+  return budget - checked;
+}
+
+async function verifyInvoiceText(extractedText) {
+  const providers = await getChatProviders();
+  const systemPrompt = NOTEPAD_VERIFIER_SYSTEM;
+  const userPrompt = "Berikut hasil ekstraksi AI tahap 1 (JSON):\n" + extractedText + "\n\nLakukan verifikasi matematis sesuai instruksi sistem. Keluarkan HANYA JSON yang sudah diverifikasi.";
+  let lastError = null;
+  for (const provider of providers) {
+    for (const key of provider.keys) {
+      try {
+        const hasil = await executeChatRequest(provider.provider, key, systemPrompt, userPrompt);
+        await db.query("UPDATE pi_keys_manager SET used_count = used_count + 1 WHERE id = ?", [key.id]);
+        return { hasil, provider: provider.provider, model: provider.model };
+      } catch (error) {
+        lastError = error;
+        if (error.status === 429) {
+          logger.warn("Rate limit tercapai, merotasi key ke Limit.", { provider: provider.provider, keyId: key.id });
+          await db.query("UPDATE pi_keys_manager SET status = 'Limit' WHERE id = ?", [key.id]);
+        } else if (error.status === 401 || error.status === 403) {
+          logger.warn("Key mati/invalid, merotasi key ke Dead.", { provider: provider.provider, keyId: key.id });
+          await db.query("UPDATE pi_keys_manager SET status = 'Dead' WHERE id = ?", [key.id]);
+        } else {
+          logger.error("AI API Error (verify):", { message: error.message, status: error.status, provider: provider.provider });
+        }
+      }
+    }
+  }
+  if (lastError) throw lastError;
+  throw new Error("Semua kunci API gagal untuk verifikasi nota.");
+}
+
 
 function providerLabel(provider) {
   const labels = {
@@ -2145,7 +2205,14 @@ async function getChatProviders() {
   const order = [active, ...AI_PROVIDERS].filter((provider, index, arr) => arr.indexOf(provider) === index);
   const providers = [];
   for (const provider of order) {
-    const [rows] = await db.query("SELECT id, provider, name, api_key AS `key`, base_url AS baseUrl, status, used_count AS usedCount FROM pi_keys_manager WHERE provider = ? AND status = 'Alive' ORDER BY id ASC", [provider]);
+    let [rows] = await db.query("SELECT id, provider, name, api_key AS `key`, base_url AS baseUrl, status, used_count AS usedCount FROM pi_keys_manager WHERE provider = ? AND status = 'Alive' ORDER BY id ASC", [provider]);
+    if (!rows.length) {
+      // [SERVER PATCH] Auto-recovery: coba hidupkan kembali key Dead/Limit yang sudah lewat cooldown
+      const remaining = await recoverStaleKeys(provider, AI_KEY_RECOVERY_MAX);
+      if (remaining < AI_KEY_RECOVERY_MAX) {
+        [rows] = await db.query("SELECT id, provider, name, api_key AS `key`, base_url AS baseUrl, status, used_count AS usedCount FROM pi_keys_manager WHERE provider = ? AND status = 'Alive' ORDER BY id ASC", [provider]);
+      }
+    }
     if (rows.length) {
       const model = await getSetting(providerModelSettingKey(provider), defaultAiModel(provider));
       providers.push({ provider, model: model === "auto" ? defaultAiModel(provider) : model, keys: rows });
@@ -2250,7 +2317,14 @@ async function getVisionProviders() {
   const order = [active, ...VISION_PROVIDERS].filter((provider, index, arr) => VISION_PROVIDERS.includes(provider) && arr.indexOf(provider) === index);
   const providers = [];
   for (const provider of order) {
-    const [rows] = await db.query("SELECT id, provider, name, api_key AS \`key\`, base_url AS baseUrl, status, used_count AS usedCount FROM pi_keys_manager WHERE provider = ? AND status = 'Alive' ORDER BY id ASC", [provider]);
+    let [rows] = await db.query("SELECT id, provider, name, api_key AS \`key\`, base_url AS baseUrl, status, used_count AS usedCount FROM pi_keys_manager WHERE provider = ? AND status = 'Alive' ORDER BY id ASC", [provider]);
+    if (!rows.length) {
+      // [SERVER PATCH] Auto-recovery: coba hidupkan kembali key Dead/Limit yang sudah lewat cooldown
+      const remaining = await recoverStaleKeys(provider, AI_KEY_RECOVERY_MAX);
+      if (remaining < AI_KEY_RECOVERY_MAX) {
+        [rows] = await db.query("SELECT id, provider, name, api_key AS \`key\`, base_url AS baseUrl, status, used_count AS usedCount FROM pi_keys_manager WHERE provider = ? AND status = 'Alive' ORDER BY id ASC", [provider]);
+      }
+    }
     if (rows.length) {
       const model = await getSetting(providerModelSettingKey(provider), defaultAiModel(provider));
       providers.push({ provider, model: model === "auto" ? defaultAiModel(provider) : model, keys: rows });

@@ -175,17 +175,54 @@ window.handleSmartNotepadFile = function(e) {
         instruction: window._simulasiMode ? "SIMULASI" : SMART_NOTEPAD_PROMPT
       });
 
-      const resData = response.data || response;
+      // [KLIEN PATCH] Ambil string JSON dari field hasil (gas() sudah unwrap data -> response = {hasil, provider, model})
+      const hasilStr = typeof response === 'string' ? response : (response && response.hasil) || '';
       let jsonData;
       try {
-        const text = typeof resData === 'string' ? resData : JSON.stringify(resData);
+        const text = String(hasilStr);
         const match = text.match(/\[.*\]|\{.*\}/s);
-        jsonData = JSON.parse(match[0]);
+        jsonData = JSON.parse(match ? match[0] : text);
       } catch(e) {
         throw new Error("Gagal membaca format data dari AI.");
       }
+      jsonData = Array.isArray(jsonData) ? jsonData[0] : jsonData;
 
-      window._snResultData = Array.isArray(jsonData) ? jsonData[0] : jsonData;
+      // ===== PASS 2: Verifikasi matematis oleh AI (hanya jika bukan SIMULASI) =====
+      let warnings = [], verificationSummary = '';
+      if (!window._simulasiMode) {
+        try {
+          const vRes = await gas("verifyInvoiceText", { text: JSON.stringify(jsonData) });
+          const vStr = (vRes && (typeof vRes === 'string' ? vRes : (vRes.hasil || ''))) || '';
+          const vMatch = vStr.match(/\[.*\]|\{.*\}/s);
+          if (vMatch) {
+            const verified = JSON.parse(vMatch[0]);
+            if (verified && verified.type) {
+              jsonData = verified; // hasil verifikasi (punya flag/alasan/warnings)
+              if (Array.isArray(jsonData.warnings)) warnings = jsonData.warnings;
+              if (jsonData.verificationSummary) verificationSummary = jsonData.verificationSummary;
+            }
+          }
+        } catch(vErr) {
+          // Graceful degradation: tetap pakai hasil pass 1 + peringatan verifikasi gagal
+          warnings = ["Verifikasi AI gagal (" + (vErr.message || 'error') + "). Data ditampilkan apa adanya — periksa manual."];
+        }
+      } else {
+        // SIMULASI: bangun warnings sintetis agar alur badge tetap terlihat
+        if (jsonData && jsonData.items && jsonData.items.length) {
+          jsonData.items.forEach(it => {
+            if (it && it.unit === 'pcs' && Number(it.qty) % 1 !== 0) { it.flag = 'check'; it.alasan = 'Qty desimal untuk satuan pcs (simulasi)'; }
+            else if (it) { it.flag = it.flag || 'ok'; it.alasan = it.alasan || ''; }
+          });
+          warnings = ['Mode SIMULASI: verifikasi AI dilewati. Periksa manual sebelum export.'];
+        }
+        if (jsonData && jsonData.grades && jsonData.grades.length) {
+          jsonData.grades.forEach(g => { if (g) { g.flag = g.flag || 'ok'; g.alasan = g.alasan || ''; } });
+          warnings = ['Mode SIMULASI: verifikasi AI dilewati. Periksa manual sebelum export.'];
+        }
+      }
+
+      window._snResultWarnings = { list: warnings, summary: verificationSummary, verified: !window._simulasiMode };
+      window._snResultData = jsonData;
 
       document.getElementById('sn-step-2').classList.add('hidden');
       document.getElementById('sn-step-3').classList.remove('hidden');
@@ -202,6 +239,28 @@ window.handleSmartNotepadFile = function(e) {
 
 // --- CRUD STATE (Notepad Result) ---
 window._snCRUD = { type: null, supplier: '', date: '', grades: [], items: [] };
+window._snResultWarnings = { list: [], summary: '', verified: false };
+
+// Panel peringatan verifikasi (dipakai renderCRUD)
+function renderWarningPanel() {
+  const w = window._snResultWarnings;
+  if (!w || !w.list || !w.list.length) return '';
+  const badgeColor = w.verified ? 'var(--warn, #f5a623)' : 'var(--danger, #ef4444)';
+  return `
+    <div style="border:1px solid ${badgeColor}55; background:${badgeColor}18; border-radius:10px; padding:12px 16px; margin-bottom:14px; font-size:0.92rem;">
+      <div style="font-weight:700; color:${badgeColor}; margin-bottom:6px;">⚠️ ${w.verified ? 'AI Verifier Menemukan Catatan' : 'Verifikasi AI Gagal / Dilewati'}</div>
+      <ul style="margin:0; padding-left:18px; color:var(--text);">
+        ${w.list.map(x => '<li>' + esc(x) + '</li>').join('')}
+      </ul>
+      ${w.summary ? '<div class="muted" style="margin-top:6px;">' + esc(w.summary) + '</div>' : ''}
+    </div>`;
+}
+function flagBadge(it) {
+  if (!it) return '';
+  return (it.flag === 'check' || it.alasan)
+    ? `<span title="${esc(it.alasan || 'perlu dicek')}" style="display:inline-block; margin-left:6px; background:rgba(245,166,35,.18); color:#f5a623; border:1px solid rgba(245,166,35,.5); font-size:0.72rem; font-weight:700; padding:1px 7px; border-radius:20px; cursor:help;">⚠️</span>`
+    : '';
+}
 
 function renderSmartNotepadResult(data) {
   window._snCRUD = {
@@ -211,14 +270,18 @@ function renderSmartNotepadResult(data) {
     grades: (data.grades || []).map(g => ({
       grade: g.grade || '',
       pricePerKg: g.pricePerKg || 0,
-      weights: Array.isArray(g.weights) ? g.weights.map(w => Number(w) || 0) : []
+      weights: Array.isArray(g.weights) ? g.weights.map(w => Number(w) || 0) : [],
+      flag: g.flag || 'ok',
+      alasan: g.alasan || ''
     })),
     items: (data.items || []).map(it => ({
       name: it.name || '',
       qty: Number(it.qty) || 0,
       unit: it.unit || 'pcs',
       basePrice: Number(it.basePrice) || 0,
-      salePrice: Number(it.salePrice) || 0
+      salePrice: Number(it.salePrice) || 0,
+      flag: it.flag || 'ok',
+      alasan: it.alasan || ''
     })),
     totalPrice: Number(data.totalPrice) || 0
   };
@@ -233,7 +296,7 @@ function renderCRUD() {
   if (c.type === 'minimarket') {
     const trs = c.items.map((it, idx) => `
       <tr>
-        <td><input type="text" class="input crud-m-name" data-idx="${idx}" value="${esc(it.name)}"></td>
+        <td><input type="text" class="input crud-m-name" data-idx="${idx}" value="${esc(it.name)}" style="${it.flag === 'check' ? 'border-color:#f5a623 !important;' : ''}">${flagBadge(it)}</td>
         <td style="width:80px;"><input type="number" class="input crud-m-qty" data-idx="${idx}" value="${it.qty}" min="0" step="any"></td>
         <td style="width:90px;"><input type="text" class="input crud-m-unit" data-idx="${idx}" value="${esc(it.unit)}"></td>
         <td style="width:130px;"><input type="number" class="input crud-m-price" data-idx="${idx}" value="${it.basePrice}" min="0" step="any"></td>
@@ -243,6 +306,7 @@ function renderCRUD() {
     `).join('');
 
     container.innerHTML = `
+      ${renderWarningPanel()}
       <h3 style="color:var(--garneta-cyan); margin-top:0;">🛒 Mode: Minimarket (Notepad Hasil — bisa diedit)</h3>
       <div style="display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
          <label>Suplier: <input type="text" id="sn-m-supplier" class="input" value="${esc(c.supplier)}"></label>
@@ -270,7 +334,7 @@ function renderCRUD() {
       return `
       <div style="border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:16px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-          <strong>Grade <input type="text" class="input crud-k-grade-name" data-g="${idx}" value="${esc(g.grade)}" style="width:70px;"></strong>
+          <strong>Grade <input type="text" class="input crud-k-grade-name" data-g="${idx}" value="${esc(g.grade)}" style="width:70px;${g.flag === 'check' ? 'border-color:#f5a623 !important;' : ''}">${flagBadge(g)}</strong>
           <label>Harga/Kg: Rp <input type="number" class="input crud-k-price" data-g="${idx}" value="${g.pricePerKg}" style="width:110px;" min="0" step="any"></label>
           <button class="btn danger btn-sm" onclick="window.crudRemoveGrade(${idx})">🗑 Hapus Grade</button>
         </div>
@@ -285,6 +349,7 @@ function renderCRUD() {
     }).join('');
 
     container.innerHTML = `
+      ${renderWarningPanel()}
       <h3 style="color:var(--garneta-cyan); margin-top:0;">🥔 Mode: Komoditas / Kentang (Notepad Hasil — bisa diedit)</h3>
       <div style="display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
          <label>Petani/Suplier: <input type="text" id="sn-k-supplier" class="input" value="${esc(c.supplier)}"></label>
@@ -483,3 +548,5 @@ window.showKentangDetail = async function(purchaseId) {
     alert("Error: " + e.message);
   }
 };
+
+// [KLIEN PATCH] Notepad Pintar 2-Pass Verifier + Auto-Recovery
