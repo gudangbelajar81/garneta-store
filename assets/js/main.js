@@ -4527,7 +4527,6 @@ Beras Premium 1"></textarea>
                   <option value="Groq">Groq</option>
                   <option value="DeepSeek">DeepSeek</option>
                   <option value="Kie">Kie AI (OpenAI Compatible)</option>
-                  <option value="GoAPI">GoAPI</option>
                   <option value="Custom">Custom / Lainnya</option>
                 </select>
               </label>
@@ -7042,7 +7041,7 @@ function doPost(e) {
 
     function normalizeProviderName(p) {
       const s = String(p || "").toLowerCase().trim();
-      const map = { "gemini": "gemini", "openai": "openai", "groq": "groq", "deepseek": "deepseek", "kie": "kie", "kie ai": "kie", "goapi": "goapi", "custom": "custom" };
+      const map = { "gemini": "gemini", "openai": "openai", "groq": "groq", "deepseek": "deepseek", "kie": "kie", "kie ai": "kie", "custom": "custom" };
       return map[s] || s;
     }
     window.normalizeProviderName = normalizeProviderName;

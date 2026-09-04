@@ -272,7 +272,7 @@ function verifyToken(req, res, next) {
       }
       
       // Allow general dashboard access
-      if (["bootstrap", "sync", "dashboard", "analyzeInvoiceImage", "verifyInvoiceText", "saveBulkPurchases", "saveBulkKentang"].includes(action)) return next();
+      if (["bootstrap", "sync", "dashboard", "analyzeInvoiceImage", "verifyInvoiceText", "saveBulkPurchases", "saveBulkKentang", "aiHealth"].includes(action)) return next();
       
       return res.status(401).json({ ok: false, message: "Akses ditolak. Fitur ini khusus Super Admin." });
     }
@@ -428,6 +428,7 @@ async function handleAction(action, payload, req) {
     verifySuperAdmin: () => verifySuperAdmin(payload.adminId, payload.password, req),
     aiSettings: () => getAiSettings(payload.provider),
     aiSettingsAll: () => getAllAiSettings(),
+    aiHealth: () => aiHealth(),
     saveAiSettings: () => saveAiSettings(payload),
     addAiKey: () => addAiKey(payload),
     editAiKey: () => editAiKey(payload),
@@ -1817,8 +1818,8 @@ async function restoreData(backup) {
   return bootstrap();
 }
 
-const AI_PROVIDERS = ["gemini", "openai", "groq", "deepseek", "kie", "goapi"];
-const VISION_PROVIDERS = ["gemini", "openai", "kie", "goapi", "custom"];
+const AI_PROVIDERS = ["gemini", "openai", "groq", "deepseek", "kie"];
+const VISION_PROVIDERS = ["gemini", "openai", "kie", "custom"];
 const AI_KEY_LIMIT = 10;
 // [SERVER PATCH] Upgrade Auto-Recovery Key + 2-Pass Verifier
 // Digunakan oleh patch-upgrade.js. Semua marker berformat @MARKER:x.
@@ -1851,6 +1852,12 @@ async function recoverStaleKeys(provider, budget) {
 }
 
 async function verifyInvoiceText(extractedText) {
+  // [GASFIX] Mode simulasi/verifikasi data contoh: kembalikan teks apa adanya dengan flag simulated,
+  // supaya pass-2 tidak memanggil AI saat DB key kosong (hindari error mentah).
+  const rawText = String(extractedText || "").trim();
+  if (!rawText || rawText.includes("__SIMULASI__") || rawText.startsWith("[{\"type\":\"minimarket\"") && rawText.includes("Contoh Barang")) {
+    return { hasil: rawText, provider: "mock-ai", model: "mock-model", simulated: true };
+  }
   const providers = await getChatProviders();
   const systemPrompt = NOTEPAD_VERIFIER_SYSTEM;
   const userPrompt = "Berikut hasil ekstraksi AI tahap 1 (JSON):\n" + extractedText + "\n\nLakukan verifikasi matematis sesuai instruksi sistem. Keluarkan HANYA JSON yang sudah diverifikasi.";
@@ -1886,8 +1893,7 @@ function providerLabel(provider) {
     openai: "OpenAI",
     groq: "Groq",
     deepseek: "DeepSeek",
-    kie: "Kie AI",
-    goapi: "GoAPI"
+    kie: "Kie AI"
   };
   return labels[provider] || provider;
 }
@@ -1895,7 +1901,7 @@ function providerLabel(provider) {
 function normalizeProvider(provider) {
   let safe = String(provider || "gemini").toLowerCase().trim();
   // Peta alias UI -> provider internal
-  const alias = { goapi: "goapi", custom: "custom", gemini: "gemini", openai: "openai", groq: "groq", deepseek: "deepseek", kie: "kie", "kie ai": "kie" };
+  const alias = { custom: "custom", gemini: "gemini", openai: "openai", groq: "groq", deepseek: "deepseek", kie: "kie", "kie ai": "kie" };
   if (alias[safe]) return alias[safe];
   // Auto-detect dari prefiks key bila provider tidak jelas
   return AI_PROVIDERS.includes(safe) ? safe : "gemini";
@@ -1907,8 +1913,7 @@ function defaultAiModel(provider) {
     openai: "gpt-4.1-mini",
     groq: "meta-llama/llama-4-scout-17b-16e-instruct",
     deepseek: "deepseek-chat",
-    kie: "gpt-5-4",
-    goapi: "gemini-2.5-flash"
+    kie: "gpt-5-4"
   };
   return models[normalizeProvider(provider)];
 }
@@ -1948,8 +1953,7 @@ function defaultBaseUrl(provider) {
     openai: "https://api.openai.com",
     groq: "https://api.groq.com/openai",
     deepseek: "https://api.deepseek.com",
-    kie: "https://api.kie.ai/codex/v1/responses",
-    goapi: "https://api.goapi.ai"
+    kie: "https://api.kie.ai/codex/v1/responses"
   };
   return urls[normalizeProvider(provider)];
 }
@@ -2024,6 +2028,19 @@ async function getAllAiSettings() {
   };
 }
 
+// [GASFIX] Status AI untuk Karyawan / auto-detect simulasi — TANPA membocorkan api_key.
+// Cukup total/live count + provider aktif agar frontend bisa memutuskan mode nyata vs simulasi.
+async function aiHealth() {
+  const active = normalizeProvider(await getSetting("AI_PROVIDER", process.env.AI_PROVIDER || "gemini"));
+  let total = 0, live = 0;
+  for (const provider of AI_PROVIDERS) {
+    const [[row]] = await db.query("SELECT COUNT(*) AS total, SUM(status = 'Alive') AS live FROM pi_keys_manager WHERE provider = ?", [provider]);
+    total += Number(row?.total || 0);
+    live += Number(row?.live || 0);
+  }
+  return { provider: active, totalKeys: total, liveKeys: live, hasLiveVision: live > 0 };
+}
+
 function keyPublicInfo(key, provider, index) {
   return {
     id: key.id,
@@ -2056,7 +2073,7 @@ async function saveAiSettings(payload = {}) {
           SELECT 1 FROM pi_keys_manager WHERE provider = ? AND api_key = ?
         )
       `, [provider, `Added Key ${i+1}`, k, provider, k]);
-      // [GASFIX] Pastikan base_url default terisi bila kosong (goapi/custom)
+      // [GASFIX] Pastikan base_url default terisi bila kosong (custom)
       await db.query(`UPDATE pi_keys_manager SET base_url = COALESCE(base_url, ?) WHERE provider = ? AND base_url IS NULL`, [defaultBaseUrl(provider), provider]);
     }
   }
@@ -2160,12 +2177,12 @@ async function analyzeInvoiceImage(payload = {}) {
     if (payload.instruction === "SIMULASI") {
         return { 
             hasil: `[
-                {"name": "Beras Sania 5Kg", "qty": "2", "price": "75000"},
-                {"name": "Minyak Goreng Sunco 2L", "qty": "1", "price": "35000"},
-                {"name": "Telur Ayam Ras 1Kg", "qty": "1.5", "price": "28000"}
-            ]`, 
-            provider: "mock-ai", 
-            model: "mock-model" 
+                {"type":"minimarket","supplier":"Toko Sumber Rejeki","date":"2026-09-04","items":[{"name":"Beras Sania 5Kg","qty":2,"unit":"pcs","basePrice":75000,"salePrice":80000},{"name":"Minyak Goreng Sunco 2L","qty":1,"unit":"pcs","basePrice":35000,"salePrice":39000},{"name":"Telur Ayam Ras 1Kg","qty":1,"unit":"pcs","basePrice":28000,"salePrice":30000}]}
+            ]`,
+            provider: "mock-ai",
+            model: "mock-model",
+            simulated: true,
+            warning: "Mode SIMULASI aktif (tanpa AI): data contoh, bukan dari foto."
         };
     }
   const imageDataUrl = payload.imageDataUrl || payload.imageData || "";
@@ -2173,12 +2190,26 @@ async function analyzeInvoiceImage(payload = {}) {
   const instruction = payload.instruction || "Baca isi foto nota ini dengan teliti dan berikan hasil sesuai data yang terlihat.";
   const providers = await getVisionProviders();
 
+  // [GASFIX] Auto-simulasi: bila TIDAK ADA provider vision berstatus Alive sama sekali
+  // (DB key kosong / semua Dead-Limit) -> kembalikan data contoh bertanda simulated,
+  // agar Karyawan tetap bisa mencoba alur Notepad Pintar tanpa error mentah.
+  if (providers.length === 0) {
+    logger.warn("Auto-simulasi: tidak ada API key vision Alive, memakai data contoh.");
+    return {
+      hasil: `[{"type":"minimarket","supplier":"Demo Supplier","date":"${new Date().toISOString().slice(0, 10)}","items":[{"name":"Contoh Barang A","qty":2,"unit":"pcs","basePrice":5000,"salePrice":6000},{"name":"Contoh Barang B","qty":1,"unit":"pcs","basePrice":15000,"salePrice":17000}]}]`,
+      provider: "mock-ai",
+      model: "mock-model",
+      simulated: true,
+      warning: "Mode SIMULASI (tanpa AI): tidak ada API Key vision Alive. Data contoh — periksa manual."
+    };
+  }
+
   for (const provider of providers) {
     for (const key of provider.keys) {
       try {
         const hasil = await executeVisionRequest(provider.provider, key, imageDataUrl, instruction);
         await db.query("UPDATE pi_keys_manager SET used_count = used_count + 1 WHERE id = ?", [key.id]);
-        return { hasil, provider: provider.provider, model: provider.model };
+        return { hasil, provider: provider.provider, model: provider.model, simulated: false };
       } catch (error) {
         if (error.status === 429) {
           logger.warn("Rate limit tercapai, merotasi key ke Limit.", { provider: provider.provider, keyId: key.id });
@@ -2195,6 +2226,19 @@ async function analyzeInvoiceImage(payload = {}) {
         }
       }
     }
+  }
+
+  // Semua provider gagal — cek apakah masih ada key sama sekali (mungkin semua baru dirotasi Dead/Limit)
+  const [[anyKey]] = await db.query("SELECT COUNT(*) AS total FROM pi_keys_manager WHERE status IN ('Alive','Dead','Limit')");
+  const totalKeys = Number(anyKey?.total || 0);
+  if (totalKeys === 0) {
+    return {
+      hasil: `[{"type":"minimarket","supplier":"Demo Supplier","date":"${new Date().toISOString().slice(0, 10)}","items":[{"name":"Contoh Barang A","qty":2,"unit":"pcs","basePrice":5000,"salePrice":6000}]}]`,
+      provider: "mock-ai",
+      model: "mock-model",
+      simulated: true,
+      warning: "Mode SIMULASI (tanpa AI): belum ada API key terdaftar. Data contoh — periksa manual."
+    };
   }
 
   throw new Error("Semua API Provider gagal atau belum ada API key vision berstatus Alive.");
@@ -2335,7 +2379,7 @@ async function getVisionProviders() {
 
 async function executeVisionRequest(provider, keyRec, imageDataUrl, instruction) {
   if (provider === "gemini") return executeGeminiVision(keyRec, imageDataUrl, instruction);
-  if (provider === "openai" || provider === "kie" || provider === "goapi" || provider === "custom") return executeOpenAiVision(keyRec, imageDataUrl, instruction, provider);
+  if (provider === "openai" || provider === "kie" || provider === "custom") return executeOpenAiVision(keyRec, imageDataUrl, instruction, provider);
   throw new Error(`${providerLabel(provider)} belum mendukung analisa gambar di aplikasi ini.`);
 }
 
@@ -2360,8 +2404,18 @@ async function executeGeminiVision(keyRec, imageDataUrl, instruction) {
   }, 45000);
   
   if (!response.ok) {
-    const err = new Error(`Gemini HTTP ${response.status}`);
+    // Baca body error agar bisa bedakan invalid key (rotable ke Dead) vs error lain.
+    let detail = "";
+    try {
+      const errJson = await response.json();
+      detail = (errJson && errJson.error && (errJson.error.message || errJson.error.status)) || JSON.stringify(errJson).slice(0, 200);
+    } catch (e) { /* body bukan JSON */ }
+    const err = new Error(`Gemini HTTP ${response.status}${detail ? " — " + detail : ""}`);
     err.status = response.status;
+    // Gemini kadang balas 400 dengan "API key not valid" — perlakukan sebagai key mati.
+    if (response.status === 400 && /api key not valid|invalid api key|api key expired|permission denied/i.test(detail)) {
+      err.status = 401;
+    }
     throw err;
   }
   
@@ -2396,8 +2450,16 @@ async function executeOpenAiVision(keyRec, imageDataUrl, instruction, provider =
   }, 45000);
   
   if (!response.ok) {
-    const err = new Error(`OpenAI HTTP ${response.status}`);
+    let detail = "";
+    try {
+      const errJson = await response.json();
+      detail = (errJson && errJson.error && (errJson.error.message || errJson.error.code)) || JSON.stringify(errJson).slice(0, 200);
+    } catch (e) { /* body bukan JSON */ }
+    const err = new Error(`OpenAI HTTP ${response.status}${detail ? " — " + detail : ""}`);
     err.status = response.status;
+    if ((response.status === 401 || response.status === 403) || (response.status === 400 && /invalid.*api key|api key.*invalid|model.*not.*found|no such model/i.test(detail))) {
+      err.status = 401;
+    }
     throw err;
   }
   

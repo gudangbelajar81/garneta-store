@@ -192,6 +192,35 @@ window.openSmartNotepad = function(modeContext = 'auto', source = 'gallery') {
   window._snLastImageDataUrl = null;
   window._snLastInstruction = '';
 
+  // [GASFIX] Auto-detect mode SIMULASI: cek ketersediaan key AI (aman utk Karyawan via aiHealth)
+  window._simulasiMode = false;
+  window._snAiHealth = null;
+  try {
+    gas('aiHealth').then(function(h) {
+      window._snAiHealth = h || null;
+      const noLive = !h || !h.hasLiveVision || Number(h.liveKeys) === 0;
+      if (noLive) window._simulasiMode = true;
+      const badge = document.getElementById('sn-ai-badge');
+      if (badge) {
+        if (noLive) {
+          badge.style.display = 'block';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+    }).catch(function() {
+      // Server AI health tidak bisa dicek — biarkan false (coba mode nyata, server fallback otomatis)
+      window._simulasiMode = false;
+    });
+  } catch(e) {
+    window._simulasiMode = false;
+  }
+
+  const simulasiNotice = `
+    <div id="sn-ai-badge" style="display:none; margin:0 0 12px 0; padding:10px 14px; border-radius:10px; font-size:0.88rem; background:rgba(245,166,35,0.12); border:1px solid rgba(245,166,35,0.45); color:#f5a623;">
+      ⚠️ <b>Mode SIMULASI (tanpa AI)</b> — tidak ada API Key vision yang aktif. Hasil analisa berupa <b>data contoh</b>, bukan dari foto. Hubungi Super Admin untuk mengisi API Key di Pengaturan AI.
+    </div>`;
+
   const modalHTML = `
     <div id="smart-notepad-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; display:flex; flex-direction:column; padding:20px; overflow-y:auto; backdrop-filter:blur(5px);">
       <div style="background:var(--bg); border:1px solid var(--line); border-radius:16px; width:100%; max-width:820px; margin:auto; padding:24px; position:relative;">
@@ -199,6 +228,7 @@ window.openSmartNotepad = function(modeContext = 'auto', source = 'gallery') {
         <h2 style="margin-top:0; color:var(--garneta-cyan);">ðŸ“¸ Nota AI (Notepad Pintar)</h2>
         <p class="muted">Satu mesin, dua mode: ðŸ›’ Minimarket (barang kelontong) &amp; ðŸ¥” Komoditas/Kentang (timbangan karung). AI membedah angka malas, mengkoreksi salah hitung, lalu hasilnya bisa diedit sebelum disimpan.</p>
 
+        ${simulasiNotice}
         <div id="sn-step-1" style="text-align:center; padding: 30px; border: 2px dashed var(--line); border-radius:12px; margin-top:16px;">
           <input type="file" id="sn-file-input" accept="image/*" ${source === 'camera' ? 'capture="environment"' : ''} style="display:none;" onchange="window.handleSmartNotepadFile(event)">
           <button class="btn primary" onclick="document.getElementById('sn-file-input').click()" style="font-size:1.15rem; padding: 12px 24px;">${source === 'camera' ? 'ðŸ“· Ambil Foto' : 'ðŸ“ Pilih Gambar Nota'}</button>
@@ -288,13 +318,29 @@ window.snAnalyze = async function() {
   if (step3) { step3.classList.add('hidden'); const rc = document.getElementById('sn-result-container'); if (rc) rc.innerHTML = ''; }
 
   try {
-    const response = await gas("analyzeInvoiceImage", {
-      imageDataUrl: dataUrl,
-      instruction: window._simulasiMode ? "SIMULASI" : buildSmartPrompt(mode, userInstruction)
-    });
+    let response;
+    try {
+      response = await gas("analyzeInvoiceImage", {
+        imageDataUrl: dataUrl,
+        instruction: window._simulasiMode ? "SIMULASI" : buildSmartPrompt(mode, userInstruction)
+      });
+    } catch (firstErr) {
+      // [GASFIX] Jika server menolak (key habis & bukan simulasi), coba sekali lagi mode SIMULASI
+      // supaya Karyawan tetap dapat umpan balik alih-alih error mentah.
+      if (window._simulasiMode) throw firstErr;
+      const fallback = await gas("analyzeInvoiceImage", {
+        imageDataUrl: dataUrl,
+        instruction: "SIMULASI"
+      }).catch(function() { return null; });
+      if (!fallback) throw firstErr;
+      window._simulasiMode = true;
+      response = fallback;
+    }
 
     // Ambil string JSON dari field hasil (gas() sudah unwrap data -> response = {hasil, provider, model})
     const hasilStr = typeof response === 'string' ? response : (response && response.hasil) || '';
+    // Jika server menandai simulated (0 key), aktifkan mode simulasi untuk UI
+    if (response && response.simulated === true) window._simulasiMode = true;
     const parsed = parseSmartNotepadJson(hasilStr);
     if (!parsed) throw new Error("Gagal membaca format data dari AI.");
 
@@ -317,7 +363,7 @@ window.snAnalyze = async function() {
         }
       } catch(vErr) {
         // Graceful degradation: tetap pakai hasil pass 1 + peringatan verifikasi gagal
-        warnings = ["Verifikasi AI gagal (" + (vErr.message || 'error') + "). Data ditampilkan apa adanya â€” periksa manual."];
+        warnings = ["Verifikasi AI gagal (" + (vErr.message || 'error') + "). Data ditampilkan apa adanya — periksa manual."];
       }
     } else {
       // SIMULASI: bangun warnings sintetis agar alur badge tetap terlihat
@@ -342,7 +388,10 @@ window.snAnalyze = async function() {
     renderSmartNotepadResult(window._snResultData);
 
   } catch(err) {
-    alert("GAGAL MEMPROSES FOTO: " + err.message + "\n\nPastikan API Key masih hidup, settingan Provider benar (Jika pakai GoAPI, pilih GoAPI), dan tidak error.");
+    const hint = window._simulasiMode
+      ? "\n\nMode SIMULASI aktif — ini bukan analisa asli. Jika kamu melihat pesan ini, berarti server tidak bisa dihubungi."
+      : "\n\nPastikan API Key masih hidup, settingan Provider benar, dan tidak error. Jika terus gagal, hubungi Super Admin.";
+    alert("GAGAL MEMPROSES FOTO: " + err.message + hint);
     document.getElementById('sn-step-2')?.classList.add('hidden');
     document.getElementById('sn-step-1b')?.classList.remove('hidden');
   }
@@ -379,9 +428,11 @@ function extractBalancedJson(text) {
   const cleaned = text.replace(/```(?:json)?/gi, '').trim();
   let start = -1;
   for (let i = 0; i < cleaned.length; i++) {
-    if (cleaned[i] === '{') { start = i; break; }
+    if (cleaned[i] === '{' || cleaned[i] === '[') { start = i; break; }
   }
   if (start === -1) return null;
+  const openCh = cleaned[start];
+  const closeCh = openCh === '{' ? '}' : ']';
   let depth = 0, inStr = false, esc = false;
   for (let i = start; i < cleaned.length; i++) {
     const ch = cleaned[i];
@@ -392,8 +443,8 @@ function extractBalancedJson(text) {
       continue;
     }
     if (ch === '"') { inStr = true; continue; }
-    if (ch === '{') depth++;
-    else if (ch === '}') { depth--; if (depth === 0) return cleaned.slice(start, i + 1); }
+    if (ch === openCh) depth++;
+    else if (ch === closeCh) { depth--; if (depth === 0) return cleaned.slice(start, i + 1); }
   }
   return null;
 }
@@ -403,7 +454,30 @@ function parseSmartNotepadJson(text) {
     const block = extractBalancedJson(text);
     if (!block) return null;
     let obj = JSON.parse(block);
-    if (Array.isArray(obj)) obj = obj[0];
+    // Bila array berisi objek item polos {name, qty, price} (format mock lama) -> bungkus jadi minimarket
+    if (Array.isArray(obj)) {
+      const first = obj[0];
+      if (first && first.items && typeof first === 'object') {
+        obj = obj[0]; // array berisi 1 objek lengkap
+      } else if (first && typeof first === 'object' && ('name' in first || 'qty' in first)) {
+        obj = {
+          type: 'minimarket',
+          supplier: 'Contoh Supplier',
+          date: new Date().toISOString().slice(0, 10),
+          items: obj.map((it) => ({
+            name: it.name || '',
+            qty: Number(it.qty) || 0,
+            unit: it.unit || 'pcs',
+            basePrice: Number(it.price ?? it.basePrice) || 0,
+            salePrice: Number(it.salePrice) || 0,
+            flag: it.flag || 'ok',
+            alasan: it.alasan || ''
+          }))
+        };
+      } else {
+        return null;
+      }
+    }
     if (!obj || typeof obj !== 'object') return null;
 
     // Auto-detect tipe bila type kosong/salah: kentang bila ada grades, minimarket bila ada items
