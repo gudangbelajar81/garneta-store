@@ -1040,12 +1040,21 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
                if (unreadForProd.length > 0 && readForProd.length > 0) {
                   let newPrice = Number(unreadForProd[0].basePrice || 0);
                   let oldPrice = Number(readForProd[0].basePrice || 0);
-                  if (newPrice !== oldPrice && oldPrice > 0) {
+                  let newPriceEcer = Number(unreadForProd[0].basePriceEcer || 0);
+                  let oldPriceEcer = Number(readForProd[0].basePriceEcer || 0);
+                  
+                  let hasGrosirChange = newPrice !== oldPrice && oldPrice > 0;
+                  let hasEcerChange = newPriceEcer !== oldPriceEcer && oldPriceEcer > 0;
+
+                  if (hasGrosirChange || hasEcerChange) {
                      priceChanges.push({
                         name: unreadForProd[0].product || "Barang",
                         old: oldPrice,
                         new: newPrice,
-                        diff: newPrice - oldPrice
+                        diff: newPrice - oldPrice,
+                        oldEcer: oldPriceEcer,
+                        newEcer: newPriceEcer,
+                        diffEcer: newPriceEcer - oldPriceEcer
                      });
                   }
                }
@@ -1061,13 +1070,55 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
                if (brandTitle) brandTitle.style.opacity = '0';
                
                let bannerHTML = priceChanges.map(c => {
-                  let isUp = c.diff > 0;
-                  let color = isUp ? "#ef4444" : "#10b981";
-                  let icon = isUp ? "📈 NAIK" : "📉 TURUN";
-                  let diffStr = Math.abs(c.diff).toLocaleString('id-ID');
-                  return `<div style="background:rgba(255,255,255,0.05); padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid ${color};">
-                     <div style="font-size:0.95rem;"><strong>${c.name}</strong></div>
-                     <div style="color:${color}; font-weight:bold; font-size:0.95rem;">${icon} Rp ${diffStr}</div>
+                  let htmlPieces = [];
+                  let primaryUp = false;
+
+                  if (c.old > 0 && c.diff !== 0) {
+                     let isUpGrosir = c.diff > 0;
+                     primaryUp = isUpGrosir;
+                     let colorGrosir = isUpGrosir ? "#ef4444" : "#10b981";
+                     let iconGrosir = isUpGrosir ? "📈 NAIK" : "📉 TURUN";
+                     let diffStrGrosir = Math.abs(c.diff).toLocaleString('id-ID');
+                     let oldStrGrosir = c.old.toLocaleString('id-ID');
+                     let newStrGrosir = c.new.toLocaleString('id-ID');
+                     let verbGrosir = isUpGrosir ? 'kenaikan' : 'penurunan';
+
+                     htmlPieces.push(`
+                     <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-size:0.95rem;"><strong>${c.name} (Grosir)</strong></div>
+                        <div style="color:${colorGrosir}; font-weight:bold; font-size:0.95rem;">${iconGrosir} Rp ${diffStrGrosir}</div>
+                     </div>
+                     <div style="font-size:0.75rem; color:rgba(255,255,255,0.6); margin-top:2px;">
+                        Dari harga <span style="text-decoration:line-through;">Rp ${oldStrGrosir}</span> menjadi <span style="color:#fff; font-weight:bold;">Rp ${newStrGrosir}</span> (Ada ${verbGrosir} Rp ${diffStrGrosir})
+                     </div>`);
+                  }
+
+                  if (c.oldEcer > 0 && c.diffEcer !== 0) {
+                     let isUpEcer = c.diffEcer > 0;
+                     if (htmlPieces.length === 0) primaryUp = isUpEcer;
+                     let colorEcer = isUpEcer ? "#ef4444" : "#10b981";
+                     let iconEcer = isUpEcer ? "📈 NAIK" : "📉 TURUN";
+                     let diffStrEcer = Math.abs(c.diffEcer).toLocaleString('id-ID');
+                     let oldStrEcer = c.oldEcer.toLocaleString('id-ID');
+                     let newStrEcer = c.newEcer.toLocaleString('id-ID');
+                     let verbEcer = isUpEcer ? 'kenaikan' : 'penurunan';
+                     
+                     let marginTop = htmlPieces.length > 0 ? "margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.1);" : "";
+                     
+                     htmlPieces.push(`
+                     <div style="display:flex; justify-content:space-between; align-items:center; ${marginTop}">
+                        <div style="font-size:0.95rem;"><strong>${c.name} (Ecer)</strong></div>
+                        <div style="color:${colorEcer}; font-weight:bold; font-size:0.95rem;">${iconEcer} Rp ${diffStrEcer}</div>
+                     </div>
+                     <div style="font-size:0.75rem; color:rgba(255,255,255,0.6); margin-top:2px;">
+                        Dari harga <span style="text-decoration:line-through;">Rp ${oldStrEcer}</span> menjadi <span style="color:#fff; font-weight:bold;">Rp ${newStrEcer}</span> (Ada ${verbEcer} Rp ${diffStrEcer})
+                     </div>`);
+                  }
+
+                  let borderColor = primaryUp ? "#ef4444" : "#10b981";
+
+                  return `<div style="background:rgba(255,255,255,0.05); padding:10px 14px; border-radius:8px; display:flex; flex-direction:column; gap:4px; border-left: 4px solid ${borderColor}; margin-bottom:8px;">
+                     ${htmlPieces.join('')}
                   </div>`;
                }).join('');
                
@@ -2267,6 +2318,21 @@ Minyak Goreng 3 45000"></textarea>
       // INLINE POS CHECKOUT LOGIC
       window.ngitungPaymentType = "tunai";
       
+      window.setNgitungBayar = function(val) {
+        if (!window.ngitungDraft) window.ngitungDraft = {};
+        if (val === 'pas') {
+          const totalRaw = window.ngitungTotalRaw || 0;
+          window.ngitungDraft.bayar = totalRaw;
+        } else {
+          window.ngitungDraft.bayar = val;
+        }
+        const bayarInput = document.getElementById('ngitung-inline-bayar');
+        if (bayarInput) {
+          bayarInput.value = window.ngitungDraft.bayar;
+          if (typeof window.ngitungHandleBayarInput === 'function') window.ngitungHandleBayarInput();
+        }
+      };
+
       window.ngitungHandleBayarInput = function() {
          const bayarEl = document.getElementById("ngitung-inline-bayar");
          const statusCont = document.getElementById("ngitung-inline-status-container");
@@ -2691,8 +2757,9 @@ window.globalBluetoothDevice = device;
             receiptLines.push(...encoder.encode(padLR("KEMBALI", "Rp " + new Intl.NumberFormat("id-ID").format(tKembali)) + "\n"));
             
             receiptLines.push(...encoder.encode("\n"));
-            receiptLines.push([0x1b, 0x61, 0x01]); // Center
-            receiptLines.push(...encoder.encode((storeFooter || "Terima kasih atas kunjungan Anda!") + "\n\n")); // Rata tengah, penutup
+            const footerAlign = parseInt(localStorage.getItem('storeFooterAlign') || '1');
+            receiptLines.push([0x1b, 0x61, footerAlign]); // Align for footer
+            receiptLines.push(...encoder.encode((storeFooter || "Terima kasih atas kunjungan Anda!") + "\n\n")); // Penutup
             receiptLines.push([0x1b, 0x64, 0x05]); // Feed 5 lines
             receiptLines.push([0x1d, 0x56, 0x42, 0x00]); // GS V B 0 (Auto Cut paper for 80mm VSC TM-80D)
             receiptLines.push([0x1b, 0x61, 0x00]); // Kiri lagi
@@ -2778,7 +2845,9 @@ window.globalBluetoothDevice = device;
           let tTotal = data.total !== undefined ? data.total : (data.grandTotal || 0);
           text += "-".repeat(paperSize) + "\n";
           text += padLR("TOTAL", "Rp " + new Intl.NumberFormat("id-ID").format(tTotal), paperSize) + "\n";
-          text += "-".repeat(paperSize) + "\n\x1b\x61\x01";
+          const footerAlign = parseInt(localStorage.getItem('storeFooterAlign') || '1');
+          const alignCode = footerAlign === 0 ? "\x00" : (footerAlign === 2 ? "\x02" : "\x01");
+          text += "-".repeat(paperSize) + "\n\x1b\x61" + alignCode;
           text += storeFooter + "\n\n\n\x1b\x64\x05\x1d\x56\x42\x00";
           
           const base64Data = btoa(unescape(encodeURIComponent(text)));
@@ -2834,10 +2903,10 @@ window.ngitungClearAll = function() {
               padding: 14px 12px 12px;
               backdrop-filter: blur(8px);
           ">
-            <!-- TOTAL HEADLINE -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
-              <div>
-                <div style="color: rgba(255,255,255,0.4); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Total Belanja</div>
+            <!-- TOTAL & CART ICON -->
+            <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 10px; gap: 12px;">
+              <div style="display: flex; align-items: baseline; gap: 8px;">
+                <div style="color: rgba(255,255,255,0.4); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px;">Total Belanja</div>
                 <div id="ngitung-inline-total" style="font-size: 1.35rem; font-weight: 900; color: #ff6b6b; letter-spacing: -0.5px;">Rp 0</div>
               </div>
               <div style="width: 36px; height: 36px; background: rgba(238,77,45,0.12); border: 1px solid rgba(238,77,45,0.25); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem;">🛒</div>
@@ -2847,10 +2916,9 @@ window.ngitungClearAll = function() {
             <div style="height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); margin-bottom: 10px;"></div>
 
             <!-- BAYAR & STATUS ROW -->
-            <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: stretch;">
-              <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
-                <span style="color: rgba(255,255,255,0.4); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.8px;">Jumlah Bayar</span>
-                <input type="number" id="ngitung-inline-bayar" inputmode="numeric" placeholder="0" value="${window.ngitungDraft.bayar || ''}"
+            <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-end; flex-wrap: wrap;">
+              <div style="flex: 0 0 32%; display: flex; flex-direction: column; justify-content: flex-end;">
+                <input type="number" id="ngitung-inline-bayar" inputmode="numeric" placeholder="Jml Bayar" value="${window.ngitungDraft.bayar || ''}"
                   oninput="window.ngitungDraft.bayar = this.value; ngitungHandleBayarInput()"
                   style="
                     width: 100%; height: 34px; text-align: right;
@@ -2861,8 +2929,17 @@ window.ngitungClearAll = function() {
                   ">
               </div>
 
+              <!-- Quick Pay Buttons -->
+              <div style="flex: 1; display: flex; align-items: flex-end; gap: 4px; overflow-x: auto; margin-bottom: 1px;">
+                 <button class="btn soft" type="button" style="flex:1; padding:0 4px; height:32px; font-size:0.75rem; white-space:nowrap; border-radius:6px; min-width:35px;" onclick="window.setNgitungBayar('pas')">Pas</button>
+                 <button class="btn soft" type="button" style="flex:1; padding:0 4px; height:32px; font-size:0.75rem; border-radius:6px; min-width:35px;" onclick="window.setNgitungBayar(10000)">10k</button>
+                 <button class="btn soft" type="button" style="flex:1; padding:0 4px; height:32px; font-size:0.75rem; border-radius:6px; min-width:35px;" onclick="window.setNgitungBayar(20000)">20k</button>
+                 <button class="btn soft" type="button" style="flex:1; padding:0 4px; height:32px; font-size:0.75rem; border-radius:6px; min-width:35px;" onclick="window.setNgitungBayar(50000)">50k</button>
+                 <button class="btn soft" type="button" style="flex:1; padding:0 4px; height:32px; font-size:0.75rem; border-radius:6px; min-width:35px;" onclick="window.setNgitungBayar(100000)">100k</button>
+              </div>
+
               <div id="ngitung-inline-status-container" class="hidden" style="
-                  flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 2px;
+                  flex: 1 1 100%; display: flex; flex-direction: column; justify-content: center; gap: 2px;
                   padding: 6px 10px; border-radius: 8px; border: 1px solid transparent;
                   transition: all 0.3s;
               ">
@@ -4665,7 +4742,15 @@ ${tab === "bluetooth" ? `
             </div>
             <div class="form-group" style="margin-bottom:24px;">
               <label>Pesan Penutup (Footer)</label>
-              <input type="text" id="store-footer-setting" class="input" placeholder="Terima Kasih!" value="${localStorage.getItem('storeFooter') || 'Terima kasih atas kunjungan Anda!'}" onblur="localStorage.setItem('storeFooter', this.value); showToast('Footer disimpan!', 'success')">
+              <textarea id="store-footer-setting" class="input" style="height: 60px; resize: vertical;" placeholder="Terima Kasih!" onblur="localStorage.setItem('storeFooter', this.value); showToast('Footer disimpan!', 'success')">${localStorage.getItem('storeFooter') || 'Terima kasih atas kunjungan Anda!'}</textarea>
+              <div style="margin-top: 12px;">
+                 <label style="display:block; margin-bottom:4px;">Posisi Teks (Align)</label>
+                 <select id="store-footer-align-setting" class="input" onchange="localStorage.setItem('storeFooterAlign', this.value); showToast('Posisi footer disimpan!', 'success')">
+                    <option value="0" ${localStorage.getItem('storeFooterAlign') === '0' ? 'selected' : ''}>Rata Kiri</option>
+                    <option value="1" ${localStorage.getItem('storeFooterAlign') === '1' || !localStorage.getItem('storeFooterAlign') ? 'selected' : ''}>Rata Tengah</option>
+                    <option value="2" ${localStorage.getItem('storeFooterAlign') === '2' ? 'selected' : ''}>Rata Kanan</option>
+                 </select>
+              </div>
             </div>
             <div class="api-section-title">Pengaturan Ukuran Kertas</div>
             <p class="muted">Pilih ukuran kertas yang sesuai dengan printer Bluetooth Anda.</p>
@@ -4923,7 +5008,7 @@ ${tab === "bluetooth" ? `
       return `<form data-form="products" class="grid forms shopee-compact-form">
         ${hiddenId()}
         
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; grid-column: 1/-1;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; grid-column: 1/-1;">
           <label>Kategori Barang<select name="category"><option value="">Pilih Kategori...</option>${cats.map(opt => `<option value="${escapeAttr(opt)}">${escapeAttr(opt)}</option>`).join("")}</select></label>
           ${input("name", "Nama Barang", true)}
         </div>
@@ -4939,7 +5024,7 @@ ${tab === "bluetooth" ? `
           ${priceWithUnit("basePriceEcer", "unitEcer", "Harga Dasar Ecer", "Ecer", true)}
         </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; grid-column: 1/-1;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; grid-column: 1/-1;">
           ${priceWithUnit("salePrice", "unit", "Harga Jual (Grosir)", "Grosir", false, "basePrice")}
           ${priceWithUnit("salePriceEcer", "unitEcer", "Harga Jual Ecer", "Ecer", true, "basePriceEcer")}
         </div>
@@ -5013,7 +5098,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
         return `<form data-form="purchases" class="grid forms">
           ${hiddenId()}
           
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; grid-column: 1/-1;">
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; grid-column: 1/-1;">
             ${input("date", "Tanggal", true, "date", today())}
             <label>Kategori Barang<select name="category"><option value="">Pilih Kategori...</option>${cats.map(opt => `<option value="${escapeAttr(opt)}">${escapeAttr(opt)}</option>`).join("")}</select></label>
           </div>
@@ -5029,7 +5114,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
             ${priceWithUnit("basePriceEcer", "unitEcer", "Harga Dasar Ecer", "Ecer", true)}
           </div>
 
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; grid-column: 1/-1;">
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; grid-column: 1/-1;">
             ${priceWithUnit("salePrice", "unit", "Harga Jual (Grosir)", "Grosir", false, "basePrice")}
             ${priceWithUnit("salePriceEcer", "unitEcer", "Harga Jual Ecer", "Ecer", true, "basePriceEcer")}
           </div>
@@ -8293,7 +8378,7 @@ window.printReceiptPDF = function() {
         <div class="total-row"><span>TOTAL</span><span>Rp ${total.toLocaleString('id-ID')}</span></div>
         ${paymentDetails}
         <div class="divider"></div>
-        <div class="footer">
+        <div class="footer" style="text-align: ${localStorage.getItem('storeFooterAlign') === '0' ? 'left' : localStorage.getItem('storeFooterAlign') === '2' ? 'right' : 'center'}; white-space: pre-wrap;">
           <p>${localStorage.getItem('storeFooter') || 'Terima Kasih Telah Berbelanja!'}</p>
         </div>
         <script>
@@ -8943,7 +9028,7 @@ window.printReceiptPDF = function() {
       <div class="divider"></div>
       <div class="row big"><span>TOTAL</span><span>${fmt(total)}</span></div>
       <div class="divider"></div>
-      <div class="center" style="margin-top:8px;font-size:11px;">${localStorage.getItem('storeFooter') || 'Terima Kasih!'}</div>
+      <div class="center" style="margin-top:8px;font-size:11px; white-space: pre-wrap; text-align: ${localStorage.getItem('storeFooterAlign') === '0' ? 'left' : localStorage.getItem('storeFooterAlign') === '2' ? 'right' : 'center'};">${localStorage.getItem('storeFooter') || 'Terima Kasih!'}</div>
       <script>setTimeout(()=>{window.print();setTimeout(()=>{window.close();},1500);},400);</script>
     </body></html>`;
     const w = window.open('', '_blank', 'width=320,height=600');
@@ -9069,6 +9154,8 @@ window.printReceiptPDF = function() {
       receiptLines.push(...encoder.encode(padLR("TOTAL", fmt(total)) + "\n"));
       receiptLines.push([0x1b, 0x61, 0x01]); // Align Center
       receiptLines.push(...encoder.encode("-".repeat(paperSize) + "\n"));
+      const footerAlign = parseInt(localStorage.getItem('storeFooterAlign') || '1');
+      receiptLines.push([0x1b, 0x61, footerAlign]); // Align for footer
       receiptLines.push(...encoder.encode((storeFooter || "Terima kasih atas kunjungan Anda!") + "\n\n")); // Feed paper
       receiptLines.push([0x1b, 0x64, 0x05]); // Feed 5 lines
       receiptLines.push([0x1d, 0x56, 0x42, 0x00]); // GS V B 0 (Auto Cut paper for 80mm VSC TM-80D)

@@ -150,6 +150,9 @@
       }
     });
 
+    // Urutkan berdasarkan ID terbaru (asumsi ID adalah timestamp) agar merujuk ke database terbaru
+    results.sort(function(a, b) { return Number(b.data.id || 0) - Number(a.data.id || 0); });
+
     renderResults(results.slice(0, 15), query);
     openDropdown();
   }
@@ -187,9 +190,18 @@
   }
 
   function renderBarangQuickCard(product) {
-    const grosirStr = product.salePrice ? formatRupiah(product.salePrice) + (product.unit ? ' / ' + escapeHtml(product.unit) : '') : '';
-    const ecerStr = product.salePriceEcer ? formatRupiah(product.salePriceEcer) + (product.unitEcer ? ' / ' + escapeHtml(product.unitEcer) : '') : '';
-    const priceDisplay = [grosirStr, ecerStr].filter(Boolean).join(' | ') || 'Harga belum diatur';
+    let priceDisplay = '';
+    if (window.isSuperAdmin && window.isSuperAdmin()) {
+      const beliG = product.basePrice ? formatRupiah(product.basePrice) : '-';
+      const beliE = product.basePriceEcer ? formatRupiah(product.basePriceEcer) : '-';
+      const jualG = product.salePrice ? formatRupiah(product.salePrice) : '-';
+      const jualE = product.salePriceEcer ? formatRupiah(product.salePriceEcer) : '-';
+      priceDisplay = '<span style="color:#10b981;">Beli: ' + beliG + ' (G) | ' + beliE + ' (E)</span><br><span style="color:#3b82f6;">Jual: ' + jualG + ' (G) | ' + jualE + ' (E)</span>';
+    } else {
+      const grosirStr = product.salePrice ? formatRupiah(product.salePrice) + (product.unit ? ' / ' + escapeHtml(product.unit) : '') : '';
+      const ecerStr = product.salePriceEcer ? formatRupiah(product.salePriceEcer) + (product.unitEcer ? ' / ' + escapeHtml(product.unitEcer) : '') : '';
+      priceDisplay = [grosirStr, ecerStr].filter(Boolean).join(' | ') || 'Harga belum diatur';
+    }
 
     return '<div class="quick-action-card compact" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 10px;">' +
       '<div style="flex: 1; min-width: 0;">' +
