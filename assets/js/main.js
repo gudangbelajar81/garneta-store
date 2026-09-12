@@ -36,7 +36,8 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
       route: "dashboard",
       role: localStorage.getItem("role") || "Admin",
       currentUser: JSON.parse(localStorage.getItem("currentUser") || "null"),
-      data: { products: [], suppliers: [], purchases: [], sales: [], users: [], priceHistory: [], auditLogs: [], dashboard: {} }
+      data: { products: [], suppliers: [], purchases: [], sales: [], users: [], priceHistory: [], auditLogs: [], dashboard: {} },
+      cache: { productOptions: '', productOptionsWithValues: '' }
     };
     window.appVersion = null;
     window.dataVersion = null;
@@ -184,6 +185,7 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
            // Silently update state.data without toast and without forcing render
            // to prevent disrupting the user while typing in forms
            state.data = await gas("bootstrap", {}, true);
+          if (typeof buildProductCache === 'function') buildProductCache();
            // Only re-render if on dashboard to avoid interrupting data entry
            if (state.route === 'dashboard') {
              render();
@@ -237,6 +239,7 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
       
       try {
         state.data = await gas("bootstrap", {}, true);
+          if (typeof buildProductCache === 'function') buildProductCache();
         startSyncPolling();
         
         document.getElementById("gateway-screen").classList.add("hidden");
@@ -1012,7 +1015,15 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
   }
 }
 
-        function render() {
+        
+    window.buildProductCache = function() {
+        if (!state.data || !state.data.products) return;
+        state.cache.productOptions = state.data.products.map(p => `<option value="${escapeAttr(p.name)}">`).join("");
+        state.cache.productOptionsWithValues = state.data.products.map(p => `<option value="${escapeAttr(p.name)}">${escapeHtml(p.name)}</option>`).join("");
+        state.cache.productOptionsById = state.data.products.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("");
+    };
+
+    function render() {
       
       // [NEW] AI Intel Harga (Price Tracker)
       if (state.route === 'dashboard') {
@@ -3793,7 +3804,7 @@ window.restoreRiwayatItem = function(idx) {
                   <form id="shopping-form" class="grid forms">
                     ${hiddenId()}
                     <label>Nama Barang<input name="name" list="shopping-products" required placeholder="Contoh: Beras Premium"></label>
-                    <datalist id="shopping-products">${state.data.products.map((p) => `<option value="${p.name}"></option>`).join("")}</datalist>
+                    <datalist id="shopping-products">${state.cache.productOptions || ""}</datalist>
                     ${input("qty", "Banyak Beli", true, "number")}
                     ${input("amount", "Harga Dasar", false, "number")}
                     ${formButtons()}
@@ -4418,7 +4429,7 @@ Beras Premium 1"></textarea>
             <label style="min-width:240px">Barang
               <select id="stats-product-filter">
                 <option value="">Semua Barang</option>
-                ${state.data.products.map((product) => `<option value="${product.id}" ${String(product.id) === String(productId) ? "selected" : ""}>${product.name}</option>`).join("")}
+                ${(state.cache.productOptionsById || '').replace(`value="${productId}"`, `value="${productId}" selected`)}
               </select>
             </label>
           </div>
@@ -5140,7 +5151,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       }
 
     function saleForm() {
-      const prodOptions = state.data.products.map((p) => `<option value="${escapeAttr(p.name)}">`).join("");
+      const prodOptions = state.cache.productOptions || "";
       return `<form id="pos-form" class="grid forms">
         ${hiddenId()}${input("date", "Tanggal", true, "date", today())}
         <label>Nama Barang
