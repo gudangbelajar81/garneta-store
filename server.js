@@ -797,6 +797,7 @@ async function ensureIndexes() {
     // Auto-migrate schema fixes
     await db.query("ALTER TABLE products MODIFY COLUMN unit VARCHAR(100) NOT NULL DEFAULT 'pcs'").catch(e => logger.warn("Schema unit: " + e.message));
     await db.query("ALTER TABLE products ADD COLUMN unit_ecer VARCHAR(100) NULL AFTER unit").catch(e => logger.warn("Schema unit_ecer: " + e.message));
+    await db.query("ALTER TABLE products ADD COLUMN aliases TEXT NULL AFTER name").catch(e => logger.warn("Schema aliases: " + e.message));
 
     await db.query("CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)");
     await db.query("CREATE INDEX IF NOT EXISTS idx_products_category ON products(category)");
@@ -853,11 +854,11 @@ async function listRows(collection, req = null) {
     if (isPublicAccess) {
       // [SECURITY] Akses publik — sembunyikan harga beli dan cost price
       const [rows] = await db.query(`
-        SELECT id, category, name, unit, unit_ecer, unit_content, sale_price, sale_price_ecer, stock, barcode, discount_type, discount_value, discount_min_qty
+        SELECT id, category, name, aliases, unit, unit_ecer, unit_content, sale_price, sale_price_ecer, stock, barcode, discount_type, discount_value, discount_min_qty
         FROM products ORDER BY id DESC
       `);
       return rows.map(r => ({
-        id: r.id, category: r.category, name: r.name,
+        id: r.id, category: r.category, name: r.name, aliases: r.aliases || "",
         unit: r.unit, unitEcer: r.unit_ecer, unitContent: Number(r.unit_content || 1),
         salePrice: Number(r.sale_price || 0), salePriceEcer: Number(r.sale_price_ecer || 0),
         stock: Number(r.stock || 0), barcode: r.barcode || "",
@@ -865,7 +866,7 @@ async function listRows(collection, req = null) {
       }));
     }
     const [rows] = await db.query(`
-      SELECT id, supplier_id, category, name, unit, unit_ecer, unit_content, base_price, base_price_ecer, cost_price, sale_price, sale_price_ecer, stock, barcode, discount_type, discount_value, discount_min_qty
+      SELECT id, supplier_id, category, name, aliases, unit, unit_ecer, unit_content, base_price, base_price_ecer, cost_price, sale_price, sale_price_ecer, stock, barcode, discount_type, discount_value, discount_min_qty
       FROM products
       ORDER BY id DESC
     `);
@@ -931,7 +932,7 @@ async function listRows(collection, req = null) {
       SELECT ph.id, ph.product_id, pr.name AS product, ph.base_price, ph.unit_content, ph.cost_price, ph.sale_price, ph.recorded_at
       FROM price_history ph
       LEFT JOIN products pr ON pr.id = ph.product_id
-      ORDER BY ph.recorded_at DESC, ph.id DESC
+      ORDER BY ph.recorded_at DESC, ph.id DESC LIMIT 500
     `);
     return rows.map(mapPriceHistory);
   }
@@ -975,7 +976,7 @@ async function addRow(collection, item = {}, req = null) {
 
   // [SECURITY] Sanitasi semua input text untuk mencegah Stored XSS
   if (item && typeof item === "object") {
-    const textFields = ["name", "notes", "address", "phone", "category", "unit", "unitEcer", "barcode", "customerName", "invoice"];
+    const textFields = ["name", "aliases", "notes", "address", "phone", "category", "unit", "unitEcer", "barcode", "customerName", "invoice"];
     for (const field of textFields) {
       if (typeof item[field] === "string") {
         item[field] = sanitizeText(item[field]);
@@ -1012,8 +1013,8 @@ async function addRow(collection, item = {}, req = null) {
   if (collection === "products") {
     const payload = productPayload(item);
     const [result] = await db.query(`
-      INSERT INTO products (supplier_id, category, name, unit, unit_ecer, unit_content, base_price, base_price_ecer, sale_price, sale_price_ecer, stock, barcode, discount_type, discount_value, discount_min_qty)
-      VALUES (:supplierId, :category, :name, :unit, :unitEcer, :unitContent, :basePrice, :basePriceEcer, :salePrice, :salePriceEcer, :stock, :barcode, :discountType, :discountValue, :discountMinQty)
+      INSERT INTO products (supplier_id, category, name, aliases, unit, unit_ecer, unit_content, base_price, base_price_ecer, sale_price, sale_price_ecer, stock, barcode, discount_type, discount_value, discount_min_qty)
+      VALUES (:supplierId, :category, :name, :aliases, :unit, :unitEcer, :unitContent, :basePrice, :basePriceEcer, :salePrice, :salePriceEcer, :stock, :barcode, :discountType, :discountValue, :discountMinQty)
     `, payload);
     await recordPriceHistory(result.insertId, "barang");
     await recordAudit(`Tambah barang: ${payload.name}`);
@@ -1033,11 +1034,22 @@ async function addRow(collection, item = {}, req = null) {
     let productId = null;
     let isNewProduct = false;
     
-    // 1. Cari produk berdasarkan nama
-    const [existingProducts] = await db.query(`SELECT id FROM products WHERE name = ? LIMIT 1`, [item.name]);
+    // 1. Cari produk berdasarkan nama atau alias
+    const searchName = (item.name || '').trim().toLowerCase();
+    const [allProducts] = await db.query(`SELECT id, name, aliases FROM products`);
+    let matchedProd = allProducts.find(p => p.name.toLowerCase() === searchName);
+    if (!matchedProd) {
+       matchedProd = allProducts.find(p => {
+           if (p.aliases) {
+               const aliases = p.aliases.toLowerCase().split(/[\/,]+/).map(s => s.trim());
+               if (aliases.includes(searchName)) return true;
+           }
+           return false;
+       });
+    }
     
-    if (existingProducts.length > 0) {
-      productId = existingProducts[0].id;
+    if (matchedProd) {
+      productId = matchedProd.id;
       // UPDATE produk lama (harga & stok)
       await db.query(`
         UPDATE products 
@@ -1219,7 +1231,7 @@ async function updateRow(collection, id, item = {}, req = null) {
 
   // [SECURITY] Sanitasi semua input text untuk update
   if (item && typeof item === "object") {
-    const textFields = ["name", "notes", "address", "phone", "category", "unit", "unitEcer", "barcode", "customerName", "invoice"];
+    const textFields = ["name", "aliases", "notes", "address", "phone", "category", "unit", "unitEcer", "barcode", "customerName", "invoice"];
     for (const field of textFields) {
       if (typeof item[field] === "string") {
         item[field] = sanitizeText(item[field]);
@@ -1250,7 +1262,7 @@ async function updateRow(collection, id, item = {}, req = null) {
     const payload = productPayload({ ...before, ...safeItem });
     await db.query(`
       UPDATE products 
-      SET supplier_id = :supplierId, category = :category, name = :name, 
+      SET supplier_id = :supplierId, category = :category, name = :name, aliases = :aliases,
           unit = :unit, unit_ecer = :unitEcer, unit_content = :unitContent, base_price = :basePrice, 
           base_price_ecer = :basePriceEcer, sale_price = :salePrice, sale_price_ecer = :salePriceEcer,
           stock = :stock, barcode = :barcode,
@@ -1508,6 +1520,7 @@ function productPayload(item) {
       supplierId: nullableNumber(item.supplierId),
     category: toTitleCase(item.category || "Umum"),
     name: toTitleCase(required(item.name, "Nama barang")),
+    aliases: item.aliases || "",
     unit: item.unit || "pcs",
     unitEcer: item.unitEcer || null,
     unitContent: number(item.unitContent) || 1,
@@ -1600,6 +1613,7 @@ function mapProduct(row) {
     supplierId: row.supplier_id,
     category: row.category,
     name: row.name,
+    aliases: row.aliases || "",
     unit: row.unit,
     unitEcer: row.unit_ecer,
     unitContent: Number(row.unit_content || 1),

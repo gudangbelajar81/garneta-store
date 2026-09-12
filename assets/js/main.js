@@ -5008,9 +5008,10 @@ ${tab === "bluetooth" ? `
       return `<form data-form="products" class="grid forms shopee-compact-form">
         ${hiddenId()}
         
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; grid-column: 1/-1;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px; grid-column: 1/-1;">
           <label>Kategori Barang<select name="category"><option value="">Pilih Kategori...</option>${cats.map(opt => `<option value="${escapeAttr(opt)}">${escapeAttr(opt)}</option>`).join("")}</select></label>
-          ${input("name", "Nama Barang", true)}
+          ${input("name", "Nama Utama", true)}
+          ${input("aliases", "Alias / Julukan", false)}
         </div>
         
         <div style="display:grid; grid-template-columns: ${isSuperAdmin() ? '1fr 1fr 1fr' : '1fr 1fr'}; gap:10px; grid-column: 1/-1;">
@@ -5540,7 +5541,19 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
 
 
     function findProduct(name) {
-      return state.data.products.find((product) => product.name.toLowerCase() === String(name || "").trim().toLowerCase());
+      const searchName = String(name || "").trim().toLowerCase();
+      if (!state.data.products) return null;
+      return state.data.products.find((product) => {
+        if (product.name && String(product.name).toLowerCase() === searchName) return true;
+        if (product.aliases) {
+          const aliasStr = String(product.aliases).toLowerCase();
+          if (aliasStr.includes(searchName)) {
+            const aliasList = aliasStr.split(/[,/]+/).map(a => a.trim());
+            if (aliasList.includes(searchName)) return true;
+          }
+        }
+        return false;
+      });
     }
 
     
