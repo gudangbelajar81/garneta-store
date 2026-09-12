@@ -134,7 +134,8 @@
       const n = String(p.name || '').toLowerCase();
       const c = String(p.category || '').toLowerCase();
       const b = String(p.barcode || '').toLowerCase();
-      if (n.includes(lowerQuery) || c.includes(lowerQuery) || b.includes(lowerQuery)) {
+      const a = String(p.aliases || '').toLowerCase();
+      if (n.includes(lowerQuery) || c.includes(lowerQuery) || b.includes(lowerQuery) || a.includes(lowerQuery)) {
         results.push({ type: 'barang', data: p });
       }
     });

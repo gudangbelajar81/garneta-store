@@ -104,6 +104,7 @@ function normalizeProduct(product) {
     id: Number(product.id),
     supplierId: product.supplierId ?? product.supplier_id ?? null,
     category: product.category ?? product.code ?? "Umum",
+    aliases: product.aliases ?? "",
     unit: product.unit ?? "pcs",
     unitContent,
     basePrice,
@@ -205,6 +206,7 @@ function toApiPayload(collection, item) {
     const payload = {
       category: item.category,
       name: item.name,
+      aliases: item.aliases ?? "",
       unit: item.unit,
       unit_content: Number(item.unitContent ?? item.unit_content ?? 1),
       base_price: Number(item.basePrice ?? item.base_price ?? 0),

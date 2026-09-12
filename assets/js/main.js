@@ -10159,7 +10159,7 @@ window.kalkulasiNotepadPembelian = function() {
     const lines = text.split('\n');
     let totalBelanja = 0;
     
-    let html = <div style="overflow-x:auto;">
+    let html = `<div style="overflow-x:auto;">
     <table class="table" style="width:100%; border-collapse:collapse; margin-top:10px;">
       <thead>
         <tr style="border-bottom:2px solid var(--border); text-align:left;">
@@ -10170,7 +10170,7 @@ window.kalkulasiNotepadPembelian = function() {
           <th style="padding:10px; text-align:right;">Subtotal</th>
         </tr>
       </thead>
-      <tbody>;
+      <tbody>`;
       
     lines.forEach(line => {
         line = line.trim();
@@ -10216,30 +10216,30 @@ window.kalkulasiNotepadPembelian = function() {
         let hargaSatuan = 0;
         
         if (matchedProduct) {
-            dikenali = <span style="color:var(--garneta-green); font-weight:bold;">? </span>;
+            dikenali = `<span style="color:var(--garneta-green); font-weight:bold;">? ${escapeHtml(matchedProduct.name)}</span>`;
             hargaSatuan = matchedProduct.basePrice || 0;
         }
         
         const subtotal = qtyNum * hargaSatuan;
         totalBelanja += subtotal;
         
-        html += <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-          <td style="padding:10px;"></td>
-          <td style="padding:10px;"></td>
-          <td style="padding:10px; text-align:right; font-weight:bold;"></td>
-          <td style="padding:10px; text-align:right;">Rp </td>
-          <td style="padding:10px; text-align:right; font-weight:bold;">Rp </td>
-        </tr>;
+        html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+          <td style="padding:10px;">${escapeHtml(nameStr)}</td>
+          <td style="padding:10px;">${dikenali}</td>
+          <td style="padding:10px; text-align:right; font-weight:bold;">${qtyStr}</td>
+          <td style="padding:10px; text-align:right;">Rp ${hargaSatuan.toLocaleString('id-ID')}</td>
+          <td style="padding:10px; text-align:right; font-weight:bold;">Rp ${subtotal.toLocaleString('id-ID')}</td>
+        </tr>`;
     });
     
-    html += </tbody>
+    html += `</tbody>
         <tfoot>
             <tr style="background:rgba(255,255,255,0.05);">
                 <th colspan="4" style="text-align:right; font-size:1.1rem; padding:15px;">GRAND TOTAL ESTIMASI:</th>
-                <th style="text-align:right; font-size:1.2rem; padding:15px; color:var(--garneta-cyan);">Rp </th>
+                <th style="text-align:right; font-size:1.2rem; padding:15px; color:var(--garneta-cyan);">Rp ${totalBelanja.toLocaleString('id-ID')}</th>
             </tr>
         </tfoot>
-    </table></div>;
+    </table></div>`;
     
     resultDiv.innerHTML = html;
 };
