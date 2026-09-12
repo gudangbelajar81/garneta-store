@@ -115,14 +115,14 @@ function kentang() {
     <div class="card fade-in">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div>
-          <h2>ðŸ¥” Grosir Kentang</h2>
+          <h2>?? Grosir Kentang</h2>
           <p class="muted">Menu khusus mencatat kulakan komoditas per karung (kentang, kacang, dll).</p>
         </div>
       </div>
 
       <div style="display:flex; gap:12px; margin-bottom:20px; border-bottom:2px solid var(--line); padding-bottom:10px;">
-        <button class="btn ${activeTab === 'riwayat' ? 'primary' : 'soft'}" onclick="window.switchKentangWorkspace('riwayat')">ðŸ¥” Grosir Kentang</button>
-        <button class="btn ${activeTab === 'notepad' ? 'primary' : 'soft'}" onclick="window.switchKentangWorkspace('notepad')">ðŸ“¸ Notepad Pintar AI</button>
+        <button class="btn ${activeTab === 'riwayat' ? 'primary' : 'soft'}" onclick="window.switchKentangWorkspace('riwayat')">?? Grosir Kentang</button>
+        <button class="btn ${activeTab === 'notepad' ? 'primary' : 'soft'}" onclick="window.switchKentangWorkspace('notepad')">?? Notepad Pintar AI</button>
       </div>
 
       <div id="kentang-workspace-riwayat" class="${activeTab === 'riwayat' ? '' : 'hidden'}">
@@ -145,13 +145,13 @@ function kentang() {
 
       <div id="kentang-workspace-notepad" class="${activeTab === 'notepad' ? '' : 'hidden'}">
         <div id="notepad-pintar-entry" style="text-align:center; padding:40px; border:2px dashed var(--line); border-radius:12px;">
-          <h3 style="margin-top:0; color:var(--garneta-cyan);">ðŸ“¸ Notepad Pintar AI</h3>
+          <h3 style="margin-top:0; color:var(--garneta-cyan);">?? Notepad Pintar AI</h3>
           <p class="muted">Foto nota tulisan tangan (minimarket / kulakan kentang). AI membedah angka, mengkoreksi salah hitung, dan menampilkan hasil untuk diedit sebelum disimpan.</p>
           <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:20px;">
-            <button class="btn primary" onclick="window.openSmartNotepad('auto','gallery')" style="font-size:1.05rem; padding:12px 20px;">ðŸ“ Gambar Internal</button>
-            <button class="btn primary" onclick="window.openSmartNotepad('auto','camera')" style="font-size:1.05rem; padding:12px 20px;">ðŸ“· Foto Kamera</button>
+            <button class="btn primary" onclick="window.openSmartNotepad('auto','gallery')" style="font-size:1.05rem; padding:12px 20px;">??? Gambar Internal</button>
+            <button class="btn primary" onclick="window.openSmartNotepad('auto','camera')" style="font-size:1.05rem; padding:12px 20px;">?? Foto Kamera</button>
           </div>
-          <p class="muted" style="margin-top:14px; font-size:0.85rem;">âœ¨ Mode otomatis: AI menebak jenis nota. Setelah foto dipilih kamu bisa ganti mode ðŸ›’ / ðŸ¥” secara manual.</p>
+          <p class="muted" style="margin-top:14px; font-size:0.85rem;">?? Mode otomatis: AI menebak jenis nota. Setelah foto dipilih kamu bisa ganti mode ?? / ?? secara manual.</p>
         </div>
         <div id="notepad-pintar-result" class="hidden" style="margin-top:20px;"></div>
       </div>
@@ -170,7 +170,7 @@ window.switchKentangWorkspace = function(tab) {
   const cont = document.querySelector('#app-content .card');
   if (cont) {
     cont.querySelectorAll('button').forEach(b => {
-      const isActive = (b.textContent.includes('ðŸ¥”') && tab === 'riwayat') || (b.textContent.includes('ðŸ“¸') && tab === 'notepad');
+      const isActive = (b.textContent.includes('??') && tab === 'riwayat') || (b.textContent.includes('??') && tab === 'notepad');
       b.className = 'btn ' + (isActive ? 'primary' : 'soft');
     });
   }
@@ -180,7 +180,7 @@ window.switchKentangWorkspace = function(tab) {
 
 
 // ============================================================
-// MODAL UNIVERSAL "NOTA AI" (KAWIN) â€” Satu mesin, dua mode
+// MODAL UNIVERSAL "NOTA AI" (KAWIN) ?? Satu mesin, dua mode
 // modeContext: 'auto' | 'minimarket' | 'kentang'; source: 'gallery' | 'camera'
 // ============================================================
 window.openSmartNotepad = function(modeContext = 'auto', source = 'gallery') {
@@ -209,7 +209,7 @@ window.openSmartNotepad = function(modeContext = 'auto', source = 'gallery') {
         }
       }
     }).catch(function() {
-      // Server AI health tidak bisa dicek — biarkan false (coba mode nyata, server fallback otomatis)
+      // Server AI health tidak bisa dicek  biarkan false (coba mode nyata, server fallback otomatis)
       window._simulasiMode = false;
     });
   } catch(e) {
@@ -218,20 +218,20 @@ window.openSmartNotepad = function(modeContext = 'auto', source = 'gallery') {
 
   const simulasiNotice = `
     <div id="sn-ai-badge" style="display:none; margin:0 0 12px 0; padding:10px 14px; border-radius:10px; font-size:0.88rem; background:rgba(245,166,35,0.12); border:1px solid rgba(245,166,35,0.45); color:#f5a623;">
-      ⚠️ <b>Mode SIMULASI (tanpa AI)</b> — tidak ada API Key vision yang aktif. Hasil analisa berupa <b>data contoh</b>, bukan dari foto. Hubungi Super Admin untuk mengisi API Key di Pengaturan AI.
+      ?? <b>Mode SIMULASI (tanpa AI)</b>  tidak ada API Key vision yang aktif. Hasil analisa berupa <b>data contoh</b>, bukan dari foto. Hubungi Super Admin untuk mengisi API Key di Pengaturan AI.
     </div>`;
 
   const modalHTML = `
     <div id="smart-notepad-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; display:flex; flex-direction:column; padding:20px; overflow-y:auto; backdrop-filter:blur(5px);">
       <div style="background:var(--bg); border:1px solid var(--line); border-radius:16px; width:100%; max-width:820px; margin:auto; padding:24px; position:relative;">
-        <button class="btn danger" onclick="document.getElementById('smart-notepad-modal').remove()" style="position:absolute; top:12px; right:12px;">âœ•</button>
-        <h2 style="margin-top:0; color:var(--garneta-cyan);">ðŸ“¸ Nota AI (Notepad Pintar)</h2>
-        <p class="muted">Satu mesin, dua mode: ðŸ›’ Minimarket (barang kelontong) &amp; ðŸ¥” Komoditas/Kentang (timbangan karung). AI membedah angka malas, mengkoreksi salah hitung, lalu hasilnya bisa diedit sebelum disimpan.</p>
+        <button class="btn danger" onclick="document.getElementById('smart-notepad-modal').remove()" style="position:absolute; top:12px; right:12px;">?</button>
+        <h2 style="margin-top:0; color:var(--garneta-cyan);">?? Nota AI (Notepad Pintar)</h2>
+        <p class="muted">Satu mesin, dua mode: ?? Minimarket (barang kelontong) &amp; ?? Komoditas/Kentang (timbangan karung). AI membedah angka malas, mengkoreksi salah hitung, lalu hasilnya bisa diedit sebelum disimpan.</p>
 
         ${simulasiNotice}
         <div id="sn-step-1" style="text-align:center; padding: 30px; border: 2px dashed var(--line); border-radius:12px; margin-top:16px;">
           <input type="file" id="sn-file-input" accept="image/*" ${source === 'camera' ? 'capture="environment"' : ''} style="display:none;" onchange="window.handleSmartNotepadFile(event)">
-          <button class="btn primary" onclick="document.getElementById('sn-file-input').click()" style="font-size:1.15rem; padding: 12px 24px;">${source === 'camera' ? 'ðŸ“· Ambil Foto' : 'ðŸ“ Pilih Gambar Nota'}</button>
+          <button class="btn primary" onclick="document.getElementById('sn-file-input').click()" style="font-size:1.15rem; padding: 12px 24px;">${source === 'camera' ? '?? Ambil Foto' : '??? Pilih Gambar Nota'}</button>
         </div>
 
         <div id="sn-step-1b" class="hidden" style="margin-top:16px;">
@@ -242,15 +242,15 @@ window.openSmartNotepad = function(modeContext = 'auto', source = 'gallery') {
             <div style="flex:1; min-width:260px;">
               <div class="muted" style="font-weight:700; margin-bottom:8px;">Jenis Nota:</div>
               <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
-                <button class="btn" id="sn-mode-auto" data-mode="auto" onclick="window.snPickMode('auto')" style="border:2px solid var(--garneta-cyan);">âœ¨ Otomatis</button>
-                <button class="btn soft" id="sn-mode-minimarket" data-mode="minimarket" onclick="window.snPickMode('minimarket')">ðŸ›’ Minimarket</button>
-                <button class="btn soft" id="sn-mode-kentang" data-mode="kentang" onclick="window.snPickMode('kentang')">ðŸ¥” Kentang</button>
+                <button class="btn" id="sn-mode-auto" data-mode="auto" onclick="window.snPickMode('auto')" style="border:2px solid var(--garneta-cyan);">?? Otomatis</button>
+                <button class="btn soft" id="sn-mode-minimarket" data-mode="minimarket" onclick="window.snPickMode('minimarket')">?? Minimarket</button>
+                <button class="btn soft" id="sn-mode-kentang" data-mode="kentang" onclick="window.snPickMode('kentang')">?? Kentang</button>
               </div>
               <label class="muted" style="font-weight:700;">Perintah AI (opsional)</label>
               <textarea id="sn-user-instruction" rows="2" placeholder="Contoh: ambil nama barang & harga saja, lalu perkirakan harga jual +20%. Atau: jumlahkan total seluruh grade." style="width:100%; margin-top:6px; box-sizing:border-box;"></textarea>
               <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
-                <button class="btn primary" onclick="window.snAnalyze()" style="padding:10px 22px; font-size:1.02rem;">ðŸ” Analisa Nota Ini</button>
-                <button class="btn soft" onclick="window.snResetToPick()" style="padding:10px 22px;">â†©ï¸ Ganti Foto</button>
+                <button class="btn primary" onclick="window.snAnalyze()" style="padding:10px 22px; font-size:1.02rem;">? Analisa Nota Ini</button>
+                <button class="btn soft" onclick="window.snResetToPick()" style="padding:10px 22px;">?? Ganti Foto</button>
               </div>
             </div>
           </div>
@@ -363,7 +363,7 @@ window.snAnalyze = async function() {
         }
       } catch(vErr) {
         // Graceful degradation: tetap pakai hasil pass 1 + peringatan verifikasi gagal
-        warnings = ["Verifikasi AI gagal (" + (vErr.message || 'error') + "). Data ditampilkan apa adanya — periksa manual."];
+        warnings = ["Verifikasi AI gagal (" + (vErr.message || 'error') + "). Data ditampilkan apa adanya  periksa manual."];
       }
     } else {
       // SIMULASI: bangun warnings sintetis agar alur badge tetap terlihat
@@ -389,7 +389,7 @@ window.snAnalyze = async function() {
 
   } catch(err) {
     const hint = window._simulasiMode
-      ? "\n\nMode SIMULASI aktif — ini bukan analisa asli. Jika kamu melihat pesan ini, berarti server tidak bisa dihubungi."
+      ? "\n\nMode SIMULASI aktif  ini bukan analisa asli. Jika kamu melihat pesan ini, berarti server tidak bisa dihubungi."
       : "\n\nPastikan API Key masih hidup, settingan Provider benar, dan tidak error. Jika terus gagal, hubungi Super Admin.";
     alert("GAGAL MEMPROSES FOTO: " + err.message + hint);
     document.getElementById('sn-step-2')?.classList.add('hidden');
@@ -401,7 +401,7 @@ window.handleSmartNotepadFile = function(e) {
   const file = e.target.files[0];
   if (!file) return;
 
-  // Kompresi gambar dulu (maks 1280px, JPEG q0.72) â€” cegah timeout 30s
+  // Kompresi gambar dulu (maks 1280px, JPEG q0.72) ? cegah timeout 30s
   const compressFn = (window.compressImageFile || window.readAndCompressImage);
   const compressPromise = compressFn
     ? Promise.resolve(compressFn.call(window, file))
@@ -421,7 +421,7 @@ window.handleSmartNotepadFile = function(e) {
 };
 
 // ============================================================
-// PARSE JSON ROBUST â€” buang markdown fence, ekstrak blok JSON seimbang
+// PARSE JSON ROBUST ?? buang markdown fence, ekstrak blok JSON seimbang
 // ============================================================
 function extractBalancedJson(text) {
   if (typeof text !== 'string') return null;
@@ -507,7 +507,7 @@ function renderWarningPanel() {
   const badgeColor = w.verified ? 'var(--warn, #f5a623)' : 'var(--danger, #ef4444)';
   return `
     <div style="border:1px solid ${badgeColor}55; background:${badgeColor}18; border-radius:10px; padding:12px 16px; margin-bottom:14px; font-size:0.92rem;">
-      <div style="font-weight:700; color:${badgeColor}; margin-bottom:6px;">âš ï¸ ${w.verified ? 'AI Verifier Menemukan Catatan' : 'Verifikasi AI Gagal / Dilewati'}</div>
+      <div style="font-weight:700; color:${badgeColor}; margin-bottom:6px;">??? ${w.verified ? 'AI Verifier Menemukan Catatan' : 'Verifikasi AI Gagal / Dilewati'}</div>
       <ul style="margin:0; padding-left:18px; color:var(--text);">
         ${w.list.map(x => '<li>' + esc(x) + '</li>').join('')}
       </ul>
@@ -517,7 +517,7 @@ function renderWarningPanel() {
 function flagBadge(it) {
   if (!it) return '';
   return (it.flag === 'check' || it.alasan)
-    ? `<span title="${esc(it.alasan || 'perlu dicek')}" style="display:inline-block; margin-left:6px; background:rgba(245,166,35,.18); color:#f5a623; border:1px solid rgba(245,166,35,.5); font-size:0.72rem; font-weight:700; padding:1px 7px; border-radius:20px; cursor:help;">âš ï¸</span>`
+    ? `<span title="${esc(it.alasan || 'perlu dicek')}" style="display:inline-block; margin-left:6px; background:rgba(245,166,35,.18); color:#f5a623; border:1px solid rgba(245,166,35,.5); font-size:0.72rem; font-weight:700; padding:1px 7px; border-radius:20px; cursor:help;">?</span>`
     : '';
 }
 
@@ -560,13 +560,13 @@ function renderCRUD() {
         <td style="width:90px;"><input type="text" class="input crud-m-unit" data-idx="${idx}" value="${esc(it.unit)}"></td>
         <td style="width:130px;"><input type="number" class="input crud-m-price" data-idx="${idx}" value="${it.basePrice}" min="0" step="any"></td>
         <td style="width:90px;"><input type="number" class="input crud-m-sale" data-idx="${idx}" value="${it.salePrice}" min="0" step="any"></td>
-        <td style="width:60px;"><button class="btn danger btn-sm" onclick="window.crudRemoveItem(${idx})">ðŸ—‘</button></td>
+        <td style="width:60px;"><button class="btn danger btn-sm" onclick="window.crudRemoveItem(${idx})">?</button></td>
       </tr>
     `).join('');
 
     container.innerHTML = `
       ${renderWarningPanel()}
-      <h3 style="color:var(--garneta-cyan); margin-top:0;">ðŸ›’ Mode: Minimarket (Notepad Hasil â€” bisa diedit)</h3>
+      <h3 style="color:var(--garneta-cyan); margin-top:0;">?? Mode: Minimarket (Notepad Hasil ?? bisa diedit)</h3>
       <div style="display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
          <label>Suplier: <input type="text" id="sn-m-supplier" class="input" value="${esc(c.supplier)}"></label>
          <label>Tanggal: <input type="date" id="sn-m-date" class="input" value="${c.date}"></label>
@@ -578,12 +578,12 @@ function renderCRUD() {
         </table>
       </div>
       <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:12px;">
-        <button class="btn soft" onclick="window.crudAddItem()">âž• Tambah Baris</button>
+        <button class="btn soft" onclick="window.crudAddItem()">? Tambah Baris</button>
       </div>
       <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px; flex-wrap:wrap;">
-        <button class="btn soft" onclick="window.snReanalyze()">ðŸ”„ Ulangi dengan mode lain</button>
+        <button class="btn soft" onclick="window.snReanalyze()">?? Ulangi dengan mode lain</button>
         <button class="btn soft" onclick="document.getElementById('smart-notepad-modal').remove()">Batal</button>
-        <button class="btn primary" onclick="window.exportSmartNotepadToBarang()">ðŸ’¾ Export ke Database Barang + Statistik Harga</button>
+        <button class="btn primary" onclick="window.exportSmartNotepadToBarang()">?? Export ke Database Barang + Statistik Harga</button>
       </div>
     `;
   } else if (c.type === 'kentang') {
@@ -596,11 +596,11 @@ function renderCRUD() {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
           <strong>Grade <input type="text" class="input crud-k-grade-name" data-g="${idx}" value="${esc(g.grade)}" style="width:70px;${g.flag === 'check' ? 'border-color:#f5a623 !important;' : ''}">${flagBadge(g)}</strong>
           <label>Harga/Kg: Rp <input type="number" class="input crud-k-price" data-g="${idx}" value="${g.pricePerKg}" style="width:110px;" min="0" step="any"></label>
-          <button class="btn danger btn-sm" onclick="window.crudRemoveGrade(${idx})">ðŸ—‘ Hapus Grade</button>
+          <button class="btn danger btn-sm" onclick="window.crudRemoveGrade(${idx})">??? Hapus Grade</button>
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
           ${weightsHtml}
-          <button class="btn soft btn-sm" onclick="window.crudAddWeight(${idx})">âž•</button>
+          <button class="btn soft btn-sm" onclick="window.crudAddWeight(${idx})">?</button>
         </div>
         <div class="muted" style="margin-top:12px; font-size:0.9rem;">
           Total Karung: <b>${g.weights.length}</b> | Total Berat: <b>${g.weights.reduce((a,b) => a + (Number(b)||0), 0)} KG</b> | Subtotal: <b>Rp ${((g.weights.reduce((a,b) => a + (Number(b)||0), 0)) * (Number(g.pricePerKg)||0)).toLocaleString('id-ID')}</b>
@@ -610,20 +610,20 @@ function renderCRUD() {
 
     container.innerHTML = `
       ${renderWarningPanel()}
-      <h3 style="color:var(--garneta-cyan); margin-top:0;">ðŸ¥” Mode: Komoditas / Kentang (Notepad Hasil â€” bisa diedit)</h3>
+      <h3 style="color:var(--garneta-cyan); margin-top:0;">?? Mode: Komoditas / Kentang (Notepad Hasil ?? bisa diedit)</h3>
       <div style="display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
          <label>Petani/Suplier: <input type="text" id="sn-k-supplier" class="input" value="${esc(c.supplier)}"></label>
          <label>Tanggal: <input type="date" id="sn-k-date" class="input" value="${c.date}"></label>
       </div>
       ${gradesHtml}
       <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:8px;">
-        <button class="btn soft" onclick="window.crudAddGrade()">âž• Tambah Grade</button>
+        <button class="btn soft" onclick="window.crudAddGrade()">? Tambah Grade</button>
         <h4 style="margin:0;">Total Keseluruhan Bayar: Rp <span id="sn-k-total">${Number(c.totalPrice).toLocaleString('id-ID')}</span></h4>
       </div>
       <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px; flex-wrap:wrap;">
-        <button class="btn soft" onclick="window.snReanalyze()">ðŸ”„ Ulangi dengan mode lain</button>
+        <button class="btn soft" onclick="window.snReanalyze()">?? Ulangi dengan mode lain</button>
         <button class="btn soft" onclick="document.getElementById('smart-notepad-modal').remove()">Batal</button>
-        <button class="btn primary" onclick="window.exportSmartNotepadToKentang()">ðŸ’¾ Export ke Grosir Kentang</button>
+        <button class="btn primary" onclick="window.exportSmartNotepadToKentang()">?? Export ke Grosir Kentang</button>
       </div>
     `;
   }
@@ -790,7 +790,7 @@ async function fetchKentangHistory() {
   }
 }
 
-// Show per-purchase detail (grades) â€” uses kentang_purchase_details
+// Show per-purchase detail (grades) ?? uses kentang_purchase_details
 window.showKentangDetail = async function(purchaseId) {
   try {
     const res = await gas("list", { collection: "kentang_purchase_details" });
@@ -806,8 +806,8 @@ window.showKentangDetail = async function(purchaseId) {
         const weightsText = weights.length ? weights.join(', ') + ' kg' : '-';
         return `
           <div style="border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:8px;">
-            <strong>Grade ${esc(r.grade)}</strong> â€” ${r.total_karung} karung, ${Number(r.total_kg)} kg<br>
-            <span class="muted">Rp ${Number(r.price_per_kg).toLocaleString('id-ID')}/kg â†’ Subtotal Rp ${Number(r.subtotal).toLocaleString('id-ID')}</span><br>
+            <strong>Grade ${esc(r.grade)}</strong> ?? ${r.total_karung} karung, ${Number(r.total_kg)} kg<br>
+            <span class="muted">Rp ${Number(r.price_per_kg).toLocaleString('id-ID')}/kg ?? Subtotal Rp ${Number(r.subtotal).toLocaleString('id-ID')}</span><br>
             <span class="muted">Rincian: ${weightsText}</span>
           </div>`;
       }).join('');
@@ -816,8 +816,8 @@ window.showKentangDetail = async function(purchaseId) {
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(5px);';
     modal.innerHTML = `
       <div style="background:var(--bg);border:1px solid var(--line);border-radius:16px;max-width:600px;width:100%;padding:24px;position:relative;max-height:80vh;overflow-y:auto;">
-        <button class="btn danger" onclick="this.closest('div[style]').remove()" style="position:absolute;top:12px;right:12px;">âœ•</button>
-        <h3 style="margin-top:0;color:var(--garneta-cyan);">ðŸ“¦ Rincian Karung & Grade</h3>
+        <button class="btn danger" onclick="this.closest('div[style]').remove()" style="position:absolute;top:12px;right:12px;">?</button>
+        <h3 style="margin-top:0;color:var(--garneta-cyan);">?? Rincian Karung & Grade</h3>
         ${html}
       </div>`;
     document.body.appendChild(modal);
