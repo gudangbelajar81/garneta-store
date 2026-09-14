@@ -945,7 +945,7 @@ function bindGajiEvents() {
 
       const msg = `================================
 STRUK RINCIAN GAJI & BON
-GARNETA STORE
+${localStorage.getItem('storeName') || 'GARNETA STORE'}
 ================================
 NAMA     : *${emp.name.toUpperCase()}*
 PERIODE  : ${tglMasuk} s/d ${tglAkhir}
