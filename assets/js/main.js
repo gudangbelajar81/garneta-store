@@ -2191,7 +2191,7 @@ Minyak Goreng 3 45000"></textarea>
             0x1b, 0x40, // init
             0x1b, 0x61, 0x01, // Center align
             0x1d, 0x21, 0x11, // Double size
-            ...encoder.encode('Toko GARNETA STORE\n'),
+            ...encoder.encode((localStorage.getItem('storeName') || 'Toko GARNETA STORE') + '\n'),
             0x1d, 0x21, 0x00, // Normal size
             ...encoder.encode('085123871118\n\n'),
             0x1b, 0x61, 0x00, // Left align
@@ -2311,7 +2311,7 @@ Minyak Goreng 3 45000"></textarea>
 </head>
             <body>
               <div class="header">
-                <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 2px;">Toko GARNETA STORE</h2>
+                <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 2px;">${localStorage.getItem('storeName') || 'GARNETA STORE'}</h2>
                 <div style="font-size: 14px; margin-bottom: 5px;">085123871118</div>
                 <div>${new Date().toLocaleString('id-ID')}</div>
               </div>
@@ -2602,7 +2602,7 @@ Minyak Goreng 3 45000"></textarea>
             </head>
             <body>
               <div class="header">
-                <h2 style="font-size: 22px; margin-bottom: 2px;">Toko GARNETA STORE</h2>
+                <h2 style="font-size: 22px; margin-bottom: 2px;">${localStorage.getItem('storeName') || 'GARNETA STORE'}</h2>
                 <div>085123871118</div>
                 <div>${data.date}</div>
                 <div>Kasir: ${opName}</div>
@@ -6965,7 +6965,7 @@ function doPost(e) {
       const printWindow = window.open("", "_blank");
       printWindow.document.write(`<html><head><title>Export GARNETA STORE</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#111}table{width:100%;border-collapse:collapse;margin-bottom:24px}td,th{border:1px solid #ccc;padding:6px;font-size:11px;text-align:left}h2{margin-top:24px}      </style>  
 
-</head><body><h1>GARNETA STORE</h1>${html}</body></html>`);
+</head><body><h1>${localStorage.getItem('storeName') || 'GARNETA STORE'}</h1>${html}</body></html>`);
       printWindow.document.close();
       printWindow.focus();
       printWindow.print();
@@ -9618,7 +9618,7 @@ window.printReceiptPDF = function() {
       </head>
       <body>
         <div class="header">
-          <h2>GARNETA STORE</h2>
+          <h2>${localStorage.getItem('storeName') || 'GARNETA STORE'}</h2>
           <div class="divider"></div>
           <p style="text-align: left; font-size: 12px;">Tgl: ${dateStr}</p>
         </div>
