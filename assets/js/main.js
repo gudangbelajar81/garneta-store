@@ -1994,36 +1994,49 @@ Minyak Goreng 3 45000"></textarea>
          const findProd = (n) => window.state.data.products.find(p => p.name.toLowerCase() === n.toLowerCase());
          
          const match2 = cleanVal.match(/^(.*?)\s+(\d+)\s+([\d.,]+)$/);
-         if (match2) {
+         const match1 = cleanVal.match(/^(.*?)\s+([\d.,]+)$/);
+
+         let prodFull = findProd(cleanVal);
+         let prodMatch1 = match1 ? findProd(match1[1].trim()) : null;
+
+         if (prodFull) {
+            name = cleanVal;
+            price = isExcludedNgitungCategory(prodFull) ? 0 : (prodFull.salePriceEcer || prodFull.salePrice || prodFull.basePrice || 0);
+            qty = 1;
+         } 
+         else if (prodMatch1 && match1) {
+             let parsedName = match1[1].trim();
+             let numVal = parseFloat(match1[2].replace(',', '.'));
+             
+             if (numVal < 1000) {
+                name = parsedName;
+                price = isExcludedNgitungCategory(prodMatch1) ? 0 : (prodMatch1.salePriceEcer || prodMatch1.salePrice || prodMatch1.basePrice || 0);
+                qty = numVal;
+             } else {
+                name = parsedName;
+                price = numVal;
+                qty = 1;
+             }
+         }
+         else if (match2) {
            name = match2[1].trim();
            price = Number(match2[2]);
            qty = parseFloat(match2[3].replace(',', '.'));
-         } else {
-           const match1 = cleanVal.match(/^(.*?)\s+([\d.,]+)$/);
-           if (match1) {
+         } 
+         else if (match1) {
              let parsedName = match1[1].trim();
              let numVal = parseFloat(match1[2].replace(',', '.'));
-             prod = findProd(parsedName);
              
-             // If product found and number is small (e.g. < 1000), it's likely a Qty
-             if (prod && numVal < 1000) {
-                name = parsedName;
-                price = isExcludedNgitungCategory(prod) ? 0 : (prod.salePriceEcer || prod.salePrice || prod.basePrice || 0);
-                qty = numVal;
-             } else {
-                // Otherwise treat as Price override
-                name = parsedName;
-                price = Number(match1[2]);
-                qty = 1;
-             }
-           } else {
-             // Only Name is provided
+             name = parsedName;
+             price = numVal;
+             qty = 1;
+         } 
+         else {
              name = cleanVal;
              prod = findProd(name);
              if (prod) {
                 price = isExcludedNgitungCategory(prod) ? 0 : (prod.salePriceEcer || prod.salePrice || prod.basePrice || 0);
              }
-           }
          }
       } else {
          // Fallback legacy parser
@@ -2186,18 +2199,30 @@ Minyak Goreng 3 45000"></textarea>
             if (spaceCount < 1) spaceCount = 1;
             return leftStr + ' '.repeat(spaceCount) + rightStr + '\n';
           };
+          
+          let storeName = localStorage.getItem('storeName') || 'GARNETA STORE';
+          let storeAddress = localStorage.getItem('storeAddress') || '';
+          let receiptLines = [];
 
-          let data = [
-            0x1b, 0x40, // init
-            0x1b, 0x61, 0x01, // Center align
-            0x1d, 0x21, 0x11, // Double size
-            ...encoder.encode((localStorage.getItem('storeName') || 'Toko GARNETA STORE') + '\n'),
-            0x1d, 0x21, 0x00, // Normal size
-            ...encoder.encode('085123871118\n\n'),
-            0x1b, 0x61, 0x00, // Left align
-            ...encoder.encode('Tgl: ' + new Date().toLocaleString('id-ID') + '\n'),
-            ...encoder.encode("-".repeat(parseInt(localStorage.getItem('printerPaperSize') || '32')) + "\n")
-          ];
+          receiptLines.push([0x1b, 0x40]); // init
+          if (storeName.length <= 16) {
+              receiptLines.push([0x1b, 0x61, 0x01]); // Center align
+              receiptLines.push([0x1d, 0x21, 0x11]); // Double Size
+              receiptLines.push(...encoder.encode(storeName + "\n"));
+              receiptLines.push([0x1d, 0x21, 0x00]); // Normal
+          } else {
+              receiptLines.push([0x1b, 0x61, 0x01]); // Center align
+              receiptLines.push(...encoder.encode(storeName + "\n"));
+          }
+          if (storeAddress) {
+              receiptLines.push(...encoder.encode(storeAddress + "\n\n"));
+          }
+
+          receiptLines.push([0x1b, 0x61, 0x00]); // Left align
+          receiptLines.push(...encoder.encode('Tgl: ' + new Date().toLocaleString('id-ID') + '\n'));
+          receiptLines.push(...encoder.encode("-".repeat(parseInt(localStorage.getItem('printerPaperSize') || '32')) + "\n"));
+          
+          let data = receiptLines.reduce((acc, val) => acc.concat(Array.from(val)), []);
           
           let total = 0;
           window.ngitungRows.forEach(row => {
@@ -2214,10 +2239,9 @@ Minyak Goreng 3 45000"></textarea>
           
           data.push(...encoder.encode("-".repeat(parseInt(localStorage.getItem('printerPaperSize') || '32')) + "\n"));
           data.push(...encoder.encode(formatLine('TOTAL:', total) + '\n'));
-          data.push(0x1b, 0x61, 0x01); // Center align
-          data.push(...encoder.encode('\nTerima kasih atas\n'));
-          data.push(...encoder.encode('kunjungan Anda!\n\n\n'));
-          data.push(0x1b, 0x61, 0x00); // Left align
+          data.push(...encoder.encode('\n'));
+          let storeFooter = localStorage.getItem('storeFooter') || 'Terima kasih atas kunjungan Anda!';
+          data.push(...encoder.encode(storeFooter + '\n\n\n'));
         
         let buffer = new Uint8Array(data);
         const btChunkSize = 32;
@@ -4615,7 +4639,7 @@ Beras Premium 1"></textarea>
               <button class="btn primary" id="add-new-api-key" style="padding: 6px 12px; font-size:12px;" onclick="document.getElementById('api-key-form-container').classList.toggle('hidden')">+ Tambah Key</button>
             </div>
           </div>
-          <p class="muted">Kelola kunci API AI Anda dengan sistem rotasi otomatis (Failover) dan cegah limit 429.</p>
+          <p class="muted">Kelola kunci AI Anda dengan sistem rotasi otomatis (Failover) dan cegah limit 429.</p>
 
           <!-- Form Tambah Kunci -->
           <div id="api-key-form-container" class="card hidden" style="margin-bottom: 16px; border-color: var(--green); position: relative; z-index: 50; pointer-events: auto;">
@@ -4760,15 +4784,15 @@ ${tab === "bluetooth" ? `
             <p class="muted">Teks yang akan dicetak pada header dan footer struk Kasir & PPOB.</p>
             <div class="form-group" style="margin-bottom:12px;">
               <label>Nama Toko (Header Utama)</label>
-              <input type="text" id="store-name-setting" class="input" placeholder="GARNETA STORE" value="${localStorage.getItem('storeName') || 'GARNETA STORE'}" onblur="localStorage.setItem('storeName', this.value); showToast('Nama toko disimpan!', 'success')">
+              <input type="text" id="store-name-setting" class="input" placeholder="GARNETA STORE" value="${localStorage.getItem('storeName') || 'GARNETA STORE'}" oninput="localStorage.setItem('storeName', this.value)" onchange="showToast('Nama toko disimpan!', 'success')">
             </div>
             <div class="form-group" style="margin-bottom:12px;">
               <label>Alamat / Keterangan (Sub-Header)</label>
-              <input type="text" id="store-address-setting" class="input" placeholder="Misal: 085123871118" value="${localStorage.getItem('storeAddress') || ''}" onblur="localStorage.setItem('storeAddress', this.value); showToast('Alamat toko disimpan!', 'success')">
+              <input type="text" id="store-address-setting" class="input" placeholder="Misal: 085123871118" value="${localStorage.getItem('storeAddress') || ''}" oninput="localStorage.setItem('storeAddress', this.value)" onchange="showToast('Alamat toko disimpan!', 'success')">
             </div>
             <div class="form-group" style="margin-bottom:24px;">
               <label>Pesan Penutup (Footer)</label>
-              <textarea id="store-footer-setting" class="input" style="height: 60px; resize: vertical;" placeholder="Terima Kasih!" onblur="localStorage.setItem('storeFooter', this.value); showToast('Footer disimpan!', 'success')">${localStorage.getItem('storeFooter') || 'Terima kasih atas kunjungan Anda!'}</textarea>
+              <textarea id="store-footer-setting" class="input" style="height: 60px; resize: vertical;" placeholder="Terima Kasih!" oninput="localStorage.setItem('storeFooter', this.value)" onchange="showToast('Footer disimpan!', 'success')">${localStorage.getItem('storeFooter') || 'Terima kasih atas kunjungan Anda!'}</textarea>
               <div style="margin-top: 12px;">
                  <label style="display:block; margin-bottom:4px;">Posisi Teks (Align)</label>
                  <select id="store-footer-align-setting" class="input" onchange="localStorage.setItem('storeFooterAlign', this.value); showToast('Posisi footer disimpan!', 'success')">
@@ -4790,6 +4814,7 @@ ${tab === "bluetooth" ? `
             <div class="api-section-title">Koneksi Hardware Kasir</div>
             <p class="muted">Jika ingin mengganti printer Bluetooth ke perangkat lain, silakan reset memori printer di sini.</p>
             <div class="actions">
+              <button class="btn primary" onclick="window.testPrintBluetooth()" type="button" style="margin-right: 8px; background: var(--garneta-cyan); color: #000; font-weight: bold;">TEST CETAK STRUK</button>
               <button class="btn danger" onclick="window.resetBluetoothPrinter()" type="button">RESET PRINTER BLUETOOTH</button>
             </div>
           </div>
@@ -4797,6 +4822,103 @@ ${tab === "bluetooth" ? `
 
       </section>`;
     }
+
+    window.testPrintBluetooth = async function() {
+        if (!navigator.bluetooth) {
+            showToast("Web Bluetooth tidak didukung. Gunakan Chrome di Android/PC.", "error");
+            return;
+        }
+        let device;
+        try {
+          device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: KNOWN_PRINTER_UUIDS.map(u => u.svc)
+          });
+          window.globalBluetoothDevice = device;
+
+          showToast("Menghubungkan ke printer...", "info");
+          
+          const connectGatt = async (retryCount = 3) => {
+              try {
+                return await device.gatt.connect();
+              } catch (err) {
+                if (retryCount <= 1) throw err;
+                await new Promise(resolve => setTimeout(resolve, 500));
+                return connectGatt(retryCount - 1);
+              }
+          };
+
+          let server;
+          for (let attempt = 1; attempt <= 2; attempt++) {
+            server = await connectGatt();
+            if (server) break;
+            if (device.gatt && device.gatt.connected) {
+              device.gatt.disconnect();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+
+          if (!server) throw new Error("Gagal connect ke GATT server.");
+
+          let service, characteristic;
+          for (const pair of KNOWN_PRINTER_UUIDS) {
+            try {
+              service = await server.getPrimaryService(pair.svc);
+              characteristic = await service.getCharacteristic(pair.char);
+              if (characteristic) break; 
+            } catch (e) {}
+          }
+          
+          if (!characteristic) throw new Error("Service Print tidak ditemukan. Pastikan ini Printer Thermal.");
+
+          showToast("Mencetak struk test...", "info");
+
+          let encoder = new TextEncoder();
+          let storeName = localStorage.getItem('storeName') || "GARNETA STORE";
+          let storeAddress = localStorage.getItem('storeAddress') || "";
+          let storeFooter = localStorage.getItem('storeFooter') || "Terima kasih atas kunjungan Anda!";
+          let receiptLines = [];
+          
+          if (storeName.length <= 16) {
+              receiptLines.push([0x1d, 0x21, 0x11]); // Double Size
+              receiptLines.push(...encoder.encode(storeName + "\n"));
+              receiptLines.push([0x1d, 0x21, 0x00]); // Normal
+          } else {
+              receiptLines.push(...encoder.encode(storeName + "\n"));
+          }
+          if (storeAddress) {
+              receiptLines.push(...encoder.encode(storeAddress + "\n"));
+          }
+          
+          receiptLines.push(...encoder.encode("-".repeat(parseInt(localStorage.getItem('printerPaperSize') || '32')) + "\n"));
+          receiptLines.push(...encoder.encode("TEST CETAK STRUK BERHASIL!\n"));
+          receiptLines.push(...encoder.encode("Hardware Bluetooth Terhubung.\n"));
+          receiptLines.push(...encoder.encode("-".repeat(parseInt(localStorage.getItem('printerPaperSize') || '32')) + "\n"));
+          
+          let footerAlign = localStorage.getItem('storeFooterAlign') || '1';
+          if (footerAlign === '1') receiptLines.push([0x1b, 0x61, 0x01]); // Center
+          else if (footerAlign === '2') receiptLines.push([0x1b, 0x61, 0x02]); // Right
+          else receiptLines.push([0x1b, 0x61, 0x00]); // Left
+          
+          receiptLines.push(...encoder.encode((storeFooter || "Terima kasih atas kunjungan Anda!") + "\n\n"));
+          receiptLines.push([0x1b, 0x61, 0x00]); // Reset to Left
+          receiptLines.push(...encoder.encode("\n\n\n"));
+          
+          let finalData = new Uint8Array(receiptLines.reduce((acc, val) => acc.concat(Array.from(val)), []));
+          
+          const CHUNK_SIZE = 100;
+          for (let i = 0; i < finalData.length; i += CHUNK_SIZE) {
+              let chunk = finalData.slice(i, i + CHUNK_SIZE);
+              await characteristic.writeValue(chunk);
+              await new Promise(resolve => setTimeout(resolve, 20));
+          }
+          
+          device.gatt.disconnect();
+          showToast("✅ Berhasil mencetak struk test!", "success");
+        } catch (err) {
+          showToast("❌ Gagal test print: " + err.message, "error");
+        }
+    };
 
     
       window.saveDigiflazzSettings = async function() {

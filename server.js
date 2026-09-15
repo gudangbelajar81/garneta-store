@@ -798,6 +798,8 @@ async function ensureIndexes() {
     await db.query("ALTER TABLE products MODIFY COLUMN unit VARCHAR(100) NOT NULL DEFAULT 'pcs'").catch(e => logger.warn("Schema unit: " + e.message));
     await db.query("ALTER TABLE products ADD COLUMN unit_ecer VARCHAR(100) NULL AFTER unit").catch(e => logger.warn("Schema unit_ecer: " + e.message));
     await db.query("ALTER TABLE products ADD COLUMN aliases TEXT NULL AFTER name").catch(e => logger.warn("Schema aliases: " + e.message));
+    // [INTEL HARGA] Pengaman kedua bila deploy melewati migrate.js
+    await db.query("ALTER TABLE price_history ADD COLUMN base_price_ecer DECIMAL(14,2) NULL AFTER base_price").catch(e => logger.warn("Schema price_history.base_price_ecer: " + e.message));
 
     await db.query("CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)");
     await db.query("CREATE INDEX IF NOT EXISTS idx_products_category ON products(category)");
@@ -929,7 +931,7 @@ async function listRows(collection, req = null) {
 
   if (collection === "priceHistory") {
     const [rows] = await db.query(`
-      SELECT ph.id, ph.product_id, pr.name AS product, ph.base_price, ph.unit_content, ph.cost_price, ph.sale_price, ph.recorded_at
+      SELECT ph.id, ph.product_id, pr.name AS product, ph.base_price, ph.base_price_ecer, ph.unit_content, ph.cost_price, ph.sale_price, ph.sale_price_ecer, ph.recorded_at
       FROM price_history ph
       LEFT JOIN products pr ON pr.id = ph.product_id
       ORDER BY ph.recorded_at DESC, ph.id DESC LIMIT 500
@@ -1106,9 +1108,9 @@ async function addRow(collection, item = {}, req = null) {
 
     // 4. Catat riwayat harga
     await db.query(`
-      INSERT INTO price_history (product_id, purchase_id, base_price, unit_content, sale_price, sale_price_ecer, recorded_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [productId, purchaseId, number(item.basePrice), number(item.unitContent) || 1, number(item.salePrice), number(item.salePriceEcer), item.date || new Date()]);
+      INSERT INTO price_history (product_id, purchase_id, base_price, base_price_ecer, unit_content, sale_price, sale_price_ecer, recorded_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [productId, purchaseId, number(item.basePrice), number(item.basePriceEcer), number(item.unitContent) || 1, number(item.salePrice), number(item.salePriceEcer), item.date || new Date()]);
     
     await recordAudit(`Omni-Pembelian: ${item.name} (${isNewProduct ? 'Baru' : 'Update'})`);
     return findRow("purchases", purchaseId);
@@ -1269,7 +1271,9 @@ async function updateRow(collection, id, item = {}, req = null) {
           discount_type = :discountType, discount_value = :discountValue, discount_min_qty = :discountMinQty
       WHERE id = :id
     `, { ...payload, id });
-    if (Number(before.basePrice) !== Number(payload.basePrice)) await recordPriceHistory(id, "barang");
+    const hargaGrosirBerubah = Number(before.basePrice) !== Number(payload.basePrice);
+    const hargaEcerBerubah = Number(before.basePriceEcer || 0) !== Number(payload.basePriceEcer || 0);
+    if (hargaGrosirBerubah || hargaEcerBerubah) await recordPriceHistory(id, "barang");
     await recordAudit(`Edit barang: ${payload.name}`);
     return findRow("products", id);
   }
@@ -1469,13 +1473,15 @@ async function findRow(collection, id) {
 async function recordPriceHistory(productId, source) {
   const product = await findRow("products", productId);
   await db.query(`
-    INSERT INTO price_history (product_id, base_price, unit_content, sale_price)
-    VALUES (:productId, :basePrice, :unitContent, :salePrice)
+    INSERT INTO price_history (product_id, base_price, base_price_ecer, unit_content, sale_price, sale_price_ecer)
+    VALUES (:productId, :basePrice, :basePriceEcer, :unitContent, :salePrice, :salePriceEcer)
   `, {
     productId,
     basePrice: product.basePrice,
+    basePriceEcer: Number(product.basePriceEcer || 0),
     unitContent: product.unitContent,
-    salePrice: product.salePrice
+    salePrice: product.salePrice,
+    salePriceEcer: Number(product.salePriceEcer || 0)
   });
 }
 
@@ -1734,8 +1740,10 @@ function mapPriceHistory(row) {
     productId: row.product_id,
     product: row.product,
     basePrice: Number(row.base_price || 0),
+    basePriceEcer: Number(row.base_price_ecer || 0),
     costPrice: Number(row.cost_price || 0),
     salePrice: Number(row.sale_price || 0),
+    salePriceEcer: Number(row.sale_price_ecer || 0),
     source: "barang",
     createdAt: row.recorded_at
   };

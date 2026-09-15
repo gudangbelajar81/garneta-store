@@ -117,6 +117,7 @@ CREATE TABLE price_history (
   product_id BIGINT UNSIGNED NOT NULL,
   purchase_id BIGINT UNSIGNED NULL,
   base_price DECIMAL(14,2) NOT NULL,
+  base_price_ecer DECIMAL(14,2) NULL,
   unit_content DECIMAL(14,2) NOT NULL DEFAULT 1,
   cost_price DECIMAL(14,2) GENERATED ALWAYS AS (
     CASE
@@ -125,6 +126,7 @@ CREATE TABLE price_history (
     END
   ) STORED,
   sale_price DECIMAL(14,2) NULL,
+  sale_price_ecer DECIMAL(14,2) NULL,
   recorded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_price_history_product
     FOREIGN KEY (product_id) REFERENCES products(id)

@@ -109,6 +109,35 @@ async function migrate() {
       }
     } catch (e) {}
 
+    // [INTEL HARGA] price_history.base_price_ecer — harga dasar ecer per baris riwayat.
+    // Tanpa kolom ini, banner Intel Harga tidak bisa menampilkan naik/turun harga ECER.
+    try {
+      const [columns] = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'price_history' AND COLUMN_NAME = 'base_price_ecer'
+      `, [database]);
+      if (columns.length === 0) {
+        await connection.query(`ALTER TABLE price_history ADD COLUMN base_price_ecer DECIMAL(14,2) NULL AFTER base_price`);
+        logger.info(`Migrasi: price_history.base_price_ecer ditambahkan`);
+      }
+    } catch (e) {}
+
+    // [INTEL HARGA] Backfill harga ecer untuk baris riwayat LAMA yang masih NULL.
+    // Diambil dari master produk karena baris lama belum pernah menyimpan angka ecer.
+    try {
+      const [result] = await connection.query(`
+        UPDATE price_history ph
+        JOIN products p ON p.id = ph.product_id
+        SET ph.base_price_ecer = p.base_price_ecer
+        WHERE ph.base_price_ecer IS NULL AND p.base_price_ecer > 0
+      `);
+      if (result.affectedRows > 0) {
+        logger.info(`Migrasi: ${result.affectedRows} baris price_history.base_price_ecer di-backfill dari master produk`);
+      }
+    } catch (e) {
+      logger.warn('Migrasi backfill base_price_ecer dilewati: ' + e.message);
+    }
+
     
     // Format existing data to Title Case
     try {
