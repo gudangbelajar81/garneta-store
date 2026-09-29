@@ -800,6 +800,8 @@ async function ensureIndexes() {
     await db.query("ALTER TABLE products ADD COLUMN aliases TEXT NULL AFTER name").catch(e => logger.warn("Schema aliases: " + e.message));
     // [INTEL HARGA] Pengaman kedua bila deploy melewati migrate.js
     await db.query("ALTER TABLE price_history ADD COLUMN base_price_ecer DECIMAL(14,2) NULL AFTER base_price").catch(e => logger.warn("Schema price_history.base_price_ecer: " + e.message));
+    // [GAJIAN REMINDER] Tanggal gajian per karyawan untuk notifikasi Super Admin
+    await db.query("ALTER TABLE employees ADD COLUMN pay_date TINYINT UNSIGNED NULL AFTER status").catch(e => logger.warn("Schema employees.pay_date: " + e.message));
 
     await db.query("CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)");
     await db.query("CREATE INDEX IF NOT EXISTS idx_products_category ON products(category)");
@@ -902,7 +904,7 @@ async function listRows(collection, req = null) {
 
   
     if (collection === "employees") {
-      const [rows] = await db.query("SELECT id, name, phone, join_date, salary_type, base_salary, status, created_at FROM employees ORDER BY id DESC");
+      const [rows] = await db.query("SELECT id, name, phone, join_date, salary_type, base_salary, status, pay_date, created_at FROM employees ORDER BY id DESC");
       return rows.map(mapEmployee);
     }
     if (collection === "cashAdvances") {
@@ -1148,9 +1150,9 @@ async function addRow(collection, item = {}, req = null) {
   
     if (collection === "employees") {
       const [result] = await db.query(`
-        INSERT INTO employees (name, phone, join_date, salary_type, base_salary, status)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `, [item.name, item.phone || null, item.joinDate, item.salaryType, item.baseSalary, item.status || 'Aktif']);
+        INSERT INTO employees (name, phone, join_date, salary_type, base_salary, status, pay_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [item.name, item.phone || null, item.joinDate, item.salaryType, item.baseSalary, item.status || 'Aktif', item.payDate || null]);
       await recordAudit(`Tambah karyawan ${item.name}`);
       return findRow("employees", result.insertId);
     }
@@ -1316,8 +1318,8 @@ async function updateRow(collection, id, item = {}, req = null) {
   
     if (collection === "employees") {
       await db.query(`
-        UPDATE employees SET name=?, phone=?, join_date=?, salary_type=?, base_salary=?, status=? WHERE id=?
-      `, [item.name, item.phone || null, item.joinDate, item.salaryType, item.baseSalary, item.status || 'Aktif', id]);
+        UPDATE employees SET name=?, phone=?, join_date=?, salary_type=?, base_salary=?, status=?, pay_date=? WHERE id=?
+      `, [item.name, item.phone || null, item.joinDate, item.salaryType, item.baseSalary, item.status || 'Aktif', item.payDate || null, id]);
       await recordAudit(`Update karyawan ${item.name}`);
       return findRow("employees", id);
     }
@@ -1683,6 +1685,7 @@ function mapEmployee(row) {
     salaryType: row.salary_type,
     baseSalary: Number(row.base_salary || 0),
     status: row.status,
+    payDate: row.pay_date,
     createdAt: row.created_at
   };
 }

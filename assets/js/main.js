@@ -440,6 +440,9 @@ function gaji() {
                   ${input("baseSalary", "Gaji Pokok", true, "text", "")}
                   ${select("status", "Status", ["Aktif", "Nonaktif", "Cuti"], emp.status || 'Aktif')}
                 </div>
+                <div style="display:grid; grid-template-columns: 1fr; gap:8px;">
+                  <label style="position:relative">Tgl Gajian (1-31)<input name="payDate" type="number" min="1" max="31" placeholder="Contoh: 25" value="${emp.payDate || ''}"></label>
+                </div>
                 <div class="form-actions" style="margin-top:4px; display:flex; gap:8px;">
                   <button type="submit" class="btn primary" style="padding:8px 12px; font-size:0.85rem; flex:1;">Update</button>
                   <button type="button" class="btn danger" style="padding:8px 12px; font-size:0.85rem;" onclick="hapusKaryawan('${emp.id}')">Hapus</button>
@@ -799,7 +802,8 @@ function bindGajiEvents() {
         joinDate: form.elements.joinDate.value,
         salaryType: form.elements.salaryType.value,
         baseSalary: plainNumber(form.elements.baseSalary.value),
-        status: form.elements.status.value
+        status: form.elements.status.value,
+        payDate: form.elements.payDate.value ? parseInt(form.elements.payDate.value) : null
       };
       const id = form.elements.id.value;
       try {

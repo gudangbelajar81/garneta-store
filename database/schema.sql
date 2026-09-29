@@ -226,6 +226,7 @@ CREATE TABLE employees (
   salary_type ENUM('Bulanan', 'Harian') NOT NULL DEFAULT 'Bulanan',
   base_salary DECIMAL(14,2) NOT NULL DEFAULT 0,
   status ENUM('Aktif', 'Nonaktif') NOT NULL DEFAULT 'Aktif',
+  pay_date TINYINT UNSIGNED NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -286,6 +287,7 @@ CREATE TABLE employees (
   salary_type ENUM('Bulanan', 'Harian') NOT NULL DEFAULT 'Bulanan',
   base_salary DECIMAL(14,2) NOT NULL DEFAULT 0,
   status ENUM('Aktif', 'Nonaktif') NOT NULL DEFAULT 'Aktif',
+  pay_date TINYINT UNSIGNED NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
