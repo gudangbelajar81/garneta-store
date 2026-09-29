@@ -440,9 +440,6 @@ function gaji() {
                   ${input("baseSalary", "Gaji Pokok", true, "text", "")}
                   ${select("status", "Status", ["Aktif", "Nonaktif", "Cuti"], emp.status || 'Aktif')}
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr; gap:8px;">
-                  <label style="position:relative">Tgl Gajian (1-31)<input name="payDate" type="number" min="1" max="31" placeholder="Contoh: 25" value="${emp.payDate || ''}"></label>
-                </div>
                 <div class="form-actions" style="margin-top:4px; display:flex; gap:8px;">
                   <button type="submit" class="btn primary" style="padding:8px 12px; font-size:0.85rem; flex:1;">Update</button>
                   <button type="button" class="btn danger" style="padding:8px 12px; font-size:0.85rem;" onclick="hapusKaryawan('${emp.id}')">Hapus</button>
@@ -691,7 +688,7 @@ window.editEmployee = function(id) {
   if (!id) {
      const name = prompt("Masukkan Nama Karyawan Baru:");
      if (name) {
-        gas("add", { collection: "employees", id: null, item: { name: name, phone: "", joinDate: today(), salaryType: "Harian", baseSalary: 0, status: "Aktif", payDate: "" }})
+        gas("add", { collection: "employees", id: null, item: { name: name, phone: "", joinDate: today(), salaryType: "Harian", baseSalary: 0, status: "Aktif" }})
         .then(() => { alert("Berhasil ditambahkan. Silakan klik Kelola untuk melengkapi profil."); load(); })
         .catch(e => alert(e.message));
      }
@@ -802,8 +799,7 @@ function bindGajiEvents() {
         joinDate: form.elements.joinDate.value,
         salaryType: form.elements.salaryType.value,
         baseSalary: plainNumber(form.elements.baseSalary.value),
-        status: form.elements.status.value,
-        payDate: form.elements.payDate.value ? parseInt(form.elements.payDate.value) : null
+        status: form.elements.status.value
       };
       const id = form.elements.id.value;
       try {
@@ -1255,8 +1251,9 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
                let currentYear = todayT.getFullYear();
                
                (state.data.employees || []).forEach(e => {
-                  if (e.status !== 'Aktif' || !e.payDate) return;
-                  let payD = parseInt(e.payDate);
+                  if (e.status !== 'Aktif' || !e.joinDate) return;
+                  // Tanggal gajian otomatis diambil dari tanggal masuk (joinDate), tidak perlu input manual
+                  let payD = new Date(e.joinDate).getDate();
                   if (isNaN(payD) || payD < 1 || payD > 31) return;
                   
                   // Calculate next payday
