@@ -8089,8 +8089,14 @@ function doPost(e) {
       if (gateway) gateway.classList.add("hidden");
       const appWrap = document.querySelector(".app");
       if (appWrap) appWrap.classList.remove("hidden");
-      renderShell();
-      render();
+      // [FIX] Tarik ulang SELURUH data (karyawan, barang, dll) dari server sebelum
+      // menggambar halaman. Tanpa ini, halaman pertama kali dirender dengan state.data
+      // kosong bawaan sehingga fitur seperti Kasbon terlihat kosong sampai di-refresh manual.
+      load().catch((err) => {
+        console.error("Gagal memuat data setelah login:", err);
+        renderShell();
+        render();
+      });
     }
 
     applyTheme();
