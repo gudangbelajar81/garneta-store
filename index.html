@@ -698,7 +698,7 @@
           if (banner) banner.style.display = 'flex';
         }
       });
-      navigator.serviceWorker.register('/sw.js').then(reg => {
+      navigator.serviceWorker.register('/service-worker.js').then(reg => {
         reg.update();
         setInterval(() => reg.update(), 30000);
         reg.addEventListener('updatefound', () => {
@@ -1051,27 +1051,7 @@
     })();
   </script>
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
-          reg.update();
-          reg.onupdatefound = () => {
-            const installingWorker = reg.installing;
-            if (installingWorker) {
-              installingWorker.onstatechange = () => {
-                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  window.location.reload();
-                }
-              };
-            }
-          };
-        }).catch(err => console.error('SW reg failed', err));
-      });
-    }
-  </script>
 </body>
-
 </html>
 
 
