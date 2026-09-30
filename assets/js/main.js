@@ -87,6 +87,29 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
     const rupiah = (value) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(String(value || 0).replace(/[^0-9-]/g, "")));
     const today = () => new Date().toISOString().slice(0, 10);
     const el = (id) => document.getElementById(id);
+    const formatTglIndo = (val) => {
+      if (!val) return "-";
+      const clean = String(val).trim().split(/[T ]/)[0];
+      const parts = clean.split(/[-/]/);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      if (parts.length === 3) {
+        let y, m, d;
+        if (parts[0].length === 4) {
+          y = parts[0];
+          m = parseInt(parts[1], 10) - 1;
+          d = parts[2].padStart(2, '0');
+        } else if (parts[2].length === 4) {
+          d = parts[0].padStart(2, '0');
+          m = parseInt(parts[1], 10) - 1;
+          y = parts[2];
+        }
+        if (y && m >= 0 && m < 12) {
+          return `${d} ${months[m]} ${y}`;
+        }
+      }
+      return clean;
+    };
+    window.formatTglIndo = formatTglIndo;
     const API_URL = (window.location.port === "8000" || window.location.port === "5500") ? "http://localhost:3000/api" : "/api";
 
     async function gas(action, payload = {}, silentAuthError = false) {
@@ -474,7 +497,7 @@ function gaji() {
                 <tbody>
                   ${unpaidBons.length === 0 ? '<tr><td colspan="4" class="text-center muted" style="padding:4px 8px;">Tidak ada utang kasbon</td></tr>' : ''}
                   ${unpaidBons.map(c => `<tr>
-                    <td style="padding:4px 8px;">${c.date ? escapeHtml(c.date.slice(0,10)) : ''}</td>
+                    <td style="padding:4px 8px;">${c.date ? formatTglIndo(c.date) : '-'}</td>
                     <td style="padding:4px 8px; color:#f43f5e;">${rupiah(c.amount)}</td>
                     <td style="padding:4px 8px;">${c.notes || '-'}</td>
                     <td style="padding:4px 8px; text-align:right;">
@@ -580,6 +603,9 @@ function gaji() {
                   ${payrolls().filter(p => p.employeeId === emp.id).sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).map(p => {
                     const dateObj = new Date(p.createdAt || new Date());
                     const tglStr = dateObj.toLocaleDateString("id-ID", {month:"short", year:"numeric"});
+                    const periodeStr = (!p.periodStart && !p.periodEnd)
+                      ? '-'
+                      : `<span style="font-weight:600; color:var(--text, #e0f8f5);">${formatTglIndo(p.periodStart)}</span> <span style="color:var(--soft-text, #6b8a9e); font-size:0.7rem; margin:0 2px;">s/d</span> <span style="font-weight:600; color:var(--text, #e0f8f5);">${formatTglIndo(p.periodEnd)}</span>`;
                     return `
                       <tr>
                         <td><a href="#" onclick="viewRiwayatGaji('${p.id}'); return false;" style="color:var(--primary); text-decoration:underline;">${tglStr}</a></td>
@@ -592,7 +618,7 @@ function gaji() {
                               <button type="button" class="btn danger" onclick="hapusRiwayatGaji('${p.id}')" title="Hapus Riwayat" style="padding:2px 4px; height:22px; min-height:20px; width:22px; font-size:0.7rem; display:inline-flex;">🗑️</button>
                            </div>
                         </td>
-                        <td style="font-size:0.65rem; text-align:right;">${p.periodStart} s/d ${p.periodEnd}</td>
+                        <td style="font-size:0.75rem; text-align:right; white-space:nowrap;">${periodeStr}</td>
                       </tr>
                     `;
                   }).join('')}
@@ -626,7 +652,7 @@ window.printGaji = function(payrollId, mode) {
    STRUK GAJI KARYAWAN
 ==============================
 Nama    : ${emp.name}
-Periode : ${p.periodStart} s/d ${p.periodEnd}
+Periode : ${(!p.periodStart && !p.periodEnd) ? '-' : `${formatTglIndo(p.periodStart)} s/d ${formatTglIndo(p.periodEnd)}`}
 ------------------------------
 TOTAL GAJI      : ${rupiah(p.basicSalaryCalculated)}
 Potong Kasbon   : ${p.totalDeductionBon > 0 ? rupiah(p.totalDeductionBon) : 'Rp 0'}
@@ -728,7 +754,7 @@ window.viewRiwayatGaji = function(payrollId) {
    STRUK GAJI KARYAWAN
 ==============================
 Nama    : ${emp.name}
-Periode : ${p.periodStart} s/d ${p.periodEnd}
+Periode : ${(!p.periodStart && !p.periodEnd) ? '-' : `${formatTglIndo(p.periodStart)} s/d ${formatTglIndo(p.periodEnd)}`}
 ------------------------------
 TOTAL GAJI      : ${rupiah(p.basicSalaryCalculated)}
 Potong Kasbon   : ${p.totalDeductionBon > 0 ? rupiah(p.totalDeductionBon) : 'Rp 0'}
@@ -937,7 +963,7 @@ function bindGajiEvents() {
       const txtGajiPokok = (currentSalaryType === 'Harian') ? '(Harian)' : '(Bulanan)';
       
       let rincianKasbon = unpaidBons.length > 0 
-        ? unpaidBons.map((b, i) => `${i+1}. ${b.date ? b.date.split('T')[0] : ''} ${b.notes ? '(' + b.notes + ')' : ''} : ${rupiah(b.amount)}`).join('\n')
+        ? unpaidBons.map((b, i) => `${i+1}. ${b.date ? formatTglIndo(b.date) : ''} ${b.notes ? '(' + b.notes + ')' : ''} : ${rupiah(b.amount)}`).join('\n')
         : "- Tidak ada kasbon";
 
       const tglMasuk = pStart ? pStart.value : (emp.joinDate ? emp.joinDate.split('T')[0] : '');
@@ -948,7 +974,7 @@ STRUK RINCIAN GAJI & BON
 ${localStorage.getItem('storeName') || 'GARNETA STORE'}
 ================================
 NAMA     : *${emp.name.toUpperCase()}*
-PERIODE  : ${tglMasuk} s/d ${tglAkhir}
+PERIODE  : ${formatTglIndo(tglMasuk)} s/d ${formatTglIndo(tglAkhir)}
 
 --------------------------------
 [ RINCIAN KASBON BELUM LUNAS ]

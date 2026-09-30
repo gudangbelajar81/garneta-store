@@ -1681,7 +1681,7 @@ function mapEmployee(row) {
     id: row.id,
     name: row.name,
     phone: row.phone,
-    joinDate: row.join_date,
+    joinDate: formatDate(row.join_date),
     salaryType: row.salary_type,
     baseSalary: Number(row.base_salary || 0),
     status: row.status,
@@ -1695,7 +1695,7 @@ function mapCashAdvance(row) {
     id: row.id,
     employeeId: row.employee_id,
     employee: row.employee_name,
-    date: row.date,
+    date: formatDate(row.date),
     amount: Number(row.amount || 0),
     notes: row.notes,
     status: row.status,
@@ -1708,8 +1708,8 @@ function mapPayroll(row) {
     id: row.id,
     employeeId: row.employee_id,
     employee: row.employee_name,
-    periodStart: row.period_start,
-    periodEnd: row.period_end,
+    periodStart: formatDate(row.period_start),
+    periodEnd: formatDate(row.period_end),
     attendanceDays: Number(row.attendance_days || 0),
     basicSalaryCalculated: Number(row.basic_salary_calculated || 0),
     totalDeductionBon: Number(row.total_deduction_bon || 0),
@@ -2569,7 +2569,13 @@ async function hashPassword(password) {
 
 function formatDate(value) {
   if (!value) return "";
-  return new Date(value).toISOString().slice(0, 10);
+  if (value instanceof Date) {
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return String(value).split('T')[0];
 }
 
 ensureIndexes().catch(e => logger.warn("Index setup error:", e.message));
