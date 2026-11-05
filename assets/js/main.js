@@ -8358,48 +8358,64 @@ if (el("webauthn-login")) {
   el("webauthn-login").onclick = async () => {
     const btn = el("webauthn-login");
     const oldText = btn.innerHTML;
-    btn.innerHTML = '<span class="icon">⏳</span> Memproses...';
+    btn.innerHTML = '<span class="icon">⏳</span> Menunggu Sidik Jari / PIN...';
     try {
-      const { startAuthentication } = window.SimpleWebAuthnBrowser || {};
+      if (!window.isSecureContext) {
+        throw new Error("Fitur Biometrik memerlukan koneksi aman (HTTPS).");
+      }
+      const { startAuthentication, browserSupportsWebAuthn } = window.SimpleWebAuthnBrowser || {};
+      if (browserSupportsWebAuthn && !browserSupportsWebAuthn()) {
+        throw new Error("Perangkat atau browser ini tidak mendukung Sidik Jari / WebAuthn.");
+      }
       if (!startAuthentication) throw new Error("Library WebAuthn belum siap.");
-      const name = el("login-name").value.trim() || 'Super Admin';
+      
+      const name = el("login-name") ? el("login-name").value.trim() : '';
       const options = await gas("generateAuthOptions", { name });
-      const authResp = await startAuthentication(options);
+      const authResp = await startAuthentication({ optionsJSON: options });
       const verification = await gas("verifyAuth", authResp);
       if (verification.token) {
         localStorage.setItem("jwt_token", verification.token);
         loginAs(verification);
+        if (el("login-modal")) el("login-modal").classList.add("hidden");
+        showToast("Login Berhasil via Sidik Jari / Face ID!", "success");
       }
     } catch (error) {
       console.error(error);
-      showToast("Gagal login dengan Sidik Jari: " + error.message, "danger");
+      if (error.name === 'NotAllowedError') {
+        showToast("Verifikasi sidik jari dibatalkan.", "warning");
+      } else {
+        showToast("Gagal login dengan Sidik Jari: " + error.message, "danger");
+      }
     } finally {
       btn.innerHTML = oldText;
     }
   };
 }
 
-
     if (el("webauthn-register")) {
       el("webauthn-register").onclick = async () => {
         try {
-          // 1. Get options from server
+          if (!window.isSecureContext) {
+            throw new Error("Fitur Biometrik memerlukan koneksi aman (HTTPS).");
+          }
+          const { startRegistration } = window.SimpleWebAuthnBrowser || {};
+          if (!startRegistration) throw new Error("Library WebAuthn belum siap.");
           const options = await gas("generateRegOptions", {});
-          // 2. Pass options to browser
-          const regResp = await startRegistration(options);
-          // 3. Verify with server
+          const regResp = await startRegistration({ optionsJSON: options });
           const verification = await gas("verifyReg", regResp);
-          alert("Sukses! Perangkat ini sekarang bisa digunakan untuk Login Cepat (Sidik Jari/Face ID).");
-          el("login-modal").classList.add("hidden");
-          el("webauthn-register-panel").classList.add("hidden");
+          alert("Sukses! Perangkat ini sekarang bisa digunakan untuk Login Cepat (Sidik Jari / Face ID / PIN).");
+          if (el("login-modal")) el("login-modal").classList.add("hidden");
+          if (el("webauthn-register-panel")) el("webauthn-register-panel").classList.add("hidden");
         } catch (error) {
           console.error(error);
-          alert("Gagal mendaftarkan Sidik Jari: " + error.message);
+          if (error.name === 'NotAllowedError') {
+            showToast("Pendaftaran dibatalkan.", "warning");
+          } else {
+            alert("Gagal mendaftarkan Sidik Jari: " + error.message);
+          }
         }
       };
     }
-
-  
 
 // --- SECURITY / RESET UI ---
 window.showResetModal = function() {
@@ -8485,20 +8501,30 @@ window.generateRecoveryKey = async function() {
 
 window.registerPasskey = async function() {
   try {
-    const { startRegistration } = window.SimpleWebAuthnBrowser || {};
+    if (!window.isSecureContext) {
+      return alert("Fitur Sidik Jari / Biometrik hanya dapat berfungsi pada koneksi HTTPS yang aman atau localhost.");
+    }
+    const { startRegistration, browserSupportsWebAuthn } = window.SimpleWebAuthnBrowser || {};
+    if (browserSupportsWebAuthn && !browserSupportsWebAuthn()) {
+      return alert("Perangkat atau browser ini tidak mendukung otentikasi biometrik WebAuthn.");
+    }
     if (!startRegistration) throw new Error("Library WebAuthn tidak termuat.");
     
-    showToast("Meminta otorisasi sidik jari...", "info");
+    showToast("Menyiapkan pendaftaran sidik jari / Face ID...", "info");
     const options = await gas("generateRegOptions", {});
-    const regResp = await startRegistration(options);
+    const regResp = await startRegistration({ optionsJSON: options });
     const verification = await gas("verifyReg", regResp);
     
-    alert("Sukses! Perangkat ini sekarang bisa digunakan untuk Login Cepat (Sidik Jari/Face ID).");
+    alert("Berhasil! Sidik Jari / Face ID / PIN perangkat ini sudah aktif dan terhubung.\n\nSekarang Anda bisa login instan dengan menekan tombol 'Login Sidik Jari / Face ID' tanpa perlu mengetik password.");
   } catch (e) {
-    showToast("Gagal mendaftarkan Sidik Jari: " + e.message, "danger");
+    console.error(e);
+    if (e.name === 'NotAllowedError') {
+      showToast("Pendaftaran dibatalkan atau waktu habis.", "warning");
+    } else {
+      showToast("Gagal mendaftarkan Sidik Jari: " + e.message, "danger");
+    }
   }
 };
-
 
 window.printReceiptPDF = function() {
   const printWindow = window.open('', '_blank');

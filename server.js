@@ -803,6 +803,33 @@ async function ensureIndexes() {
     // [GAJIAN REMINDER] Tanggal gajian per karyawan untuk notifikasi Super Admin
     await db.query("ALTER TABLE employees ADD COLUMN pay_date TINYINT UNSIGNED NULL AFTER status").catch(e => logger.warn("Schema employees.pay_date: " + e.message));
 
+    // [BIOMETRIC / WEBAUTHN] Tabel passkeys & magic_links auto-create
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS passkeys (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id BIGINT UNSIGNED NOT NULL,
+        public_key TEXT NOT NULL,
+        webauthn_user_id VARCHAR(255) NOT NULL,
+        counter INT NOT NULL DEFAULT 0,
+        device_type VARCHAR(255),
+        backed_up BOOLEAN NOT NULL DEFAULT false,
+        transports VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB
+    `).catch(e => logger.warn("Schema passkeys: " + e.message));
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS magic_links (
+        token VARCHAR(255) PRIMARY KEY,
+        user_id BIGINT UNSIGNED NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        used BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB
+    `).catch(e => logger.warn("Schema magic_links: " + e.message));
+
     await db.query("CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)");
     await db.query("CREATE INDEX IF NOT EXISTS idx_products_category ON products(category)");
     await db.query("CREATE INDEX IF NOT EXISTS idx_purchases_product ON purchases(purchased_at)");
@@ -2637,50 +2664,49 @@ process.on("unhandledRejection", (reason) => {
 // --- WEBAUTHN & MAGIC LINK LOGIC ---
 
 // In-memory cache for WebAuthn challenges
-const currentChallenges = {}; // userId -> challenge
+const currentChallenges = {}; // userId or challenge -> data
 
 const rpName = "GARNETA STORE";
-// Fallbacks are now handled dynamically inside the functions
-// const rpID = process.env.RP_ID || "alveza-backend-production.up.railway.app";
-// const origin = process.env.ORIGIN || "https://alveza-backend-production.up.railway.app";
 
 function getWebAuthnConfig(req) {
-  let dynamicRpID = process.env.RP_ID || "alveza-backend-production.up.railway.app";
-  let dynamicOrigin = process.env.ORIGIN || "https://alveza-backend-production.up.railway.app";
+  let dynamicRpID = process.env.RP_ID || "localhost";
+  let dynamicOrigin = process.env.ORIGIN || "http://localhost:3000";
 
-  if (req && req.headers && req.headers.host) {
-    // Extract hostname without port for rpID
-    const hostParts = req.headers.host.split(':');
-    dynamicRpID = hostParts[0];
-    
-    // Construct origin
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-    dynamicOrigin = `${protocol}://${req.headers.host}`;
-  }
-  
+  // Prioritaskan Origin header jika ada (URL resmi dari browser client)
   if (req && req.headers && req.headers.origin) {
-    dynamicOrigin = req.headers.origin;
+    try {
+      const originUrl = new URL(req.headers.origin);
+      dynamicOrigin = originUrl.origin;
+      dynamicRpID = originUrl.hostname;
+    } catch (_) {}
+  } else if (req && req.headers) {
+    const rawHost = req.headers['x-forwarded-host'] || req.headers.host || '';
+    if (rawHost) {
+      dynamicRpID = rawHost.split(':')[0];
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+      dynamicOrigin = `${protocol}://${rawHost}`;
+    }
   }
-  
+
   return { dynamicRpID, dynamicOrigin };
 }
 
 async function generateRegistrationOptionsWebAuthn(req) {
-  if (!req.user) throw new Error("Harus login terlebih dahulu untuk mendaftar sidik jari.");
-  
+  if (!req.user) throw new Error("Harus login terlebih dahulu untuk mendaftar sidik jari / Face ID.");
+
   const { dynamicRpID } = getWebAuthnConfig(req);
-  const [passkeys] = await db.query('SELECT public_key, webauthn_user_id FROM passkeys WHERE user_id = ?', [req.user.id]);
-  
+  const [passkeys] = await db.query('SELECT id, transports FROM passkeys WHERE user_id = ?', [req.user.id]);
+
   const options = await simplewebauthn.generateRegistrationOptions({
     rpName,
     rpID: dynamicRpID,
-    userID: req.user.id.toString(),
+    userID: new TextEncoder().encode(req.user.id.toString()),
     userName: req.user.name,
     attestationType: "none",
     excludeCredentials: passkeys.map(pk => ({
-      id: pk.public_key,
+      id: pk.id,
       type: "public-key",
-      transports: ["internal"],
+      transports: pk.transports ? pk.transports.split(',') : ["internal"],
     })),
     authenticatorSelection: {
       residentKey: "preferred",
@@ -2695,10 +2721,10 @@ async function generateRegistrationOptionsWebAuthn(req) {
 
 async function verifyRegistrationWebAuthn(payload, req) {
   if (!req.user) throw new Error("Harus login terlebih dahulu.");
-  
+
   const expectedChallenge = currentChallenges[req.user.id];
-  if (!expectedChallenge) throw new Error("Challenge tidak ditemukan atau sudah kadaluarsa.");
-  
+  if (!expectedChallenge) throw new Error("Challenge pendaftaran kadaluarsa. Silakan coba lagi.");
+
   const { dynamicRpID, dynamicOrigin } = getWebAuthnConfig(req);
   let verification;
   try {
@@ -2707,48 +2733,75 @@ async function verifyRegistrationWebAuthn(payload, req) {
       expectedChallenge,
       expectedOrigin: dynamicOrigin,
       expectedRPID: dynamicRpID,
+      requireUserVerification: false,
     });
   } catch (error) {
     throw new Error("Verifikasi sidik jari gagal: " + error.message);
   }
 
   if (verification.verified && verification.registrationInfo) {
-    const { credentialPublicKey, credentialID, counter, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
-    
-    // Save to database
+    const regInfo = verification.registrationInfo;
+    const cred = regInfo.credential || {};
+    const credentialID = cred.id || regInfo.credentialID;
+    const credentialPublicKey = cred.publicKey || regInfo.credentialPublicKey;
+    const counter = cred.counter !== undefined ? cred.counter : (regInfo.counter || 0);
+    const credentialDeviceType = regInfo.credentialDeviceType || "singleDevice";
+    const credentialBackedUp = regInfo.credentialBackedUp || false;
+    const transports = cred.transports ? cred.transports.join(',') : "internal";
+
+    const idStr = typeof credentialID === 'string' ? credentialID : Buffer.from(credentialID).toString('base64url');
+    const pubKeyStr = typeof credentialPublicKey === 'string' ? credentialPublicKey : Buffer.from(credentialPublicKey).toString('base64url');
+
+    // Simpan ke database
     await db.query(`
-      INSERT INTO passkeys (id, user_id, public_key, webauthn_user_id, counter, device_type, backed_up)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO passkeys (id, user_id, public_key, webauthn_user_id, counter, device_type, backed_up, transports)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE public_key = VALUES(public_key), counter = VALUES(counter), transports = VALUES(transports)
     `, [
-      Buffer.from(credentialID).toString('base64url'),
+      idStr,
       req.user.id,
-      Buffer.from(credentialPublicKey).toString('base64url'),
+      pubKeyStr,
       req.user.id.toString(),
       counter,
       credentialDeviceType,
-      credentialBackedUp
+      credentialBackedUp,
+      transports
     ]);
 
     delete currentChallenges[req.user.id];
-    return { ok: true, message: "Sidik jari berhasil didaftarkan." };
+    return { ok: true, message: "Sidik Jari / PIN / Face ID berhasil didaftarkan pada perangkat ini." };
   }
-  throw new Error("Verifikasi sidik jari gagal.");
+  throw new Error("Verifikasi pendaftaran biometrik gagal.");
 }
 
 async function generateAuthenticationOptionsWebAuthn(payload, req) {
-  // If payload has a username, find their passkeys. Otherwise discoverable login.
   let allowCredentials = [];
   let expectedUserId = null;
-  
-  if (payload.name) {
-    const [users] = await db.query('SELECT id FROM users WHERE name = ? LIMIT 1', [payload.name]);
+
+  const searchName = payload && payload.name ? payload.name.trim() : null;
+  if (searchName) {
+    const [users] = await db.query('SELECT id FROM users WHERE name = ? LIMIT 1', [searchName]);
     if (users.length > 0) {
       expectedUserId = users[0].id;
-      const [passkeys] = await db.query('SELECT id FROM passkeys WHERE user_id = ?', [expectedUserId]);
+      const [passkeys] = await db.query('SELECT id, transports FROM passkeys WHERE user_id = ?', [expectedUserId]);
       allowCredentials = passkeys.map(pk => ({
         id: pk.id,
         type: "public-key",
-        transports: ["internal", "usb", "ble", "nfc"],
+        transports: pk.transports ? pk.transports.split(',') : ["internal", "usb", "ble", "nfc"],
+      }));
+    }
+  }
+
+  // Jika nama tidak diisi atau tidak ketemu, default-kan ke passkey Super Admin yang ada di sistem
+  if (allowCredentials.length === 0) {
+    const [superAdmins] = await db.query('SELECT id FROM users WHERE role = "Super Admin" LIMIT 1');
+    if (superAdmins.length > 0) {
+      expectedUserId = superAdmins[0].id;
+      const [passkeys] = await db.query('SELECT id, transports FROM passkeys WHERE user_id = ?', [expectedUserId]);
+      allowCredentials = passkeys.map(pk => ({
+        id: pk.id,
+        type: "public-key",
+        transports: pk.transports ? pk.transports.split(',') : ["internal", "usb", "ble", "nfc"],
       }));
     }
   }
@@ -2756,12 +2809,11 @@ async function generateAuthenticationOptionsWebAuthn(payload, req) {
   const { dynamicRpID } = getWebAuthnConfig(req);
   const options = await simplewebauthn.generateAuthenticationOptions({
     rpID: dynamicRpID,
-    allowCredentials,
+    allowCredentials: allowCredentials.length > 0 ? allowCredentials : undefined,
     userVerification: "preferred",
   });
 
-  // For authentication, we store challenge globally using options.challenge as key
-  currentChallenges[options.challenge] = expectedUserId; 
+  currentChallenges[options.challenge] = expectedUserId;
   return options;
 }
 
@@ -2777,12 +2829,9 @@ async function verifyAuthenticationWebAuthn(payload, req) {
     user = users[0];
   }
 
-  if (!dbPasskey || !user) throw new Error("Sidik jari tidak dikenali di sistem.");
+  if (!dbPasskey || !user) throw new Error("Sidik Jari / Face ID tidak dikenali. Silakan daftarkan ulang perangkat ini dari menu Pengaturan.");
 
-  // We need to find the expected challenge. The client sends it back in clientDataJSON.
-  // Actually, we should store challenges. For simplicity in this implementation, 
-  // we would verify the challenge from memory.
-  // We need to parse clientDataJSON to get the challenge to look it up.
+  // Parse clientDataJSON untuk mendapatkan challenge yang dikirimkan balik oleh browser
   const clientDataJSON = Buffer.from(body.response.clientDataJSON, 'base64url').toString('utf8');
   const clientData = JSON.parse(clientDataJSON);
   const expectedChallenge = clientData.challenge;
@@ -2795,26 +2844,27 @@ async function verifyAuthenticationWebAuthn(payload, req) {
       expectedChallenge,
       expectedOrigin: dynamicOrigin,
       expectedRPID: dynamicRpID,
-      authenticator: {
-        credentialID: Buffer.from(dbPasskey.id, 'base64url'),
-        credentialPublicKey: Buffer.from(dbPasskey.public_key, 'base64url'),
+      credential: {
+        id: dbPasskey.id,
+        publicKey: Buffer.from(dbPasskey.public_key, 'base64url'),
         counter: dbPasskey.counter,
         transports: dbPasskey.transports ? dbPasskey.transports.split(',') : ["internal"]
       },
+      requireUserVerification: false,
     });
   } catch (error) {
-    throw new Error("Autentikasi gagal: " + error.message);
+    throw new Error("Autentikasi sidik jari gagal: " + error.message);
   }
 
   if (verification.verified) {
-    // Update counter
     await db.query('UPDATE passkeys SET counter = ? WHERE id = ?', [verification.authenticationInfo.newCounter, dbPasskey.id]);
-    // [SECURITY] JWT dengan expiry
+    delete currentChallenges[expectedChallenge];
+
     const token = jwt.sign({ id: user.id, name: user.name, role: displayRole(user.role) }, JWT_SECRET, { expiresIn: JWT_EXPIRY });
     return { token, name: user.name, role: displayRole(user.role), isSuperAdmin: user.role === "Super Admin" };
   }
-  
-  throw new Error("Verifikasi gagal.");
+
+  throw new Error("Verifikasi biometrik gagal.");
 }
 
 async function requestMagicLink(phoneOrEmail) {
