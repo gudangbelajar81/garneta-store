@@ -229,9 +229,16 @@ window.openSmartNotepad = function(modeContext = 'auto', source = 'gallery') {
         <p class="muted">Satu mesin, dua mode: ?? Minimarket (barang kelontong) &amp; ?? Komoditas/Kentang (timbangan karung). AI membedah angka malas, mengkoreksi salah hitung, lalu hasilnya bisa diedit sebelum disimpan.</p>
 
         ${simulasiNotice}
-        <div id="sn-step-1" style="text-align:center; padding: 30px; border: 2px dashed var(--line); border-radius:12px; margin-top:16px;">
+<div id="sn-step-1" style="text-align:center; padding: 26px 20px; border: 2px dashed var(--line); border-radius:12px; margin-top:16px;">
           <input type="file" id="sn-file-input" accept="image/*" ${source === 'camera' ? 'capture="environment"' : ''} style="display:none;" onchange="window.handleSmartNotepadFile(event)">
-          <button class="btn primary" onclick="document.getElementById('sn-file-input').click()" style="font-size:1.15rem; padding: 12px 24px;">${source === 'camera' ? '?? Ambil Foto' : '??? Pilih Gambar Nota'}</button>
+          <button class="btn primary" onclick="document.getElementById('sn-file-input').click()" style="font-size:1.15rem; padding: 12px 24px;">${source === 'camera' ? '📷 Ambil Foto' : '📁 Pilih Gambar Nota'}</button>
+          
+          <div style="margin-top:16px; border-top:1px dashed var(--line); padding-top:14px;">
+            <p class="muted" style="margin-bottom:8px; font-size:0.88rem;">Punya salinan teks dari Gemini Web / ChatGPT?</p>
+            <button class="btn soft" onclick="document.getElementById('smart-notepad-modal')?.remove(); window.openGeminiPasteModal();" style="border:1px solid var(--garneta-cyan); color:var(--garneta-cyan); padding:8px 18px; font-weight:bold; font-size:0.95rem; cursor:pointer;">
+              📋 Tempel Teks Hasil Gemini
+            </button>
+          </div>
         </div>
 
         <div id="sn-step-1b" class="hidden" style="margin-top:16px;">
@@ -450,50 +457,126 @@ function extractBalancedJson(text) {
 }
 
 function parseSmartNotepadJson(text) {
-  try {
-    const block = extractBalancedJson(text);
-    if (!block) return null;
-    let obj = JSON.parse(block);
-    // Bila array berisi objek item polos {name, qty, price} (format mock lama) -> bungkus jadi minimarket
-    if (Array.isArray(obj)) {
-      const first = obj[0];
-      if (first && first.items && typeof first === 'object') {
-        obj = obj[0]; // array berisi 1 objek lengkap
-      } else if (first && typeof first === 'object' && ('name' in first || 'qty' in first)) {
-        obj = {
-          type: 'minimarket',
-          supplier: 'Contoh Supplier',
-          date: new Date().toISOString().slice(0, 10),
-          items: obj.map((it) => ({
-            name: it.name || '',
-            qty: Number(it.qty) || 0,
-            unit: it.unit || 'pcs',
-            basePrice: Number(it.price ?? it.basePrice) || 0,
-            salePrice: Number(it.salePrice) || 0,
-            flag: it.flag || 'ok',
-            alasan: it.alasan || ''
-          }))
-        };
-      } else {
-        return null;
+  if (!text) return null;
+  const rawStr = String(text).trim();
+
+  // Helper coba parse langsung atau unwrap
+  const tryParse = (str) => {
+    try {
+      const clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
+      return JSON.parse(clean);
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // 1. Coba parse langsung
+  let obj = tryParse(rawStr);
+
+  // 2. Jika belum, coba extract balanced JSON
+  if (!obj) {
+    const block = extractBalancedJson(rawStr);
+    if (block) obj = tryParse(block);
+  }
+
+  // 3. Jika belum, coba perbaiki unclosed JSON (misal kena potong di tengah)
+  if (!obj) {
+    try {
+      const cleaned = rawStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const firstBrace = cleaned.indexOf('{');
+      if (firstBrace !== -1) {
+        let partial = cleaned.slice(firstBrace);
+        let openB = 0, openA = 0;
+        let inS = false;
+        for (let i = 0; i < partial.length; i++) {
+          const c = partial[i];
+          if (c === '"' && (i === 0 || partial[i-1] !== '\\')) inS = !inS;
+          if (!inS) {
+            if (c === '{') openB++;
+            else if (c === '}') openB = Math.max(0, openB - 1);
+            else if (c === '[') openA++;
+            else if (c === ']') openA = Math.max(0, openA - 1);
+          }
+        }
+        if (inS) partial += '"';
+        while (openA > 0) { partial += ']'; openA--; }
+        while (openB > 0) { partial += '}'; openB--; }
+        obj = tryParse(partial);
+      }
+    } catch (e) {}
+  }
+
+  // 4. Jika masih belum, fallback ekstraksi baris (Tabel Markdown atau Pipe)
+  if (!obj) {
+    const lines = rawStr.split('\n');
+    const items = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('---') || trimmed.startsWith('#')) continue;
+      // Format pipa: Name | Qty Satuan | Harga | Subtotal
+      if (trimmed.includes('|')) {
+        const parts = trimmed.split('|').map(p => p.trim()).filter(Boolean);
+        if (parts.length >= 2 && !/nama barang/i.test(parts[0])) {
+          const name = parts[0];
+          const qtyPart = parts[1] || '1';
+          const qtyMatch = qtyPart.match(/(\d+[\.,]?\d*)/);
+          const qty = qtyMatch ? parseFloat(qtyMatch[1].replace(',', '.')) : 1;
+          const unit = qtyPart.replace(/[0-9\.,]/g, '').trim() || 'pcs';
+          const pricePart = parts[2] ? parts[2].replace(/[^0-9]/g, '') : '0';
+          const basePrice = parseInt(pricePart, 10) || 0;
+          items.push({ name, qty, unit, basePrice, salePrice: 0, flag: 'ok', alasan: '' });
+        }
       }
     }
-    if (!obj || typeof obj !== 'object') return null;
-
-    // Auto-detect tipe bila type kosong/salah: kentang bila ada grades, minimarket bila ada items
-    let type = String(obj.type || '').trim().toLowerCase();
-    const hasGrades = Array.isArray(obj.grades) && obj.grades.length > 0;
-    const hasItems = Array.isArray(obj.items) && obj.items.length > 0;
-    if (type !== 'minimarket' && type !== 'kentang') {
-      if (hasGrades && !hasItems) type = 'kentang';
-      else if (hasItems && !hasGrades) type = 'minimarket';
-      else type = hasGrades ? 'kentang' : (hasItems ? 'minimarket' : 'minimarket');
-      obj.type = type;
+    if (items.length > 0) {
+      obj = {
+        type: 'minimarket',
+        supplier: 'CV. Pangan Sejahtera',
+        date: new Date().toISOString().slice(0, 10),
+        items
+      };
     }
-    return obj;
-  } catch(e) {
-    return null;
   }
+
+  if (!obj) return null;
+
+  // Normalisasi array atau object
+  if (Array.isArray(obj)) {
+    const first = obj[0];
+    if (first && first.items && typeof first === 'object') {
+      obj = obj[0];
+    } else if (first && typeof first === 'object' && ('name' in first || 'qty' in first)) {
+      obj = {
+        type: 'minimarket',
+        supplier: 'Contoh Supplier',
+        date: new Date().toISOString().slice(0, 10),
+        items: obj.map((it) => ({
+          name: it.name || '',
+          qty: Number(it.qty) || 0,
+          unit: it.unit || 'pcs',
+          basePrice: Number(it.price ?? it.basePrice) || 0,
+          salePrice: Number(it.salePrice) || 0,
+          flag: it.flag || 'ok',
+          alasan: it.alasan || ''
+        }))
+      };
+    } else {
+      return null;
+    }
+  }
+
+  if (!obj || typeof obj !== 'object') return null;
+
+  let type = String(obj.type || '').trim().toLowerCase();
+  const hasGrades = Array.isArray(obj.grades) && obj.grades.length > 0;
+  const hasItems = Array.isArray(obj.items) && obj.items.length > 0;
+  if (type !== 'minimarket' && type !== 'kentang') {
+    if (hasGrades && !hasItems) type = 'kentang';
+    else if (hasItems && !hasGrades) type = 'minimarket';
+    else type = hasGrades ? 'kentang' : (hasItems ? 'minimarket' : 'minimarket');
+    obj.type = type;
+  }
+  return obj;
 }
 
 // --- CRUD STATE (Notepad Result) ---

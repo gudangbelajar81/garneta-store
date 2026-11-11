@@ -211,8 +211,9 @@
       '</div>' +
       '<div style="display: flex; gap: 14px; align-items: center;">' +
         '<span style="cursor: pointer; font-size: 1.1rem; opacity: 0.8;" onclick="quickActionEditBarang(\'' + product.id + '\')" title="Edit">✏️</span>' +
+        '<span style="cursor: pointer; font-size: 1.1rem; opacity: 0.8;" onclick="quickActionDuplikatBarang(\'' + product.id + '\')" title="Duplikat">📄</span>' +
         '<span style="cursor: pointer; font-size: 1.1rem; opacity: 0.8;" onclick="quickActionLihatSupplier(\'' + product.id + '\')" title="Suplier">🏢</span>' +
-        '<span style="cursor: pointer; font-size: 1.1rem; opacity: 0.8;" onclick="quickActionHapusBarang(\'' + product.id + '\', \'' + escapeHtml(product.name).replace(/'/g, "\'") + '\')" title="Hapus">🗑️</span>' +
+        '<span style="cursor: pointer; font-size: 1.1rem; opacity: 0.8;" onclick="quickActionHapusBarang(\'' + product.id + '\')" title="Hapus">🗑️</span>' +
       '</div>' +
     '</div>';
   }
@@ -286,11 +287,29 @@
   };
 
   window.quickActionEditBarang = function(productId) {
+    closeDropdown();
     window.state.route = 'barang';
+    window.barangWorkspace = 'form';
     if (window.renderShell) window.renderShell();
     if (window.render) window.render();
     setTimeout(function() {
       if (window.fillForm) window.fillForm('products', productId);
+    }, 100);
+  };
+
+  window.quickActionDuplikatBarang = function(productId) {
+    closeDropdown();
+    window.state.route = 'barang';
+    window.barangWorkspace = 'form';
+    if (window.renderShell) window.renderShell();
+    if (window.render) window.render();
+    setTimeout(function() {
+      if (window.fillForm) window.fillForm('products', productId);
+      setTimeout(function() {
+        const form = document.querySelector('form[data-form="products"]');
+        if (form && form.elements && form.elements.id) form.elements.id.value = '';
+        if (window.showToast) window.showToast('Data diduplikat. Silakan ubah lalu Simpan.', 'info');
+      }, 50);
     }, 100);
   };
 
@@ -345,7 +364,9 @@
   };
 
   window.quickActionLihatBarangSupplier = function(supplierId) {
+    closeDropdown();
     window.state.route = 'barang';
+    window.barangWorkspace = 'search';
     if (window.renderShell) window.renderShell();
     if (window.render) window.render();
     setTimeout(function() {
@@ -360,17 +381,56 @@
     }, 100);
   };
 
-  window.quickActionHapusBarang = async function(productId, productName) {
+  window.quickActionHapusBarang = async function(productId) {
+    const product = (window.state && window.state.data && window.state.data.products)
+      ? window.state.data.products.find(function(p) { return String(p.id) === String(productId); })
+      : null;
+    const productName = product ? product.name : ('Barang #' + productId);
+
     if (!confirm('❗ Yakin ingin menghapus barang "' + productName + '"?\n\nTindakan ini tidak bisa dibatalkan.')) return;
+
     try {
-      await window.gas('delete', { collection: 'products', id: productId });
-      // Close dropdown and reload
-      const dropdown = document.getElementById('smart-search-dropdown');
-      if (dropdown) dropdown.classList.add('hidden');
+      const gasFn = window.gas || (typeof gas === 'function' ? gas : null);
+      if (!gasFn) throw new Error('Fungsi koneksi API (gas) tidak ditemukan.');
+
+      await gasFn('remove', { collection: 'products', id: productId });
+
+      // Hapus dari state produk lokal seketika
+      if (window.state && window.state.data && window.state.data.products) {
+        window.state.data.products = window.state.data.products.filter(function(p) {
+          return String(p.id) !== String(productId);
+        });
+      }
+
+      // Hapus dari keranjang ekspres jika ada
+      if (window.expresCart && Array.isArray(window.expresCart)) {
+        window.expresCart = window.expresCart.filter(function(item) {
+          return String(item.productId || item.id) !== String(productId);
+        });
+      }
+
+      // Refresh pencarian pintar dropdown jika input masih berisi teks
       const input = document.getElementById('smart-search-input');
-      if (input) input.value = '';
-      if (window.load) await window.load();
-      if (window.showToast) window.showToast('Barang "' + productName + '" berhasil dihapus.', 'success');
+      if (input && input.value.trim().length >= 1) {
+        performSearch(input.value.trim());
+      } else {
+        closeDropdown();
+      }
+
+      // Refresh pencarian di menu barang jika sedang aktif
+      const searchBarangInput = document.getElementById('search-barang-input');
+      if (searchBarangInput && searchBarangInput.value.trim().length >= 1 && typeof window.searchBarang === 'function') {
+        window.searchBarang(searchBarangInput.value.trim());
+      }
+
+      // Re-render UI aktif
+      if (typeof window.render === 'function') {
+        window.render();
+      }
+
+      if (window.showToast) {
+        window.showToast('Barang "' + productName + '" berhasil dihapus.', 'success');
+      }
     } catch (err) {
       alert('Gagal menghapus barang: ' + err.message);
     }

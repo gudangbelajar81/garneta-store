@@ -1,4 +1,4 @@
-﻿.env
+.env
 node_modules/
 logs/*.log
 !logs/.gitkeep
@@ -6,3 +6,7 @@ logs/*.log
 server.log
 server.err.log
 npm-debug.log*
+*.bak*
+*.kawin.*
+fix_*.js
+inject_cache.js

@@ -89,7 +89,12 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
     const el = (id) => document.getElementById(id);
     const formatTglIndo = (val) => {
       if (!val) return "-";
-      const clean = String(val).trim().split(/[T ]/)[0];
+      const sVal = String(val).trim();
+      if (sVal.includes(" s/d ")) {
+        const parts = sVal.split(" s/d ");
+        return `${formatTglIndo(parts[0])} s/d ${formatTglIndo(parts[1])}`;
+      }
+      const clean = sVal.split(/[T ]/)[0];
       const parts = clean.split(/[-/]/);
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
       if (parts.length === 3) {
@@ -110,6 +115,21 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
       return clean;
     };
     window.formatTglIndo = formatTglIndo;
+
+    const formatPeriodeIndo = (start, end) => {
+      const s = start || '';
+      const e = end || '';
+      if (!s && !e) return "-";
+      if (s && !e && String(s).includes(" s/d ")) {
+        const parts = String(s).split(" s/d ");
+        return `${formatTglIndo(parts[0])} s/d ${formatTglIndo(parts[1])}`;
+      }
+      if (s && e) {
+        return `${formatTglIndo(s)} s/d ${formatTglIndo(e)}`;
+      }
+      return formatTglIndo(s || e);
+    };
+    window.formatPeriodeIndo = formatPeriodeIndo;
     const API_URL = (window.location.port === "8000" || window.location.port === "5500") ? "http://localhost:3000/api" : "/api";
 
     async function gas(action, payload = {}, silentAuthError = false) {
@@ -173,6 +193,8 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
       return result?.data !== undefined ? result.data : result;
     }
 
+    window.gas = gas;
+
     async function clearAuditLogs() {
       if (!confirm("Yakin ingin menghapus semua log aktivitas?")) return;
       try {
@@ -209,6 +231,7 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
            // to prevent disrupting the user while typing in forms
            state.data = await gas("bootstrap", {}, true);
           if (typeof buildProductCache === 'function') buildProductCache();
+          if (typeof window.hydrateExpresCarts === 'function') window.hydrateExpresCarts(false);
            // Only re-render if on dashboard to avoid interrupting data entry
            if (state.route === 'dashboard') {
              render();
@@ -263,6 +286,7 @@ window.showToast = function(msg, icon = "info") { if (typeof Swal !== "undefined
       try {
         state.data = await gas("bootstrap", {}, true);
           if (typeof buildProductCache === 'function') buildProductCache();
+          if (typeof window.hydrateExpresCarts === 'function') window.hydrateExpresCarts(true);
         startSyncPolling();
         
         document.getElementById("gateway-screen").classList.add("hidden");
@@ -373,11 +397,140 @@ function users() { return `<div class="card"><h2>Users</h2><p>Fitur ini dalam pe
 function settings() { return `<div class="card"><h2>Settings</h2><p>Fitur ini dalam pengembangan.</p></div>`; }
 function kasbon() { return `<div class="card"><h2>Kasbon</h2><p>Fitur ini dalam pengembangan.</p></div>`; }
 
+function getPendingGajianList() {
+  const list = [];
+  const activeEmployees = (typeof employees === 'function' ? employees() : (state.data.employees || [])).filter(e => e.status === 'Aktif' && e.joinDate);
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const currentDate = now.getDate();
+  const todayZero = new Date(currentYear, currentMonth, currentDate, 0, 0, 0, 0);
+
+  activeEmployees.forEach(emp => {
+    const jDate = new Date(emp.joinDate);
+    if (isNaN(jDate.getTime())) return;
+    const payDay = jDate.getDate(); // Tanggal gajian otomatis dari tanggal masuk (joinDate)
+
+    // Cari riwayat gaji terakhir untuk karyawan ini
+    const allPayrolls = (typeof payrolls === 'function' ? payrolls() : (state.data.payrolls || []));
+    const empPayrolls = allPayrolls.filter(p => String(p.employeeId) === String(emp.id));
+    empPayrolls.sort((a, b) => new Date(b.paidAt || b.createdAt || b.periodEnd || 0) - new Date(a.paidAt || a.createdAt || a.periodEnd || 0));
+    const latestPayroll = empPayrolls[0];
+    const latestPaidDate = latestPayroll ? new Date(latestPayroll.paidAt || latestPayroll.createdAt || latestPayroll.periodEnd) : null;
+
+    // Tanggal target gajian bulan ini (handle bulan < 31 hari)
+    const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const actualPayDayThisMonth = Math.min(payDay, daysInCurrentMonth);
+    const thisMonthPayDate = new Date(currentYear, currentMonth, actualPayDayThisMonth, 0, 0, 0, 0);
+
+    let isDue = false;
+    let label = '';
+    let badgeType = 'warning'; // 'warning' | 'danger'
+    let diffDays = 0;
+
+    if (todayZero.getTime() >= thisMonthPayDate.getTime()) {
+      // Hari ini SUDAH masuk atau lewat tanggal gajian bulan ini
+      // Cek apakah sudah pernah dibayar pada atau sesudah tanggal gajian bulan ini
+      const alreadyPaidThisMonth = latestPaidDate && (
+        latestPaidDate.getFullYear() === currentYear &&
+        latestPaidDate.getMonth() === currentMonth &&
+        latestPaidDate.getDate() >= actualPayDayThisMonth
+      );
+
+      if (!alreadyPaidThisMonth) {
+        isDue = true;
+        diffDays = Math.round((todayZero.getTime() - thisMonthPayDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays === 0) {
+          label = "HARI INI (Waktunya Gajian)";
+          badgeType = "danger";
+        } else {
+          label = `TERLEWAT ${diffDays} HARI (Jatuh tempo tgl ${actualPayDayThisMonth})`;
+          badgeType = "danger";
+        }
+      }
+    } else {
+      // Hari ini sebelum tanggal gajian bulan ini (misal hari ini tgl 20, gajian tgl 25)
+      // 1. Cek apakah bulan lalu sudah dibayar
+      const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+      const prevPayDay = Math.min(payDay, daysInPrevMonth);
+      const prevMonthPayDate = new Date(currentYear, currentMonth - 1, prevPayDay, 0, 0, 0, 0);
+
+      const alreadyPaidPrevMonth = latestPaidDate && latestPaidDate.getTime() >= prevMonthPayDate.getTime();
+      if (!alreadyPaidPrevMonth && jDate.getTime() <= prevMonthPayDate.getTime()) {
+        isDue = true;
+        const overdueDays = Math.round((todayZero.getTime() - prevMonthPayDate.getTime()) / (1000 * 60 * 60 * 24));
+        label = `TERLEWAT ${overdueDays} HARI (Bulan lalu belum gajian)`;
+        badgeType = "danger";
+      } else {
+        // 2. Jika bulan lalu sudah lunas, cek apakah mendekati gajian bulan ini (H-1 atau H-2)
+        const daysUntil = Math.round((thisMonthPayDate.getTime() - todayZero.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysUntil <= 2 && daysUntil > 0) {
+          isDue = true;
+          label = daysUntil === 1 ? "BESOK (H-1)" : "H-2 (2 Hari Lagi)";
+          badgeType = "warning";
+        }
+      }
+    }
+
+    if (isDue) {
+      const allBons = (typeof cashAdvances === 'function' ? cashAdvances() : (state.data.cashAdvances || []));
+      const unpaidBons = allBons.filter(c => String(c.employeeId) === String(emp.id) && c.status === 'Belum Lunas');
+      const totalBon = unpaidBons.reduce((sum, c) => sum + Number(c.amount || 0), 0);
+      list.push({
+        emp,
+        label,
+        badgeType,
+        payDay: actualPayDayThisMonth,
+        totalBon
+      });
+    }
+  });
+
+  return list;
+}
+window.getPendingGajianList = getPendingGajianList;
+
+window.openGajiSettings = function(empId = null) {
+  localStorage.setItem("settingsTab", "gaji");
+  window.gajiActiveEmpId = empId;
+  window.showPage("settings");
+};
+
 function gaji() {
   const activeEmpId = window.gajiActiveEmpId || null;
   
   if (!activeEmpId) {
     // List Karyawan View
+    const pendingGajianList = (typeof isSuperAdmin === 'function' && isSuperAdmin()) ? getPendingGajianList() : [];
+    
+    let gajianBannerHtml = '';
+    if (pendingGajianList.length > 0) {
+      gajianBannerHtml = `
+      <div class="card" style="margin-bottom:1.2rem; background:linear-gradient(135deg, rgba(244,63,94,0.15), rgba(126,34,206,0.15)); border:1px solid #f43f5e; border-radius:12px; padding:16px;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+          <span style="font-size:26px;">🔔</span>
+          <div>
+            <h4 style="margin:0; font-size:15px; font-weight:800; color:#ff4d6d; text-transform:uppercase; letter-spacing:0.5px;">PERINGATAN GAJIAN (SUPER ADMIN)</h4>
+            <p style="margin:3px 0 0 0; font-size:12px; color:var(--text, #e0f8f5);">Ada <strong>${pendingGajianList.length} karyawan</strong> yang sudah waktunya gajian (cutoff dari tanggal masuk):</p>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${pendingGajianList.map(item => `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:10px 14px; border-radius:8px; border-left:4px solid ${item.badgeType === 'danger' ? '#f43f5e' : '#f59e0b'}; flex-wrap:wrap; gap:8px;">
+              <div>
+                <strong style="color:#fff; font-size:14px;">${escapeHtml(item.emp.name)}</strong>
+                <span style="display:inline-block; margin-left:8px; font-size:11px; padding:2px 8px; border-radius:4px; font-weight:700; background:${item.badgeType === 'danger' ? '#ef4444' : '#f59e0b'}; color:#fff;">${item.label}</span>
+                ${item.totalBon > 0 ? `<span style="display:inline-block; margin-left:6px; font-size:12px; color:#fde047; font-weight:600;">(Kasbon: ${rupiah(item.totalBon)})</span>` : ''}
+                <div style="font-size:11px; color:var(--soft-text, #888); margin-top:2px;">Tgl Masuk: ${formatTglIndo(item.emp.joinDate)} (Gajian tiap tanggal ${item.payDay})</div>
+              </div>
+              <button class="btn primary" onclick="openEmployeeDashboard('${item.emp.id}')" style="padding:6px 12px; font-size:12px; white-space:nowrap; font-weight:700;">💰 Bayar Gaji</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      `;
+    }
+
     return `
     <section class="workspace">
       <div class="workspace-header">
@@ -386,6 +539,7 @@ function gaji() {
         <button class="btn primary" onclick="editEmployee('')" style="margin-top:1rem;">+ Karyawan Baru</button>
       </div>
       <div class="workspace-content">
+        ${gajianBannerHtml}
         <div class="card">
           <div class="table-wrap">
             <table class="table">
@@ -394,8 +548,10 @@ function gaji() {
                 ${employees().map(e => {
                   const unpaidBons = cashAdvances().filter(c => c.employeeId == e.id && c.status === 'Belum Lunas');
                   const totalBon = unpaidBons.reduce((sum, c) => sum + Number(c.amount), 0);
+                  const pItem = pendingGajianList.find(p => String(p.emp.id) === String(e.id));
+                  const badgeHtml = pItem ? `<span class="badge" style="background:${pItem.badgeType === 'danger' ? '#ef4444' : '#f59e0b'}; color:#fff; font-size:0.65rem; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:700;">${pItem.label}</span>` : '';
                   return `<tr onclick="openEmployeeDashboard('${e.id}')" style="cursor:pointer; transition:all 0.3s ease;" onmouseover="this.style.background='rgba(0,255,204,0.05)'" onmouseout="this.style.background='transparent'">
-                    <td><strong style="color:var(--mint); text-decoration:underline; text-underline-offset:3px;">${escapeHtml(e.name)}</strong></td>
+                    <td><strong style="color:var(--mint); text-decoration:underline; text-underline-offset:3px;">${escapeHtml(e.name)}</strong>${badgeHtml}</td>
                     <td>${e.salaryType}</td>
                     <td>${rupiah(e.baseSalary)}</td>
                     <td style="color: #f43f5e;">${totalBon > 0 ? rupiah(totalBon) : '-'}</td>
@@ -516,6 +672,20 @@ function gaji() {
         
         <!-- Panel Kanan: Hitung Gaji -->
         <div>
+          ${(() => {
+            const pList = (typeof isSuperAdmin === 'function' && isSuperAdmin()) ? getPendingGajianList() : [];
+            const empDue = pList.find(p => String(p.emp.id) === String(emp.id));
+            if (!empDue) return '';
+            return `
+            <div style="background:rgba(244,63,94,0.15); border:1px solid #f43f5e; border-radius:10px; padding:12px 16px; margin-bottom:1rem; display:flex; align-items:center; gap:12px;">
+              <span style="font-size:24px;">⚠️</span>
+              <div style="font-size:12px; line-height:1.4;">
+                <strong style="color:#f43f5e; font-size:13px; text-transform:uppercase;">PERHATIAN: ${empDue.label}!</strong><br>
+                <span style="color:var(--text, #e0f8f5);">Karyawan ini masuk per tanggal <strong>${formatTglIndo(emp.joinDate)}</strong> (Jatuh tempo cutoff rutin tiap tanggal <strong>${empDue.payDay}</strong>).</span>
+              </div>
+            </div>
+            `;
+          })()}
           <div class="card" style="border: 1px solid var(--primary); background: rgba(0, 240, 255, 0.02);">
             <h3>💰 Hitung & Bayar Gaji</h3>
             <form id="form-payroll" class="grid forms" style="grid-template-columns: 1fr;">
@@ -603,9 +773,9 @@ function gaji() {
                   ${payrolls().filter(p => p.employeeId === emp.id).sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).map(p => {
                     const dateObj = new Date(p.createdAt || new Date());
                     const tglStr = dateObj.toLocaleDateString("id-ID", {month:"short", year:"numeric"});
-                    const periodeStr = (!p.periodStart && !p.periodEnd)
-                      ? '-'
-                      : `<span style="font-weight:600; color:var(--text, #e0f8f5);">${formatTglIndo(p.periodStart)}</span> <span style="color:var(--soft-text, #6b8a9e); font-size:0.7rem; margin:0 2px;">s/d</span> <span style="font-weight:600; color:var(--text, #e0f8f5);">${formatTglIndo(p.periodEnd)}</span>`;
+                    const pStartVal = p.periodStart || p.period_start || '';
+                    const pEndVal = p.periodEnd || p.period_end || '';
+                    const periodeStr = formatPeriodeIndo(pStartVal, pEndVal);
                     return `
                       <tr>
                         <td><a href="#" onclick="viewRiwayatGaji('${p.id}'); return false;" style="color:var(--primary); text-decoration:underline;">${tglStr}</a></td>
@@ -652,7 +822,7 @@ window.printGaji = function(payrollId, mode) {
    STRUK GAJI KARYAWAN
 ==============================
 Nama    : ${emp.name}
-Periode : ${(!p.periodStart && !p.periodEnd) ? '-' : `${formatTglIndo(p.periodStart)} s/d ${formatTglIndo(p.periodEnd)}`}
+Periode : ${formatPeriodeIndo(p.periodStart || p.period_start, p.periodEnd || p.period_end)}
 ------------------------------
 TOTAL GAJI      : ${rupiah(p.basicSalaryCalculated)}
 Potong Kasbon   : ${p.totalDeductionBon > 0 ? rupiah(p.totalDeductionBon) : 'Rp 0'}
@@ -754,7 +924,7 @@ window.viewRiwayatGaji = function(payrollId) {
    STRUK GAJI KARYAWAN
 ==============================
 Nama    : ${emp.name}
-Periode : ${(!p.periodStart && !p.periodEnd) ? '-' : `${formatTglIndo(p.periodStart)} s/d ${formatTglIndo(p.periodEnd)}`}
+Periode : ${formatPeriodeIndo(p.periodStart || p.period_start, p.periodEnd || p.period_end)}
 ------------------------------
 TOTAL GAJI      : ${rupiah(p.basicSalaryCalculated)}
 Potong Kasbon   : ${p.totalDeductionBon > 0 ? rupiah(p.totalDeductionBon) : 'Rp 0'}
@@ -1271,48 +1441,16 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
             document.body.appendChild(existingBanner);
 
             // [NEW] Global Gajian Reminder (Only for Super Admin)
-            let pendingGajian = [];
             if (typeof isSuperAdmin === 'function' && isSuperAdmin()) {
-               let currentMonth = todayT.getMonth();
-               let currentYear = todayT.getFullYear();
-               
-               (state.data.employees || []).forEach(e => {
-                  if (e.status !== 'Aktif' || !e.joinDate) return;
-                  // Tanggal gajian otomatis diambil dari tanggal masuk (joinDate), tidak perlu input manual
-                  let payD = new Date(e.joinDate).getDate();
-                  if (isNaN(payD) || payD < 1 || payD > 31) return;
-                  
-                  // Calculate next payday
-                  let nextPay = new Date(currentYear, currentMonth, payD);
-                  nextPay.setHours(0,0,0,0);
-                  
-                  // Jika tanggal hari ini sudah MELEWATI payD, berarti gajian bulan ini sudah lewat. Gajian berikutnya bulan depan.
-                  // Misalnya hari ini tanggal 26, payD tanggal 25. Maka nextPay digeser ke bulan depan.
-                  if (todayT.getTime() > nextPay.getTime()) {
-                     nextPay.setMonth(nextPay.getMonth() + 1);
-                  }
-                  
-                  // Calculate difference in days
-                  let diffTime = nextPay.getTime() - todayT.getTime();
-                  let diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-                  
-                  // If <= 2 days, show warning
-                  if (diffDays <= 2 && diffDays >= 0) {
-                     pendingGajian.push({ emp: e, days: diffDays });
-                  }
-               });
-               
+               const pendingGajian = (typeof getPendingGajianList === 'function') ? getPendingGajianList() : [];
                let existingGajiBanner = document.getElementById('gajian-global-banner');
                if (pendingGajian.length > 0) {
                   let texts = pendingGajian.map(p => {
-                     let hText = p.days === 0 ? "HARI INI!" : (p.days === 1 ? "BESOK!" : "H-2");
                      let bonText = "";
-                     const unpaidBons = (state.data.cashAdvances || []).filter(c => c.employeeId == p.emp.id && c.status === 'Belum Lunas');
-                     const totalBon = unpaidBons.reduce((sum, c) => sum + Number(c.amount), 0);
-                     if (totalBon > 0) {
-                         bonText = ` <strong style="color:#fde047;">(Ada Kasbon: ${rupiah(totalBon)})</strong>`;
+                     if (p.totalBon > 0) {
+                         bonText = ` <strong style="color:#fde047;">(Kasbon: ${rupiah(p.totalBon)})</strong>`;
                      }
-                     return `<div style="padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.2);">${p.emp.name} (${hText})${bonText}</div>`;
+                     return `<div style="padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.2);">${escapeHtml(p.emp.name)}: <span style="font-weight:700; color:#ffedd5;">${p.label}</span>${bonText}</div>`;
                   });
                   let bannerText = texts.join('');
                   
@@ -1321,7 +1459,6 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
                      existingGajiBanner.id = 'gajian-global-banner';
                      existingGajiBanner.style = `position:fixed; top:20px; right:20px; background:linear-gradient(135deg, #7e22ce, #9333ea); color:white; padding:16px 24px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.4); z-index:9998; display:flex; align-items:center; gap:16px; cursor:pointer; transition: transform 0.3s ease; border: 1px solid rgba(255,255,255,0.2); max-width: 400px;`;
                      
-                     // Supaya tidak numpuk dengan orderan banner
                      if (document.getElementById('orderan-global-banner')) {
                          existingGajiBanner.style.top = '140px';
                      }
@@ -1330,19 +1467,22 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
                         <div style="font-size:32px; filter:drop-shadow(0 0 10px rgba(255,255,255,0.5));">💸</div>
                         <div style="flex: 1;">
                            <h4 style="margin:0 0 6px 0; font-size:16px; font-weight:800; letter-spacing:0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">WAKTUNYA GAJIAN BOS!</h4>
-                           <div style="margin:0; font-size:14px; line-height:1.4;">${bannerText}</div>
+                           <div style="margin:0; font-size:13px; line-height:1.4;">${bannerText}</div>
                         </div>
                         <div style="margin-left:auto; padding-left:16px;">
                            <button class="btn" onclick="event.stopPropagation(); this.parentElement.parentElement.remove()" style="background:rgba(0,0,0,0.2); border:none; color:white; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-times"></i></button>
                         </div>
                      `;
                      existingGajiBanner.onclick = () => { 
-                        window.showPage('gaji'); 
+                        if (typeof window.openGajiSettings === 'function') {
+                          window.openGajiSettings();
+                        } else {
+                          window.showPage('settings');
+                        }
                         existingGajiBanner.remove(); 
                      };
                      document.body.appendChild(existingGajiBanner);
                      
-                     // Animasi pulse halus
                      setInterval(() => {
                         let b = document.getElementById('gajian-global-banner');
                         if (b) {
@@ -1351,7 +1491,8 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
                         }
                      }, 5000);
                   } else {
-                     existingGajiBanner.querySelector('div > div').innerHTML = bannerText;
+                     const cnt = existingGajiBanner.querySelector('div > div > div');
+                     if (cnt) cnt.innerHTML = bannerText;
                   }
                } else if (existingGajiBanner) {
                   existingGajiBanner.remove();
@@ -1686,6 +1827,7 @@ Berdasarkan rincian di atas, untuk gajian periode ini kasbonnya mau *Dipotong Fu
                 <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
                   <button class="btn primary" onclick="window.openSmartNotepad('auto','gallery')" style="font-size:1.05rem; padding:12px 22px;">📁 Gambar Internal</button>
                   <button class="btn primary" onclick="window.openSmartNotepad('auto','camera')" style="font-size:1.05rem; padding:12px 22px;">📷 Foto Kamera</button>
+                  <button class="btn soft" onclick="window.openGeminiPasteModal()" style="font-size:1.05rem; padding:12px 22px; border:1px solid var(--garneta-cyan); color:var(--garneta-cyan);">📋 Tempel Teks Gemini</button>
                 </div>
               </div>
             </div>
@@ -1832,6 +1974,7 @@ Minyak Goreng 3 45000"></textarea>
               </label>
               <div class="actions">
                 <button class="btn soft" id="parse-pembelian-wa">Proses Paste WA</button>
+                <button class="btn primary" onclick="window.openGeminiPasteModal()" style="background:var(--garneta-cyan); color:#000;">📋 Tempel Teks Gemini</button>
                 <button class="btn danger" id="clear-pembelian-wa">Kosongkan</button>
               </div>
               <div id="pembelian-wa-preview" style="margin-top:16px;"></div>
@@ -3895,47 +4038,146 @@ Beras Premium 1"></textarea>
          workspaceContent = subToolbar + belanjaContent;
          
       } else if (activeTopWorkspace === 'expres') {
-         if (!window.expresCart || window.expresCart.length < 20) {
-             window.expresCart = window.getInitialExpresCart(false);
-              window.saveExpresCart();
+         if (typeof window.hydrateExpresCarts === 'function') {
+             window.hydrateExpresCarts(false);
          }
-         const expresRows = window.expresCart;
-         const totalCuan = expresRows.reduce((sum, r) => sum + (r.profit || 0), 0);
+         const activeW = window.activeExpresWorker || 'karyawan1';
+         const workerKeys = ['karyawan1', 'karyawan2', 'karyawan3'];
+         const isSuper = isSuperAdmin();
+         if (!isSuper && activeW === 'rekap') {
+             window.activeExpresWorker = 'karyawan1';
+         }
+         const currentW = window.activeExpresWorker || 'karyawan1';
+
+         const workerTabsHtml = `
+           <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1);">
+             ${workerKeys.map(wk => {
+               const cfg = window.EXPRES_WORKERS[wk];
+               const wCart = window.expresCarts[wk] || [];
+               const filledCount = wCart.filter(r => (parseFloat(r.qty) || 0) > 0 && (r.name || '').trim() !== '').length;
+               const isActive = currentW === wk;
+               return `<button onclick="window.switchExpresWorker('${wk}')" style="flex:1; min-width:110px; padding:8px 10px; border-radius:8px; border:1px solid ${isActive ? 'var(--garneta-cyan)' : 'rgba(255,255,255,0.15)'}; background:${isActive ? 'rgba(0,255,204,0.15)' : 'rgba(255,255,255,0.04)'}; color:${isActive ? '#fff' : '#aaa'}; font-weight:${isActive ? 'bold' : 'normal'}; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; white-space:nowrap;">
+                 <span>${cfg.icon}</span>
+                 <span>${cfg.shortName}</span>
+                 ${filledCount > 0 ? `<span style="background:var(--garneta-cyan); color:#000; border-radius:99px; padding:1px 6px; font-size:10px; font-weight:bold;">${filledCount}</span>` : ''}
+               </button>`;
+             }).join('')}
+             ${isSuper ? `
+               <button onclick="window.switchExpresWorker('rekap')" style="flex:1; min-width:110px; padding:8px 10px; border-radius:8px; border:1px solid ${currentW === 'rekap' ? '#f59e0b' : 'rgba(255,255,255,0.15)'}; background:${currentW === 'rekap' ? 'rgba(245,158,11,0.18)' : 'rgba(255,255,255,0.04)'}; color:${currentW === 'rekap' ? '#fde68a' : '#aaa'}; font-weight:${currentW === 'rekap' ? 'bold' : 'normal'}; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; white-space:nowrap;">
+                 <span>📊</span>
+                 <span>Rekap Gabungan</span>
+               </button>
+             ` : ''}
+           </div>
+         `;
+
          const datalistHtml = `
            <datalist id="expres-products">
              ${(state?.data?.products || []).map(p => `<option value="${escapeAttr(p.name || '')}"></option>`).join('')}
            </datalist>
          `;
 
-          let formsHtml = `
-            <div style="width: 100%; background: rgba(255,255,255,0.01); border-radius: 4px; padding: 4px; border: 1px solid rgba(255,255,255,0.05);">
-              <div style="display:grid; grid-template-columns: ${isSuperAdmin() ? '2fr 1fr 1fr' : '2fr 1fr'}; gap:0px; padding-bottom: 4px; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.2);">
-               <div style="font-size:12px; color:#aaa; font-weight:bold; padding-left:6px;">PILIH BARANG</div>
-               <div style="font-size:12px; color:#aaa; font-weight:bold; padding-left:6px;">TERJUAL</div>
-               ${isSuperAdmin() ? '<div style="font-size:12px; color:#aaa; font-weight:bold; padding-left:6px;">CUAN</div>' : ''}
-             </div>
-             ${expresRows.map((r, i) => `
-             <div style="display:grid; grid-template-columns: ${isSuperAdmin() ? '2fr 1fr 1fr' : '2fr 1fr'}; gap:0px; border-bottom:1px solid rgba(255,255,255,0.05); align-items:center;">
-               <input type="text" class="jual-expres-input" list="expres-products" value="${r.name}" oninput="window.updateExpresRow(${i}, 'name', this.value)" style="color:#fff;" ${i===0?'placeholder="Ketik..."':''}>
-               <input type="number" class="jual-expres-input" value="${r.qty || ''}" oninput="window.updateExpresRow(${i}, 'qty', this.value)" min="0.1" step="0.1" style="color:#fff; border-left:1px solid rgba(255,255,255,0.05) !important;" ${i===0?'placeholder="Cth: 5"':''}>
-               ${isSuperAdmin() ? `<input id="expres-jumlah-${i}" type="text" class="jual-expres-input" readonly style="background:rgba(0,0,0,0.15) !important; border-left:1px solid rgba(255,255,255,0.05) !important; color:var(--garneta-cyan) !important;" value="${r.profit > 0 ? rupiah(r.profit) : ''}" placeholder="Rp 0">` : ''}
-             </div>`).join('')}
-           </div>
-         `;
+         let bodyHtml = '';
+
+         if (currentW === 'rekap' && isSuper) {
+             let grandTotal = 0;
+             let totalItemsPacked = 0;
+             const cardsHtml = workerKeys.map(wk => {
+               const cfg = window.EXPRES_WORKERS[wk];
+               const wCart = window.expresCarts[wk] || [];
+               const filled = wCart.filter(r => (parseFloat(r.qty) || 0) > 0 && (r.name || '').trim() !== '');
+               const wProfit = filled.reduce((s, r) => s + (r.profit || 0), 0);
+               grandTotal += wProfit;
+               totalItemsPacked += filled.length;
+
+               return `
+                 <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px; margin-bottom:10px;">
+                   <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:6px; margin-bottom:6px;">
+                     <div style="font-weight:bold; font-size:13px; color:#fff;">${cfg.icon} ${cfg.name}</div>
+                     <div style="font-weight:bold; font-size:13px; color:var(--garneta-cyan);">${rupiah(wProfit)}</div>
+                   </div>
+                   ${filled.length === 0 ? '<div style="font-size:12px; color:#777; font-style:italic;">Belum ada inputan packing dari HP karyawan ini.</div>' : `
+                     <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:8px;">
+                       ${filled.map(item => `
+                         <div style="display:flex; justify-content:space-between; font-size:12px; color:#ddd; padding:2px 0; border-bottom:1px dashed rgba(255,255,255,0.05);">
+                           <span><b>${item.qty}</b> × ${escapeHtml(item.name)} <span style="color:#888; font-size:11px;">(isi ${item.isi} × ${rupiah(item.cuanEcer)})</span></span>
+                           <span style="color:var(--mint);">${rupiah(item.profit)}</span>
+                         </div>
+                       `).join('')}
+                     </div>
+                     <div style="text-align:right;">
+                       <button onclick="window.eksekusiCuan('${wk}')" style="background:rgba(0,255,204,0.18); color:var(--garneta-cyan); border:1px solid var(--garneta-cyan); border-radius:4px; padding:4px 10px; font-size:11px; font-weight:bold; cursor:pointer;">🚀 Eksekusi ${cfg.shortName}</button>
+                     </div>
+                   `}
+                 </div>
+               `;
+             }).join('');
+
+             bodyHtml = `
+               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                 <span style="font-size:12px; color:#aaa;">Ringkasan gabungan semua tukang packing hari ini</span>
+                 <button onclick="window.refreshExpresDraftsFromServer()" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer;">🔄 Tarik Draft HP</button>
+               </div>
+               ${cardsHtml}
+               <div style="padding:10px; background:rgba(245,158,11,0.15); border-radius:8px; margin-top:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(245,158,11,0.4);">
+                 <div>
+                   <div style="font-size:11px; color:#fde68a; font-weight:bold;">GRAND TOTAL CUAN (3 KARYAWAN)</div>
+                   <div style="font-weight:bold; font-size:1.15rem; color:#fff;">${rupiah(grandTotal)}</div>
+                 </div>
+                 <button id="btn-eksekusi-cuan-all" class="btn" style="background:#f59e0b; color:#000; font-weight:bold; font-size:12px; padding:6px 14px; border-radius:6px; border:none; cursor:pointer; min-height:34px; ${totalItemsPacked <= 0 ? 'opacity:0.5; cursor:not-allowed;' : ''}" onclick="window.eksekusiCuan('all')" ${totalItemsPacked <= 0 ? 'disabled' : ''}>🚀 Eksekusi Semua</button>
+               </div>
+             `;
+         } else {
+             const cfg = window.EXPRES_WORKERS[currentW] || window.EXPRES_WORKERS.karyawan1;
+             const expresRows = window.expresCarts[currentW] || [];
+             const totalCuan = expresRows.reduce((sum, r) => sum + (r.profit || 0), 0);
+             const hasValidQty = expresRows.some(r => (parseFloat(r.qty) || 0) > 0 && (r.name || '').trim() !== '');
+
+             const gridCols = isSuper ? '2.2fr 0.9fr 0.7fr 1.1fr 26px' : '2.2fr 1fr 26px';
+
+             bodyHtml = `
+               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:0 2px;">
+                 <div style="font-size:12px; color:var(--garneta-cyan); font-weight:bold;">${cfg.icon} Input Packing: ${cfg.name}</div>
+                 <div style="display:flex; gap:6px;">
+                   <button onclick="window.addExpresRow('${currentW}')" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:4px; padding:3px 8px; font-size:11px; cursor:pointer;">+ Baris</button>
+                   <button onclick="window.resetExpresWorkerTemplate('${currentW}')" style="background:rgba(255,255,255,0.08); color:#fca5a5; border:1px solid rgba(244,63,94,0.3); border-radius:4px; padding:3px 8px; font-size:11px; cursor:pointer;">🔄 Reset Template</button>
+                 </div>
+               </div>
+               <div style="width: 100%; background: rgba(255,255,255,0.01); border-radius: 6px; padding: 4px; border: 1px solid rgba(255,255,255,0.08);">
+                 <div style="display:grid; grid-template-columns: ${gridCols}; gap:0px; padding-bottom: 4px; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.2);">
+                   <div style="font-size:11px; color:#aaa; font-weight:bold; padding-left:6px;">PILIH BARANG</div>
+                   <div style="font-size:11px; color:#aaa; font-weight:bold; padding-left:6px;">TERJUAL</div>
+                   ${isSuper ? '<div style="font-size:11px; color:#aaa; font-weight:bold; text-align:center;">ISI</div><div style="font-size:11px; color:#aaa; font-weight:bold; padding-left:6px;">CUAN</div>' : ''}
+                   <div></div>
+                 </div>
+                 ${expresRows.map((r, i) => `
+                 <div style="display:grid; grid-template-columns: ${gridCols}; gap:0px; border-bottom:1px solid rgba(255,255,255,0.05); align-items:center;">
+                   <input type="text" class="jual-expres-input" list="expres-products" value="${escapeAttr(r.name || '')}" oninput="window.updateExpresRow(${i}, 'name', this.value, '${currentW}')" style="color:#fff; font-size:12px;" placeholder="Ketik barang...">
+                   <input type="number" class="jual-expres-input" value="${r.qty !== undefined && r.qty !== '' ? r.qty : ''}" oninput="window.updateExpresRow(${i}, 'qty', this.value, '${currentW}')" min="0" step="0.1" style="color:#fff; font-weight:bold; font-size:13px; border-left:1px solid rgba(255,255,255,0.05) !important; text-align:center;" placeholder="0">
+                   ${isSuper ? `
+                     <div id="expres-isi-${currentW}-${i}" style="font-size:11px; color:#888; text-align:center; border-left:1px solid rgba(255,255,255,0.05);">${r.name ? (r.isi || 1) : '-'}</div>
+                     <input id="expres-jumlah-${currentW}-${i}" type="text" class="jual-expres-input" readonly style="background:rgba(0,0,0,0.15) !important; border-left:1px solid rgba(255,255,255,0.05) !important; color:var(--garneta-cyan) !important; font-size:11px;" value="${r.profit > 0 ? rupiah(r.profit) : ''}" placeholder="Rp 0">
+                   ` : ''}
+                   <button onclick="window.removeExpres(${i}, '${currentW}')" title="Kosongkan baris" style="background:transparent; border:none; color:#666; cursor:pointer; font-size:14px; padding:0; display:flex; align-items:center; justify-content:center;">×</button>
+                 </div>`).join('')}
+               </div>
+               <div style="padding:8px 10px; background:rgba(0,255,204,0.1); border-radius:6px; margin-top:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.1);">
+                   ${isSuper ? `
+                   <div>
+                     <span style="font-weight:bold; font-size:12px; margin-right:8px;">CUAN ${cfg.shortName.toUpperCase()}</span>
+                     <span id="expres-total-${currentW}" style="font-weight:bold; font-size:1rem; color:var(--garneta-cyan);">${rupiah(totalCuan)}</span>
+                   </div>
+                   ` : '<div style="font-size:11px; color:#aaa;">Draft tersimpan otomatis per karyawan</div>'}
+                   <button id="btn-eksekusi-cuan" class="btn" style="background:var(--garneta-cyan); color:#000; font-weight:bold; font-size:12px; padding:6px 14px; border-radius:4px; border:none; cursor:pointer; min-height: 32px; ${!hasValidQty ? 'opacity:0.5; cursor:not-allowed;' : ''}" onclick="window.eksekusiCuan('${currentW}')" ${!hasValidQty ? 'disabled' : ''}>🚀 Eksekusi ${cfg.shortName}</button>
+               </div>
+             `;
+         }
 
          workspaceContent = `<div class="workspace-content" style="padding-top:8px;">
-             <h3 style="margin:0 0 8px 0; font-size:1rem; display:flex; justify-content:space-between; align-items:center;"><span>🚀 Jual Expres</span><input type="date" id="expres-date" value="${today()}" style="background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 4px; border-radius: 4px; font-size: 0.85rem;" /></h3>
+             <h3 style="margin:0 0 8px 0; font-size:1rem; display:flex; justify-content:space-between; align-items:center;"><span>🚀 Jual Expres (Multi-Packer)</span><input type="date" id="expres-date" value="${today()}" style="background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 4px; border-radius: 4px; font-size: 0.85rem;" /></h3>
+             ${workerTabsHtml}
              ${datalistHtml}
-             ${formsHtml}
-             <div style="padding:8px; background:rgba(0,255,204,0.1); border-radius:6px; margin-top:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.1);">
-                 ${isSuperAdmin() ? `
-                 <div>
-                   <span style="font-weight:bold; font-size:12px; margin-right:8px;">TOTAL CUAN</span>
-                   <span id="expres-total" style="font-weight:bold; font-size:1rem; color:var(--garneta-cyan);">${rupiah(totalCuan)}</span>
-                 </div>
-                 ` : '<div></div>'}
-                 <button id="btn-eksekusi-cuan" class="btn" style="background:var(--garneta-cyan); color:#000; font-weight:bold; font-size:12px; padding:4px 12px; border-radius:4px; border:none; cursor:pointer; min-height: 32px;" onclick="window.eksekusiCuan()" ${totalCuan <= 0 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>🚀 Eksekusi</button>
-             </div>
+             ${bodyHtml}
          </div>`;
       } else if (activeTopWorkspace === 'orderan') {
          let orders = state.data.orders || [];
@@ -4100,18 +4342,41 @@ Beras Premium 1"></textarea>
              
              let tableContent = '';
              if (window.cuanLaporanTab === 'harian') {
-                 // Hanya bulan ini
+                 // Hanya bulan ini, plus breakdown per karyawan & item
                  const grouped = {};
                  reports.forEach(r => {
                      if (!r.executionDate) return;
                      const month = r.executionDate.slice(0, 7);
                      if (month === today().slice(0, 7)) {
-                         grouped[r.executionDate] = (grouped[r.executionDate] || 0) + r.amount;
+                         if (!grouped[r.executionDate]) grouped[r.executionDate] = { total: 0, list: [] };
+                         grouped[r.executionDate].total += Number(r.amount || 0);
+                         grouped[r.executionDate].list.push(r);
                      }
                  });
                  const sortedDates = Object.keys(grouped).sort((a,b) => b.localeCompare(a));
-                 tableContent = `<table class="table"><thead><tr><th>Tanggal</th><th style="text-align:right;">Total Cuan</th></tr></thead><tbody>
-                     ${sortedDates.map(d => `<tr><td>${d}</td><td style="text-align:right; color:var(--mint);">${rupiah(grouped[d])}</td></tr>`).join('')}
+                 tableContent = `<table class="table"><thead><tr><th>Tanggal & Rincian Packing</th><th style="text-align:right;">Total Cuan</th></tr></thead><tbody>
+                     ${sortedDates.map(d => {
+                       const g = grouped[d];
+                       const detailsHtml = g.list.map(dr => {
+                         const itemsSummary = Array.isArray(dr.itemsDetail) && dr.itemsDetail.length > 0
+                           ? dr.itemsDetail.map(it => `<span style="display:inline-block; background:rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; margin:2px 4px 2px 0; font-size:10px;"><b>${it.qty}</b> ${escapeHtml(it.name)} (${rupiah(it.profit)})</span>`).join('')
+                           : '<span style="font-size:10px; color:#888;">Input Total Langsung</span>';
+                         return `<div style="margin-top:4px; padding:4px 6px; background:rgba(0,0,0,0.2); border-left:2px solid var(--garneta-cyan); border-radius:3px;">
+                           <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px;">
+                             <span style="color:#fff; font-weight:bold;">👤 ${escapeHtml(dr.workerName || 'Umum')}</span>
+                             <span style="color:var(--garneta-cyan); font-weight:bold;">${rupiah(dr.amount)}</span>
+                           </div>
+                           <div>${itemsSummary}</div>
+                         </div>`;
+                       }).join('');
+                       return `<tr>
+                         <td>
+                           <div style="font-weight:bold; color:#fff;">${d}</div>
+                           ${detailsHtml}
+                         </td>
+                         <td style="text-align:right; color:var(--mint); font-weight:bold; vertical-align:top; white-space:nowrap;">${rupiah(g.total)}</td>
+                       </tr>`;
+                     }).join('')}
                      ${sortedDates.length === 0 ? '<tr><td colspan="2" class="muted" style="text-align:center;">Belum ada eksekusi cuan di bulan ini.</td></tr>' : ''}
                  </tbody></table>`;
              } else if (window.cuanLaporanTab === 'bulanan') {
@@ -4169,48 +4434,309 @@ Beras Premium 1"></textarea>
        render();
     };
 
-        window.getInitialExpresCart = function(forceReset = false) {
-        if (forceReset) {
-            return Array.from({length: 20}, () => ({ name: "", qty: "", isi: 1, cuanEcer: 0, profit: 0 }));
+    // --- JUALAN EXPRES MULTI-PACKER ENGINE ---
+    window.EXPRES_WORKERS = {
+      karyawan1: {
+        id: "karyawan1",
+        name: "Karyawan 1 (Sembako)",
+        shortName: "Karyawan 1",
+        icon: "🌾",
+        defaultItems: [
+          "Tepung Gunung Agung",
+          "Tepung Payung",
+          "Tepung Segitiga",
+          "Tepung Lencana Merah",
+          "Beras",
+          "Gula Pasir",
+          "Gula Jawa",
+          "Minyak Sawit",
+          "Minyak Goreng"
+        ],
+        minRows: 12
+      },
+      karyawan2: {
+        id: "karyawan2",
+        name: "Karyawan 2 (Telur)",
+        shortName: "Karyawan 2",
+        icon: "🥚",
+        defaultItems: [
+          "Telur"
+        ],
+        minRows: 6
+      },
+      karyawan3: {
+        id: "karyawan3",
+        name: "Karyawan 3 (Kentang)",
+        shortName: "Karyawan 3",
+        icon: "🥔",
+        defaultItems: [
+          "Kentang Besar",
+          "Kentang Sedang",
+          "Kentang Siomay"
+        ],
+        minRows: 6
+      }
+    };
+
+    window.findExpresProduct = function(nameOrId) {
+      if (!nameOrId || !window.state?.data?.products) return null;
+      const q = String(nameOrId).trim().toLowerCase();
+      let found = window.state.data.products.find(p => String(p.id) === q);
+      if (found) return found;
+      found = window.state.data.products.find(p => (p.name || '').trim().toLowerCase() === q);
+      if (found) return found;
+      found = window.state.data.products.find(p => {
+        const aliasStr = p.aliases || p.alias || '';
+        if (!aliasStr) return false;
+        const aliases = String(aliasStr).split(',').map(a => a.trim().toLowerCase());
+        return aliases.includes(q);
+      });
+      if (found) return found;
+      return window.state.data.products.find(p => (p.name || '').toLowerCase().includes(q)) || null;
+    };
+
+    window.resolveExpresItemMetrics = function(item) {
+      if (!item) return { name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0 };
+      const prod = window.findExpresProduct(item.productId || item.name);
+      if (prod) {
+        item.productId = prod.id;
+        if (!item.name || item.name.trim() === '') item.name = prod.name;
+        const saleEcer = Number(String(prod.salePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
+        const baseEcer = Number(String(prod.basePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
+        item.isi = Number(String(prod.unitContent || '1').replace(/[^0-9]/g, '')) || 1;
+        let cuan = Math.max(0, saleEcer - baseEcer);
+        if (cuan <= 0) {
+          const saleP = Number(String(prod.salePrice || '0').replace(/[^0-9]/g, '')) || 0;
+          const baseP = Number(String(prod.basePrice || '0').replace(/[^0-9]/g, '')) || 0;
+          if (saleP > baseP) cuan = (saleP - baseP) / (item.isi || 1);
         }
-        try {
-            const saved = JSON.parse(localStorage.getItem("expresCart") || "null");
-            if (Array.isArray(saved)) {
-                let mapped = saved.map(r => ({
-                    name: r.name || "",
-                    qty: r.qty !== undefined ? r.qty : "",
-                    isi: r.isi !== undefined ? r.isi : 1,
-                    cuanEcer: r.cuanEcer !== undefined ? r.cuanEcer : 0,
-                    profit: r.profit !== undefined ? r.profit : 0,
-                    productId: r.productId
-                }));
-                while (mapped.length < 20) {
-                    mapped.push({ name: "", qty: "", isi: 1, cuanEcer: 0, profit: 0 });
-                }
-                return mapped;
+        item.cuanEcer = cuan;
+      } else {
+        item.isi = Number(item.isi) || 1;
+        item.cuanEcer = Number(item.cuanEcer) || 0;
+      }
+      const qty = parseFloat(item.qty) || 0;
+      item.profit = qty * (item.isi || 1) * (item.cuanEcer || 0);
+      return item;
+    };
+
+    window.activeExpresWorker = localStorage.getItem('garneta_expres_active_worker') || 'karyawan1';
+
+    window.getInitialExpresCartForWorker = function(workerId, forceReset = false) {
+      const cfg = window.EXPRES_WORKERS[workerId] || window.EXPRES_WORKERS.karyawan1;
+      const minRows = cfg.minRows || 10;
+
+      if (forceReset) {
+        const fresh = cfg.defaultItems.map(name => window.resolveExpresItemMetrics({ name: name, qty: '', isi: 1, cuanEcer: 0, profit: 0 }));
+        while (fresh.length < minRows) {
+          fresh.push({ name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0 });
+        }
+        return fresh;
+      }
+
+      try {
+        const raw = localStorage.getItem('expresCart_' + workerId);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            let mapped = parsed.map(r => window.resolveExpresItemMetrics({
+              name: r.name || '',
+              qty: r.qty !== undefined ? r.qty : '',
+              isi: r.isi !== undefined ? r.isi : 1,
+              cuanEcer: r.cuanEcer !== undefined ? r.cuanEcer : 0,
+              profit: r.profit !== undefined ? r.profit : 0,
+              productId: r.productId
+            }));
+            while (mapped.length < minRows) {
+              mapped.push({ name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0 });
             }
-        } catch (e) {}
-        return Array.from({length: 20}, () => ({ name: "", qty: "", isi: 1, cuanEcer: 0, profit: 0 }));
+            return mapped;
+          }
+        }
+      } catch(e) {}
+
+      const serverDrafts = window.state?.data?.expresDrafts;
+      if (serverDrafts && Array.isArray(serverDrafts[workerId]) && serverDrafts[workerId].length > 0) {
+        let mapped = serverDrafts[workerId].map(r => window.resolveExpresItemMetrics({
+          name: r.name || '',
+          qty: r.qty !== undefined ? r.qty : '',
+          isi: r.isi !== undefined ? r.isi : 1,
+          cuanEcer: r.cuanEcer !== undefined ? r.cuanEcer : 0,
+          profit: r.profit !== undefined ? r.profit : 0,
+          productId: r.productId
+        }));
+        while (mapped.length < minRows) {
+          mapped.push({ name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0 });
+        }
+        return mapped;
+      }
+
+      return window.getInitialExpresCartForWorker(workerId, true);
     };
 
-    // Simpan expresCart ke localStorage - fungsi ini SEMPAT HILANG sehingga
-    // checkbox daftar barang tidak pernah tersimpan (hilang saat refresh).
-    window.saveExpresCart = function() {
-        try {
-            localStorage.setItem('expresCart', JSON.stringify(window.expresCart || []));
-        } catch (e) {}
+    window.getInitialExpresCart = function(forceReset = false) {
+      const activeW = (window.activeExpresWorker === 'rekap' || !window.activeExpresWorker) ? 'karyawan1' : window.activeExpresWorker;
+      return window.getInitialExpresCartForWorker(activeW, forceReset);
     };
 
-    window.eksekusiCuan = async function() {
-        const total = window.expresCart.reduce((sum, r) => sum + (r.profit || 0), 0);
-        if (total <= 0) return;
-        
-        // Menggunakan native confirm agar 100% jalan di semua browser/tanpa masalah CDN
-        if (!confirm(`Yakin ingin mengeksekusi Total Cuan ${isSuperAdmin() ? rupiah(total) : 'Shift Ini'}? Data akan masuk ke Laporan A tanggal hari ini.`)) {
-            return;
+    window.expresCarts = window.expresCarts || {
+      karyawan1: window.getInitialExpresCartForWorker('karyawan1'),
+      karyawan2: window.getInitialExpresCartForWorker('karyawan2'),
+      karyawan3: window.getInitialExpresCartForWorker('karyawan3')
+    };
+    window.expresCart = window.expresCarts[(window.activeExpresWorker === 'rekap' ? 'karyawan1' : window.activeExpresWorker)] || window.expresCarts.karyawan1;
+
+    window.hydrateExpresCarts = function(forceFromServer = false) {
+      const serverDrafts = window.state?.data?.expresDrafts;
+      ['karyawan1', 'karyawan2', 'karyawan3'].forEach(w => {
+        const current = window.expresCarts[w] || [];
+        const hasLocalQty = current.some(r => (parseFloat(r.qty) || 0) > 0);
+        const sDraft = serverDrafts && Array.isArray(serverDrafts[w]) ? serverDrafts[w] : null;
+        const hasServerQty = sDraft && sDraft.some(r => (parseFloat(r.qty) || 0) > 0);
+
+        // Ambil dari server jika forceFromServer (dan user tidak sedang ngetik di worker aktif) ATAU jika lokal belum diisi tp server ada isinya
+        if (sDraft && sDraft.length > 0 && ((forceFromServer && (window.activeExpresWorker === 'rekap' || w !== window.activeExpresWorker || !hasLocalQty)) || (!hasLocalQty && hasServerQty))) {
+          const minRows = window.EXPRES_WORKERS[w]?.minRows || 10;
+          let mapped = sDraft.map(r => window.resolveExpresItemMetrics({
+            name: r.name || '',
+            qty: r.qty !== undefined ? r.qty : '',
+            isi: r.isi !== undefined ? r.isi : 1,
+            cuanEcer: r.cuanEcer !== undefined ? r.cuanEcer : 0,
+            profit: r.profit !== undefined ? r.profit : 0,
+            productId: r.productId
+          }));
+          while (mapped.length < minRows) mapped.push({ name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0 });
+          window.expresCarts[w] = mapped;
+          try { localStorage.setItem('expresCart_' + w, JSON.stringify(mapped)); } catch(e) {}
+        } else {
+          if (!window.expresCarts[w] || window.expresCarts[w].length === 0) {
+            window.expresCarts[w] = window.getInitialExpresCartForWorker(w);
+          } else {
+            window.expresCarts[w].forEach(r => window.resolveExpresItemMetrics(r));
+          }
+        }
+      });
+      const act = (window.activeExpresWorker === 'rekap' || !window.activeExpresWorker) ? 'karyawan1' : window.activeExpresWorker;
+      window.expresCart = window.expresCarts[act];
+    };
+
+    window.refreshExpresDraftsFromServer = async function() {
+      try {
+        showToast("Mengambil draft terbaru dari HP karyawan...", "info");
+        const res = await gas("getExpresDrafts", {});
+        if (res && res.drafts) {
+          if (!window.state.data) window.state.data = {};
+          window.state.data.expresDrafts = res.drafts;
+          ['karyawan1', 'karyawan2', 'karyawan3'].forEach(w => {
+            const sDraft = res.drafts[w];
+            if (Array.isArray(sDraft) && sDraft.length > 0) {
+              const minRows = window.EXPRES_WORKERS[w]?.minRows || 10;
+              let mapped = sDraft.map(r => window.resolveExpresItemMetrics({
+                name: r.name || '',
+                qty: r.qty !== undefined ? r.qty : '',
+                isi: r.isi !== undefined ? r.isi : 1,
+                cuanEcer: r.cuanEcer !== undefined ? r.cuanEcer : 0,
+                profit: r.profit !== undefined ? r.profit : 0,
+                productId: r.productId
+              }));
+              while (mapped.length < minRows) mapped.push({ name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0 });
+              window.expresCarts[w] = mapped;
+              try { localStorage.setItem('expresCart_' + w, JSON.stringify(mapped)); } catch(e) {}
+            }
+          });
+          showToast("Draft terbaru berhasil ditarik!", "success");
+          render();
+        }
+      } catch(e) {
+        showToast("Gagal menarik draft: " + e.message, "error");
+      }
+    };
+
+    let _draftSyncTimers = {};
+    window.saveExpresCart = function(workerId = window.activeExpresWorker) {
+      if (!workerId || workerId === 'rekap') workerId = 'karyawan1';
+      const cart = window.expresCarts[workerId] || [];
+      try {
+        localStorage.setItem('expresCart_' + workerId, JSON.stringify(cart));
+        if (workerId === window.activeExpresWorker) {
+          localStorage.setItem('expresCart', JSON.stringify(cart));
+          window.expresCart = cart;
+        }
+      } catch (e) {}
+
+      if (_draftSyncTimers[workerId]) clearTimeout(_draftSyncTimers[workerId]);
+      _draftSyncTimers[workerId] = setTimeout(() => {
+        if (typeof gas === 'function') {
+          gas("saveExpresDraft", { worker: workerId, cart: cart }).catch(console.error);
+        }
+      }, 800);
+    };
+
+    window.switchExpresWorker = function(workerId) {
+      window.activeExpresWorker = workerId;
+      try { localStorage.setItem('garneta_expres_active_worker', workerId); } catch(e) {}
+      if (workerId !== 'rekap') {
+        if (!window.expresCarts[workerId]) {
+          window.expresCarts[workerId] = window.getInitialExpresCartForWorker(workerId);
+        }
+        window.expresCart = window.expresCarts[workerId];
+      } else {
+        window.refreshExpresDraftsFromServer();
+      }
+      render();
+    };
+
+    window.addExpresRow = function(workerId = window.activeExpresWorker) {
+      const activeW = (workerId === 'rekap') ? 'karyawan1' : workerId;
+      if (!window.expresCarts[activeW]) window.expresCarts[activeW] = [];
+      window.expresCarts[activeW].push({ name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0 });
+      window.saveExpresCart(activeW);
+      render();
+    };
+
+    window.resetExpresWorkerTemplate = function(workerId = window.activeExpresWorker) {
+      const activeW = (workerId === 'rekap') ? 'karyawan1' : workerId;
+      const name = window.EXPRES_WORKERS[activeW]?.name || activeW;
+      if (!confirm(`Reset daftar & jumlah untuk ${name} kembali ke template bawaan?`)) return;
+      window.expresCarts[activeW] = window.getInitialExpresCartForWorker(activeW, true);
+      window.saveExpresCart(activeW);
+      render();
+    };
+
+    window.eksekusiCuan = async function(targetWorker = window.activeExpresWorker) {
+        const isAll = (targetWorker === 'all' || targetWorker === 'rekap');
+        const targets = isAll ? ['karyawan1', 'karyawan2', 'karyawan3'] : [targetWorker];
+
+        let totalAll = 0;
+        let itemsToExec = [];
+
+        targets.forEach(w => {
+          const c = window.expresCarts[w] || [];
+          const activeItems = c.filter(r => (parseFloat(r.qty) || 0) > 0 && (r.name || '').trim() !== '');
+          const wProfit = activeItems.reduce((sum, r) => sum + (r.profit || 0), 0);
+          totalAll += wProfit;
+          if (activeItems.length > 0) {
+            itemsToExec.push({
+              worker: w,
+              workerName: window.EXPRES_WORKERS[w]?.name || w,
+              items: activeItems,
+              profit: wProfit
+            });
+          }
+        });
+
+        if (itemsToExec.length === 0) {
+          showToast("Belum ada barang terjual yang diisi jumlahnya.", "warning");
+          return;
         }
 
-        const btn = document.getElementById('btn-eksekusi-cuan');
+        const confirmText = isAll
+          ? `Yakin ingin mengeksekusi SEMUA Karyawan (Total Cuan: ${isSuperAdmin() ? rupiah(totalAll) : 'Semua Shift'}) ke Laporan Cuan?`
+          : `Yakin ingin mengeksekusi ${window.EXPRES_WORKERS[targetWorker]?.name || targetWorker} (${isSuperAdmin() ? rupiah(totalAll) : 'Shift Ini'}) ke Laporan Cuan?`;
+
+        if (!confirm(confirmText)) return;
+
+        const btn = document.getElementById(isAll ? 'btn-eksekusi-cuan-all' : 'btn-eksekusi-cuan');
         if (btn) {
             btn.disabled = true;
             btn.innerHTML = '⏳ Memproses...';
@@ -4218,28 +4744,35 @@ Beras Premium 1"></textarea>
         }
         try {
             const executionDate = document.getElementById("expres-date") ? document.getElementById("expres-date").value : today();
-            const payload = { amount: total, executionDate: executionDate };
-            await gas("add", { collection: "cuan_reports", item: payload });
-            
-            // Reset cart
-            window.expresCart = window.getInitialExpresCart(true);
-              window.saveExpresCart();
-            
+            for (const entry of itemsToExec) {
+              const payload = {
+                amount: entry.profit,
+                executionDate: executionDate,
+                workerName: entry.workerName,
+                itemsDetail: entry.items
+              };
+              await gas("add", { collection: "cuan_reports", item: payload });
+
+              // Reset worker draft ke template preset bersih
+              window.expresCarts[entry.worker] = window.getInitialExpresCartForWorker(entry.worker, true);
+              window.saveExpresCart(entry.worker);
+              // Immediate sync reset to server
+              await gas("saveExpresDraft", { worker: entry.worker, cart: window.expresCarts[entry.worker] }).catch(()=>{});
+            }
+
+            if (window.activeExpresWorker !== 'rekap') {
+              window.expresCart = window.expresCarts[window.activeExpresWorker];
+            }
+
             if (btn) {
                 btn.innerHTML = '✅ Berhasil!';
                 btn.style.background = '#10b981';
                 btn.style.opacity = '1';
             }
-            
-            // Toast tidak akan nge-block UI
+
             showToast("Sukses mengeksekusi cuan!", "success");
-            
-            // Render ulang segera supaya UI kembali normal (mengosongkan form)
             render();
-            
-            // Load data di background agar tidak menahan/mem-freeze UI
             load().catch(console.error);
-            
         } catch (e) {
             if (btn) {
                 btn.disabled = false;
@@ -4254,41 +4787,47 @@ Beras Premium 1"></textarea>
        window.cuanLaporanTab = tab;
        render();
     };
-    window.updateExpresRow = function(index, field, value) {
-       let row = window.expresCart[index];
+
+    window.updateExpresRow = function(index, field, value, workerId = window.activeExpresWorker) {
+       const activeW = (!workerId || workerId === 'rekap') ? 'karyawan1' : workerId;
+       const cart = window.expresCarts[activeW] || [];
+       let row = cart[index];
        if (!row) return;
        if (field === 'name') {
            row.name = value;
-           const prod = window.state.data.products.find(p => (p.name || "").trim().toLowerCase() === String(value || "").trim().toLowerCase());
+           const prod = window.findExpresProduct(value);
            if (prod) {
                row.name = prod.name;
-               row.isi = prod.unitContent || 1;
-               const saleEcer = Number(String(prod.salePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
-               const baseEcer = Number(String(prod.basePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
-               row.cuanEcer = saleEcer - baseEcer;
+               row.productId = prod.id;
            } else {
-               row.isi = 1;
-               row.cuanEcer = 0;
+               row.productId = undefined;
            }
+           window.resolveExpresItemMetrics(row);
        } else if (field === 'qty') {
-           row.qty = parseFloat(value) || 0;
+           row.qty = value === '' ? '' : (parseFloat(value) || 0);
+           window.resolveExpresItemMetrics(row);
        }
-       row.profit = row.qty * (row.isi || 1) * (row.cuanEcer || 0);
-       
-       // Live update UI elements without calling render() to maintain focus
-       const jumlahEl = document.getElementById('expres-jumlah-' + index);
+
+       const isiEl = document.getElementById('expres-isi-' + activeW + '-' + index);
+       if (isiEl) {
+           isiEl.innerText = row.name ? (row.isi || 1) : '-';
+       }
+
+       const jumlahEl = document.getElementById('expres-jumlah-' + activeW + '-' + index) || document.getElementById('expres-jumlah-' + index);
        if (jumlahEl) {
            jumlahEl.value = row.profit > 0 ? rupiah(row.profit) : '';
        }
-       
-       const totalCuan = window.expresCart.reduce((sum, r) => sum + (r.profit || 0), 0);
-       const totalEl = document.getElementById('expres-total');
+
+       const totalCuan = cart.reduce((sum, r) => sum + (r.profit || 0), 0);
+       const totalEl = document.getElementById('expres-total-' + activeW) || document.getElementById('expres-total');
        if (totalEl) {
            totalEl.innerText = rupiah(totalCuan);
        }
+
+       const hasValidQty = cart.some(r => (parseFloat(r.qty) || 0) > 0 && (r.name || '').trim() !== '');
        const btnEksekusi = document.getElementById('btn-eksekusi-cuan');
        if (btnEksekusi) {
-           if (totalCuan > 0) {
+           if (hasValidQty) {
                btnEksekusi.disabled = false;
                btnEksekusi.style.opacity = '1';
                btnEksekusi.style.cursor = 'pointer';
@@ -4296,17 +4835,18 @@ Beras Premium 1"></textarea>
                btnEksekusi.disabled = true;
                btnEksekusi.style.opacity = '0.5';
                btnEksekusi.style.cursor = 'not-allowed';
-            }
-        }
-        window.saveExpresCart();
+           }
+       }
+       window.saveExpresCart(activeW);
     };
-    
-    window.removeExpres = function(index) {
-      if (window.expresCart && window.expresCart[index]) {
-         window.expresCart[index] = {name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0};
-           window.saveExpresCart();
-           render();
-        }
+
+    window.removeExpres = function(index, workerId = window.activeExpresWorker) {
+      const activeW = (!workerId || workerId === 'rekap') ? 'karyawan1' : workerId;
+      if (window.expresCarts[activeW] && window.expresCarts[activeW][index]) {
+         window.expresCarts[activeW][index] = {name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0};
+         window.saveExpresCart(activeW);
+         render();
+      }
     };
 
     // Workspace state for Penjualan page
@@ -5501,7 +6041,16 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
         if (collection === "shopping") {
           if (typeof saveShoppingRows === 'function' && typeof shoppingRows === 'function') {
             saveShoppingRows(shoppingRows().filter((row) => String(row.id) !== String(id)));
-            if (typeof render === 'function') render();
+            if (typeof render === 'function') {
+            render();
+            if (currentSearchVal && typeof window.searchBarang === 'function') {
+              const newSearchInput = document.getElementById("search-barang-input");
+              if (newSearchInput) {
+                newSearchInput.value = currentSearchVal;
+                window.searchBarang(currentSearchVal);
+              }
+            }
+          }
           }
           return;
         }
@@ -5515,11 +6064,22 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
           users: "users", suppliers: "suppliers"
         };
         const stateKey = collectionMap[collection];
+        const searchInput = document.getElementById("search-barang-input");
+        const currentSearchVal = searchInput ? searchInput.value : null;
         let removed = null;
         if (stateKey && window.state && window.state.data[stateKey]) {
           removed = window.state.data[stateKey].find(r => String(r.id) === String(id));
           window.state.data[stateKey] = window.state.data[stateKey].filter(r => String(r.id) !== String(id));
-          if (typeof render === 'function') render();
+          if (typeof render === 'function') {
+            render();
+            if (currentSearchVal && typeof window.searchBarang === 'function') {
+              const newSearchInput = document.getElementById("search-barang-input");
+              if (newSearchInput) {
+                newSearchInput.value = currentSearchVal;
+                window.searchBarang(currentSearchVal);
+              }
+            }
+          }
         }
 
         try {
@@ -5530,7 +6090,16 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
             window.state.data[stateKey].push(removed);
             window.state.data[stateKey].sort((a, b) => Number(b.id) - Number(a.id));
           }
-          if (typeof render === 'function') render();
+          if (typeof render === 'function') {
+            render();
+            if (currentSearchVal && typeof window.searchBarang === 'function') {
+              const newSearchInput = document.getElementById("search-barang-input");
+              if (newSearchInput) {
+                newSearchInput.value = currentSearchVal;
+                window.searchBarang(currentSearchVal);
+              }
+            }
+          }
           alert("Gagal menghapus: " + err.message);
         }
       }
@@ -6622,11 +7191,20 @@ function doPost(e) {
             suppliers: "suppliers"
           };
           const stateKey = collectionMap[collection];
+        const searchInput = document.getElementById("search-barang-input");
+        const currentSearchVal = searchInput ? searchInput.value : null;
           let removed = null;
           if (stateKey && state.data[stateKey]) {
             removed = state.data[stateKey].find(r => String(r.id) === String(id));
             state.data[stateKey] = state.data[stateKey].filter(r => String(r.id) !== String(id));
             render(); // langsung re-render, user tidak perlu tunggu!
+            if (currentSearchVal && typeof window.searchBarang === 'function') {
+              const newSearchInput = document.getElementById("search-barang-input");
+              if (newSearchInput) {
+                newSearchInput.value = currentSearchVal;
+                window.searchBarang(currentSearchVal);
+              }
+            }
           }
 
           // ── Sync ke server di background ──
@@ -6639,6 +7217,13 @@ function doPost(e) {
               state.data[stateKey].sort((a, b) => Number(b.id) - Number(a.id));
             }
             render();
+            if (currentSearchVal && typeof window.searchBarang === 'function') {
+              const newSearchInput = document.getElementById("search-barang-input");
+              if (newSearchInput) {
+                newSearchInput.value = currentSearchVal;
+                window.searchBarang(currentSearchVal);
+              }
+            }
             alert("Gagal menghapus: " + err.message);
           }
         };
@@ -8111,14 +8696,32 @@ function doPost(e) {
       localStorage.setItem("role", state.role);
       localStorage.setItem("currentUser", JSON.stringify(user));
       el("login-modal").classList.add("hidden");
-      // Sembunyikan gateway-screen agar tidak menutupi aplikasi setelah login
       const gateway = document.getElementById("gateway-screen");
       if (gateway) gateway.classList.add("hidden");
       const appWrap = document.querySelector(".app");
       if (appWrap) appWrap.classList.remove("hidden");
-      // [FIX] Tarik ulang SELURUH data (karyawan, barang, dll) dari server sebelum
-      // menggambar halaman. Tanpa ini, halaman pertama kali dirender dengan state.data
-      // kosong bawaan sehingga fitur seperti Kasbon terlihat kosong sampai di-refresh manual.
+      
+      // Auto prompt passkey / biometrik jika Super Admin di perangkat yang mendukung
+      if (user.role === "Super Admin" && window.isSecureContext && window.SimpleWebAuthnBrowser) {
+        const { browserSupportsWebAuthn } = window.SimpleWebAuthnBrowser;
+        if (browserSupportsWebAuthn && browserSupportsWebAuthn()) {
+          const passkeyPromptDone = sessionStorage.getItem("passkey_prompt_done");
+          if (!passkeyPromptDone) {
+            sessionStorage.setItem("passkey_prompt_done", "1");
+            setTimeout(async () => {
+              try {
+                const res = await gas("checkPasskeys", {}, true);
+                if (res && res.count === 0) {
+                  if (confirm("Aktifkan Login Sidik Jari / Face ID di perangkat ini agar berikutnya bisa login instan tanpa password?")) {
+                    window.registerPasskey();
+                  }
+                }
+              } catch (_) {}
+            }, 1200);
+          }
+        }
+      }
+
       load().catch((err) => {
         console.error("Gagal memuat data setelah login:", err);
         renderShell();
@@ -10166,51 +10769,41 @@ window.deleteManualCashflow = async function(id) {
 };
 
     window.toggleExpresItem = function(id, checked) {
-        if (!window.expresCart) window.expresCart = window.getInitialExpresCart(false);
+        const activeW = (!window.activeExpresWorker || window.activeExpresWorker === 'rekap') ? 'karyawan1' : window.activeExpresWorker;
+        if (!window.expresCarts[activeW]) window.expresCarts[activeW] = window.getInitialExpresCartForWorker(activeW, false);
+        const cart = window.expresCarts[activeW];
         const product = (window.state && window.state.data && window.state.data.products || []).find(p => String(p.id) === String(id));
         if (!product) return;
-        
+
         const productName = (product.name || "").trim();
-        
+
         if (checked) {
-            // Cek jika sudah ada
-            const exists = window.expresCart.some(r => r.productId ? String(r.productId) === String(product.id) : (r.name || "").trim().toLowerCase() === productName.toLowerCase());
+            const exists = cart.some(r => r.productId ? String(r.productId) === String(product.id) : (r.name || "").trim().toLowerCase() === productName.toLowerCase());
             if (!exists) {
-                // Cari slot kosong pertama
-                let emptyIdx = window.expresCart.findIndex(r => !(r.name || "").trim());
+                let emptyIdx = cart.findIndex(r => !(r.name || "").trim());
                 if (emptyIdx === -1) {
-                    // Jika penuh, tambah row baru
-                    window.expresCart.push({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0});
-                    emptyIdx = window.expresCart.length - 1;
+                    cart.push({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0});
+                    emptyIdx = cart.length - 1;
                 }
-                const saleEcer = Number(String(product.salePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
-                const baseEcer = Number(String(product.basePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
-                const isiUnit = Number(String(product.unitContent || '1').replace(/[^0-9]/g, '')) || 1;
-                
-                window.expresCart[emptyIdx] = {
+                cart[emptyIdx] = window.resolveExpresItemMetrics({
                     name: productName,
                     qty: '',
-                    isi: isiUnit,
-                    cuanEcer: saleEcer - baseEcer,
-                    profit: 0,
                     productId: product.id
-                };
+                });
             }
         } else {
-            // Hapus dari expresCart
-            const idx = window.expresCart.findIndex(r => r.productId ? String(r.productId) === String(product.id) : (r.name || "").trim().toLowerCase() === productName.toLowerCase());
+            const idx = cart.findIndex(r => r.productId ? String(r.productId) === String(product.id) : (r.name || "").trim().toLowerCase() === productName.toLowerCase());
             if (idx !== -1) {
-                // Hapus dan geser ke bawah, lalu tambahkan baris kosong di akhir agar jumlah minimal tetap 20 jika diperlukan
-                window.expresCart.splice(idx, 1);
-                if (window.expresCart.length < 20) {
-                    window.expresCart.push({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0});
+                cart.splice(idx, 1);
+                const minRows = window.EXPRES_WORKERS[activeW]?.minRows || 10;
+                if (cart.length < minRows) {
+                    cart.push({name: '', qty: '', isi: 1, cuanEcer: 0, profit: 0});
                 }
             }
         }
-        window.saveExpresCart();
+        window.expresCart = cart;
+        window.saveExpresCart(activeW);
     };
-
-
 
 // --- GATEWAY EVENTS (FIXED) ---
 document.addEventListener("DOMContentLoaded", () => {
@@ -10435,3 +11028,302 @@ window.kalkulasiNotepadPembelian = function() {
     
     resultDiv.innerHTML = html;
 };
+
+    // --- SMART PASTE NOTA GEMINI / CHATGPT ---
+    // Modal Tempel Teks Gemini
+    window.openGeminiPasteModal = function() {
+      let modal = document.getElementById('gemini-paste-modal');
+      if (modal) modal.remove();
+
+      const today = new Date().toISOString().slice(0, 10);
+      modal = document.createElement('div');
+      modal.id = 'gemini-paste-modal';
+      modal.style.cssText = 'position:fixed; inset:0; z-index:999999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); padding:16px; font-family:Arial,sans-serif;';
+      
+      modal.innerHTML = `
+        <div style="background:var(--surface, #0a1526); border:1px solid var(--line, rgba(0,255,204,0.3)); border-radius:16px; max-width:720px; width:100%; box-shadow:0 25px 50px rgba(0,0,0,0.9); padding:24px; position:relative; max-height:92vh; overflow-y:auto;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.5rem;">📋</span>
+              <div>
+                <h3 style="margin:0; font-size:1.2rem; color:var(--garneta-cyan, #00ffcc);">Tempel Teks Nota Gemini / AI</h3>
+                <p class="muted" style="margin:2px 0 0; font-size:0.85rem;">Input cepat: salin teks nota dari Gemini atau ChatGPT, lalu tempel di sini.</p>
+              </div>
+            </div>
+            <button class="btn danger" onclick="document.getElementById('gemini-paste-modal').remove()" style="padding:6px 12px; font-weight:bold;">✕</button>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div>
+              <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:4px; color:#fff;">Suplier / Toko (opsional):</label>
+              <input type="text" id="gemini-nota-supplier" class="input" placeholder="Contoh: CV. Pangan Sejahtera / MUH/MUSYAFA" style="width:100%; box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:4px; color:#fff;">Tanggal Nota:</label>
+              <input type="date" id="gemini-nota-date" class="input" value="${today}" style="width:100%; box-sizing:border-box;">
+            </div>
+          </div>
+
+          <div style="margin-bottom:18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label style="font-size:0.85rem; font-weight:bold; color:#fff;">Tempel Teks Hasil Gemini Di Sini:</label>
+              <span class="muted" style="font-size:0.75rem;">Mendukung format pipa (|) dan tabel</span>
+            </div>
+            <textarea id="gemini-nota-text" class="input" rows="10" placeholder="Contoh teks dari Gemini:
+GUNUNG AGUNG 25 KG | 20 SAK | 450000 | 9000000
+CAKRA 25 KG | 5 SAK | 239000 | 1195000
+LENCANA MERAH 25 KG | 10 SAK | 228000 | 2280000
+SEGITIGA BIRU 25 KG | 5 SAK | 234000 | 1170000
+... dst (baris TOTAL otomatis diabaikan)" style="width:100%; box-sizing:border-box; font-family:monospace; font-size:0.85rem; line-height:1.4;"></textarea>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn soft" onclick="document.getElementById('gemini-paste-modal').remove()">Batal</button>
+            <button class="btn primary" onclick="window.processGeminiNotaPaste()" style="padding:10px 22px; font-weight:bold; background:var(--garneta-cyan, #00ffcc); color:#000;">
+              🔍 Proses & Atur Harga Jual ➔
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+      setTimeout(() => document.getElementById('gemini-nota-text')?.focus(), 100);
+    };
+
+    window.processGeminiNotaPaste = function() {
+      const textEl = document.getElementById('gemini-nota-text');
+      const supplierEl = document.getElementById('gemini-nota-supplier');
+      const dateEl = document.getElementById('gemini-nota-date');
+
+      const text = textEl ? textEl.value.trim() : '';
+      if (!text) {
+        if (window.showToast) window.showToast('Tempelkan teks hasil Gemini terlebih dahulu!', 'error');
+        else alert('Tempelkan teks hasil Gemini terlebih dahulu!');
+        return;
+      }
+
+      const supplier = supplierEl ? supplierEl.value.trim() : '';
+      const date = dateEl && dateEl.value ? dateEl.value : new Date().toISOString().slice(0, 10);
+
+      // Parse lines
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const items = [];
+
+      for (const line of lines) {
+        if (/^(total|subtotal|grand\s*total)\s*[:=]/i.test(line)) continue;
+        if (line.includes('|')) {
+          const parts = line.split('|').map(p => p.trim()).filter(Boolean);
+          if (parts.length >= 3) {
+            if (/^(nama|barang|item|produk)/i.test(parts[0]) && /^(qty|jumlah|satuan)/i.test(parts[1])) continue;
+            const name = parts[0];
+            const qtyUnitStr = parts[1];
+            const priceStr = parts[2];
+
+            const qtyMatch = qtyUnitStr.match(/^([\d.,]+)\s*(.*)$/);
+            const qty = qtyMatch ? parseFloat(qtyMatch[1].replace(/,/g, '.')) : 1;
+            const unit = (qtyMatch && qtyMatch[2] ? qtyMatch[2].trim() : 'pcs').toLowerCase();
+            const basePrice = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
+            const salePrice = Math.round((basePrice * 1.1) / 500) * 500; // default margin +10%
+
+            items.push({ name, qty, unit, basePrice, salePrice });
+          }
+        } else {
+          const parsed = typeof parseNameQtyUnit === 'function' ? parseNameQtyUnit(line) : null;
+          if (parsed) {
+            items.push({ name: parsed.name, qty: parsed.qty, unit: parsed.unit, basePrice: 0, salePrice: 0 });
+          }
+        }
+      }
+
+      if (items.length === 0) {
+        alert('Tidak ada data barang valid yang ditemukan. Pastikan format teks dipisahkan tanda | (pipa).');
+        return;
+      }
+
+      document.getElementById("gemini-paste-modal")?.remove();
+      window.openGeminiPreviewModal(items, supplier, date);
+    };
+
+    window.openGeminiPreviewModal = function(items, defaultSupplier, defaultDate) {
+      let currentItems = JSON.parse(JSON.stringify(items));
+      let supplier = defaultSupplier || '';
+      let date = defaultDate || new Date().toISOString().slice(0, 10);
+
+      const calcTotal = () => currentItems.reduce((acc, it) => acc + (Number(it.qty || 0) * Number(it.basePrice || 0)), 0);
+      const escapeStr = (str) => String(str || '').replace(/"/g, '&quot;');
+      const formatRup = (val) => typeof rupiah === 'function' ? rupiah(val) : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(val || 0));
+
+      let modal = document.getElementById('gemini-preview-modal');
+      if (modal) modal.remove();
+
+      modal = document.createElement('div');
+      modal.id = 'gemini-preview-modal';
+      modal.style.cssText = 'position:fixed; inset:0; z-index:99999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); padding:16px; font-family:Arial,sans-serif;';
+
+      const renderContent = () => {
+        const total = calcTotal();
+        modal.innerHTML = `
+          <div style="background:var(--surface, #0a1526); border:1px solid var(--line, rgba(0,255,204,0.3)); border-radius:16px; max-width:880px; width:100%; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 50px rgba(0,0,0,0.9);">
+            <!-- Header -->
+            <div style="padding:16px 20px; border-bottom:1px solid var(--line, rgba(0,255,204,0.2)); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25);">
+              <div>
+                <h3 style="margin:0; color:#00ffcc; font-size:1.2rem; display:flex; align-items:center; gap:8px;">
+                  <span>🤖 Pratinjau Nota Gemini</span>
+                  <span style="font-size:0.8rem; background:rgba(0,255,204,0.2); padding:2px 8px; border-radius:10px; color:#fff;">${currentItems.length} Barang</span>
+                </h3>
+                <p style="margin:4px 0 0; font-size:0.82rem; color:#888;">Periksa data, tentukan harga jual, lalu klik simpan ke database toko.</p>
+              </div>
+              <button onclick="document.getElementById('gemini-preview-modal').remove()" style="background:none; border:none; color:#aaa; font-size:22px; cursor:pointer;">✕</button>
+            </div>
+
+            <!-- Body -->
+            <div style="padding:16px 20px; overflow-y:auto; flex:1;">
+              <div style="display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
+                <label style="flex:1; min-width:200px; font-size:12px; color:#00ffcc; font-weight:bold;">Nama Suplier:
+                  <input type="text" id="gpm-supplier" value="${escapeStr(supplier)}" placeholder="Cth: CV. Pangan Sejahtera" style="width:100%; margin-top:4px; padding:6px 10px; border-radius:8px; border:1px solid rgba(0,255,204,0.3); background:rgba(0,0,0,0.4); color:#fff;">
+                </label>
+                <label style="width:160px; font-size:12px; color:#00ffcc; font-weight:bold;">Tanggal Nota:
+                  <input type="date" id="gpm-date" value="${date}" style="width:100%; margin-top:4px; padding:6px 10px; border-radius:8px; border:1px solid rgba(0,255,204,0.3); background:rgba(0,0,0,0.4); color:#fff;">
+                </label>
+              </div>
+
+              <!-- Quick Margin Setter -->
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                <span style="font-size:0.82rem; color:#b3ffeb; font-weight:bold;">⚡ Set Cepat Margin Harga Jual:</span>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                  <button class="btn soft" onclick="window.applyGeminiMargin(0.05)" style="font-size:11px; padding:3px 8px; min-height:26px;">+5%</button>
+                  <button class="btn soft" onclick="window.applyGeminiMargin(0.10)" style="font-size:11px; padding:3px 8px; min-height:26px;">+10%</button>
+                  <button class="btn soft" onclick="window.applyGeminiMargin(0.15)" style="font-size:11px; padding:3px 8px; min-height:26px;">+15%</button>
+                  <button class="btn soft" onclick="window.applyGeminiMargin(0.20)" style="font-size:11px; padding:3px 8px; min-height:26px;">+20%</button>
+                  <button class="btn soft" onclick="window.applyGeminiMargin(0)" style="font-size:11px; padding:3px 8px; min-height:26px;">Modal = Jual</button>
+                </div>
+              </div>
+
+              <!-- Table -->
+              <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                  <thead>
+                    <tr style="background:rgba(255,255,255,0.06); text-align:left;">
+                      <th style="padding:8px; width:30px;">#</th>
+                      <th style="padding:8px;">Nama Barang</th>
+                      <th style="padding:8px; width:70px;">Qty</th>
+                      <th style="padding:8px; width:80px;">Satuan</th>
+                      <th style="padding:8px; width:110px;">Modal Satuan</th>
+                      <th style="padding:8px; width:110px;">Harga Jual</th>
+                      <th style="padding:8px; width:110px; text-align:right;">Subtotal</th>
+                      <th style="padding:8px; width:40px; text-align:center;">✕</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${currentItems.map((it, idx) => `
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                        <td style="padding:6px 8px; color:#888;">${idx + 1}</td>
+                        <td style="padding:6px 8px;"><input type="text" value="${escapeStr(it.name)}" onchange="window.updateGeminiRow(${idx}, 'name', this.value)" style="padding:4px 6px; font-size:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; width:100%;"></td>
+                        <td style="padding:6px 8px;"><input type="number" value="${it.qty}" min="1" step="any" onchange="window.updateGeminiRow(${idx}, 'qty', this.value)" style="padding:4px 6px; font-size:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; width:100%;"></td>
+                        <td style="padding:6px 8px;"><input type="text" value="${escapeStr(it.unit)}" onchange="window.updateGeminiRow(${idx}, 'unit', this.value)" style="padding:4px 6px; font-size:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; width:100%;"></td>
+                        <td style="padding:6px 8px;"><input type="number" value="${it.basePrice}" onchange="window.updateGeminiRow(${idx}, 'basePrice', this.value)" style="padding:4px 6px; font-size:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,204,0.3); border-radius:6px; color:#10b981; width:100%;"></td>
+                        <td style="padding:6px 8px;"><input type="number" value="${it.salePrice}" onchange="window.updateGeminiRow(${idx}, 'salePrice', this.value)" style="padding:4px 6px; font-size:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(59,130,246,0.3); border-radius:6px; color:#38bdf8; width:100%;"></td>
+                        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#fff;">${formatRup(Number(it.qty || 0) * Number(it.basePrice || 0))}</td>
+                        <td style="padding:6px 8px; text-align:center;"><button onclick="window.removeGeminiRow(${idx})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:14px;">🗑️</button></td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding:14px 20px; border-top:1px solid var(--line, rgba(0,255,204,0.2)); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25); flex-wrap:wrap; gap:10px;">
+              <div>
+                <span style="font-size:0.82rem; color:#888;">Total Belanja Nota:</span>
+                <span style="font-size:1.15rem; font-weight:bold; color:#00ffcc; margin-left:8px;">${formatRup(total)}</span>
+              </div>
+              <div style="display:flex; gap:10px;">
+                <button class="btn soft" onclick="document.getElementById('gemini-preview-modal').remove()">Batal</button>
+                <button class="btn primary" id="gpm-save-btn" onclick="window.saveGeminiItemsToDb()">💾 Simpan Semua ke Database</button>
+              </div>
+            </div>
+          </div>
+        `;
+      };
+
+      window.applyGeminiMargin = function(pct) {
+        currentItems.forEach(it => {
+          const bp = Number(it.basePrice || 0);
+          it.salePrice = Math.round((bp * (1 + pct)) / 500) * 500;
+        });
+        renderContent();
+      };
+
+      window.updateGeminiRow = function(idx, field, val) {
+        if (field === 'qty' || field === 'basePrice' || field === 'salePrice') {
+          currentItems[idx][field] = Number(val || 0);
+          if (field === 'basePrice' && Number(currentItems[idx].salePrice || 0) <= Number(val || 0)) {
+            currentItems[idx].salePrice = Math.round((Number(val || 0) * 1.1) / 500) * 500;
+          }
+        } else {
+          currentItems[idx][field] = val;
+        }
+        renderContent();
+      };
+
+      window.removeGeminiRow = function(idx) {
+        currentItems.splice(idx, 1);
+        renderContent();
+      };
+
+      window.saveGeminiItemsToDb = async function() {
+        const btn = document.getElementById('gpm-save-btn');
+        const supInput = document.getElementById('gpm-supplier');
+        const dateInput = document.getElementById('gpm-date');
+        const finalSupplier = supInput ? supInput.value.trim() : supplier;
+        const finalDate = dateInput ? dateInput.value : date;
+
+        if (currentItems.length === 0) {
+          alert('Tidak ada item untuk disimpan.');
+          return;
+        }
+
+        if (btn) {
+          btn.innerText = 'Menyimpan...';
+          btn.disabled = true;
+        }
+
+        try {
+          const res = await gas('saveBulkPurchases', {
+            supplier: finalSupplier,
+            date: finalDate,
+            items: currentItems.map(it => ({
+              name: it.name,
+              qty: Number(it.qty || 1),
+              unit: it.unit || 'pcs',
+              unitContent: 1,
+              basePrice: Number(it.basePrice || 0),
+              salePrice: Number(it.salePrice || 0),
+              category: 'Umum'
+            }))
+          });
+
+          modal.remove();
+
+          if (typeof load === 'function') await load();
+          if (typeof render === 'function') render();
+
+          const successCount = res?.savedCount || currentItems.length;
+          if (window.showToast) {
+            window.showToast(`${successCount} barang berhasil disimpan ke Database & Pembelian!`, 'success');
+          } else {
+            alert(`${successCount} barang berhasil disimpan ke Database & Pembelian!`);
+          }
+        } catch (err) {
+          alert('Gagal menyimpan barang: ' + err.message);
+          if (btn) {
+            btn.innerText = '💾 Simpan Semua ke Database';
+            btn.disabled = false;
+          }
+        }
+      };
+
+      document.body.appendChild(modal);
+      renderContent();
+    };

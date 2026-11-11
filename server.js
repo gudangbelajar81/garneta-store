@@ -88,8 +88,10 @@ app.use(helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:", "https://api.qrserver.com"], // QR Code API allowed
       connectSrc: ["'self'"],
+      upgradeInsecureRequests: null,
     }
   },
+  hsts: false,
   crossOriginEmbedderPolicy: false // Nonaktifkan karena bisa break PWA
 }));
 // [SECURITY] Sembunyikan X-Powered-By
@@ -262,7 +264,7 @@ function verifyToken(req, res, next) {
     }
     
     if (req.user.role === "Karyawan") {
-      if (["add", "update", "remove", "list"].includes(action)) {
+      if (["add", "update", "remove", "delete", "list"].includes(action)) {
         const collection = req.body?.payload?.collection;
         if (KASIR_COLLECTIONS.has(collection)) {
           if (action === "list") req.isPublicKasir = true;
@@ -272,7 +274,7 @@ function verifyToken(req, res, next) {
       }
       
       // Allow general dashboard access
-      if (["bootstrap", "sync", "dashboard", "analyzeInvoiceImage", "verifyInvoiceText", "saveBulkPurchases", "saveBulkKentang", "aiHealth"].includes(action)) return next();
+      if (["bootstrap", "sync", "dashboard", "analyzeInvoiceImage", "verifyInvoiceText", "saveBulkPurchases", "saveBulkKentang", "aiHealth", "saveExpresCart", "saveExpresDraft", "getExpresDrafts"].includes(action)) return next();
       
       return res.status(401).json({ ok: false, message: "Akses ditolak. Fitur ini khusus Super Admin." });
     }
@@ -424,6 +426,7 @@ async function handleAction(action, payload, req) {
     setupSuperAdmin: () => addRow("users", payload),
     update: () => updateRow(payload.collection, payload.id, payload.item, req),
     remove: () => removeRow(payload.collection, payload.id),
+    delete: () => removeRow(payload.collection, payload.id),
     login: () => loginUser(payload.name, payload.password, req),
     verifySuperAdmin: () => verifySuperAdmin(payload.adminId, payload.password, req),
     aiSettings: () => getAiSettings(payload.provider),
@@ -442,7 +445,11 @@ async function handleAction(action, payload, req) {
     saveBulkPurchases: () => saveBulkPurchases(payload),
     saveBulkKentang: () => saveBulkKentang(payload),
       saveExpresCart: () => saveExpresCart(payload),
+      saveExpresDraft: () => saveExpresDraft(payload),
+      getExpresDrafts: () => getExpresDrafts(),
+      saveExpresTemplates: () => saveExpresTemplates(payload),
       saveAppSetting: () => saveAppSetting(payload.key, payload.value),
+    checkPasskeys: () => checkUserPasskeys(req),
     generateRegOptions: () => generateRegistrationOptionsWebAuthn(req),
     verifyReg: () => verifyRegistrationWebAuthn(payload, req),
     generateAuthOptions: () => generateAuthenticationOptionsWebAuthn(payload, req),
@@ -774,12 +781,16 @@ function actionNotFoundMessage(action) {
 }
 
 async function bootstrap() {
-  const [products, suppliers, purchases, sales, users, priceHistory, auditLogs, stats, employees, cashAdvances, payrolls, ngitungSales, orders, cuanReports, expresCartStr, masterKategori] = await Promise.all([
+  const [products, suppliers, purchases, sales, users, priceHistory, auditLogs, stats, employees, cashAdvances, payrolls, ngitungSales, orders, cuanReports, expresCartStr, masterKategori, draft1Str, draft2Str, draft3Str, templatesStr] = await Promise.all([
     listRows("products"), listRows("suppliers"), listRows("purchases"), listRows("sales"),
     listRows("users"), listRows("priceHistory"), listRows("auditLogs"), dashboard(),
     listRows("employees"), listRows("cashAdvances"), listRows("payrolls"), listRows("ngitungSales"),
     listRows("orders").catch(()=>[]), listRows("cuan_reports").catch(()=>[]), getSetting('EXPRES_CART', null),
-    getSetting('MASTER_KATEGORI', 'Umum\nSembako\nRokok\nMinuman\nSnack\nBumbu Dapur\nAlat Mandi')
+    getSetting('MASTER_KATEGORI', 'Umum\nSembako\nRokok\nMinuman\nSnack\nBumbu Dapur\nAlat Mandi'),
+    getSetting('EXPRES_DRAFT_KARYAWAN1', null),
+    getSetting('EXPRES_DRAFT_KARYAWAN2', null),
+    getSetting('EXPRES_DRAFT_KARYAWAN3', null),
+    getSetting('EXPRES_TEMPLATES', null)
   ]);
   
   let expresCart = null;
@@ -787,7 +798,19 @@ async function bootstrap() {
       try { expresCart = JSON.parse(expresCartStr); } catch(e) {}
   }
 
-  return { products, suppliers, purchases, sales, users, priceHistory, auditLogs, employees, cashAdvances, payrolls, ngitungSales, orders, cuan_reports: cuanReports, dashboard: stats, expresCart, masterKategori };
+  const parseDraft = (str) => {
+    if (!str) return null;
+    try { return JSON.parse(str); } catch(e) { return null; }
+  };
+
+  const expresDrafts = {
+    karyawan1: parseDraft(draft1Str),
+    karyawan2: parseDraft(draft2Str),
+    karyawan3: parseDraft(draft3Str)
+  };
+  const expresTemplates = parseDraft(templatesStr);
+
+  return { products, suppliers, purchases, sales, users, priceHistory, auditLogs, employees, cashAdvances, payrolls, ngitungSales, orders, cuan_reports: cuanReports, dashboard: stats, expresCart, expresDrafts, expresTemplates, masterKategori };
 }
 
 
@@ -802,6 +825,10 @@ async function ensureIndexes() {
     await db.query("ALTER TABLE price_history ADD COLUMN base_price_ecer DECIMAL(14,2) NULL AFTER base_price").catch(e => logger.warn("Schema price_history.base_price_ecer: " + e.message));
     // [GAJIAN REMINDER] Tanggal gajian per karyawan untuk notifikasi Super Admin
     await db.query("ALTER TABLE employees ADD COLUMN pay_date TINYINT UNSIGNED NULL AFTER status").catch(e => logger.warn("Schema employees.pay_date: " + e.message));
+    // [JUAL EXPRES] Kolom worker_name, items_detail, notes pada cuan_reports
+    await db.query("ALTER TABLE cuan_reports ADD COLUMN worker_name VARCHAR(100) NULL AFTER amount").catch(() => {});
+    await db.query("ALTER TABLE cuan_reports ADD COLUMN items_detail JSON NULL AFTER worker_name").catch(() => {});
+    await db.query("ALTER TABLE cuan_reports ADD COLUMN notes TEXT NULL AFTER items_detail").catch(() => {});
 
     // [BIOMETRIC / WEBAUTHN] Tabel passkeys & magic_links auto-create
     await db.query(`
@@ -872,11 +899,14 @@ async function listRows(collection, req = null) {
   }
 
   if (collection === "cuan_reports") {
-    const [rows] = await db.query(`SELECT id, execution_date, amount, created_at FROM cuan_reports ORDER BY execution_date DESC LIMIT 500`);
+    const [rows] = await db.query(`SELECT id, execution_date, amount, worker_name, items_detail, notes, created_at FROM cuan_reports ORDER BY execution_date DESC, id DESC LIMIT 500`);
     return rows.map(r => ({
       id: r.id,
-      executionDate: r.execution_date ? new Date(r.execution_date).toISOString().split('T')[0] : null,
+      executionDate: r.execution_date ? formatDate(r.execution_date) : null,
       amount: Number(r.amount || 0),
+      workerName: r.worker_name || "",
+      itemsDetail: typeof r.items_detail === 'string' ? JSON.parse(r.items_detail || '[]') : (r.items_detail || []),
+      notes: r.notes || "",
       createdAt: r.created_at
     }));
   }
@@ -1034,9 +1064,68 @@ async function addRow(collection, item = {}, req = null) {
   }
 
   if (collection === "cuan_reports") {
+    let finalAmount = Number(item.amount || 0);
+    let itemsDetail = Array.isArray(item.itemsDetail) ? item.itemsDetail : [];
+    
+    // Authoritative calculation from products table if itemsDetail is present
+    if (itemsDetail.length > 0) {
+      try {
+        const [allProducts] = await db.query("SELECT id, name, aliases, unit_content, base_price, base_price_ecer, sale_price, sale_price_ecer FROM products");
+        let calculatedTotal = 0;
+        itemsDetail = itemsDetail.map(it => {
+          const itName = String(it.name || "").trim().toLowerCase();
+          if (!itName || !Number(it.qty)) return null;
+          
+          const matched = allProducts.find(p => {
+            if (it.productId && String(p.id) === String(it.productId)) return true;
+            if (String(p.name || "").trim().toLowerCase() === itName) return true;
+            const aliases = (p.aliases || "").split(",").map(a => a.trim().toLowerCase());
+            return aliases.includes(itName);
+          });
+
+          const qty = Number(it.qty) || 0;
+          let isi = Number(it.isi) || 1;
+          let cuanEcer = Number(it.cuanEcer) || 0;
+
+          if (matched) {
+            isi = Number(matched.unit_content) || 1;
+            const saleEcer = Number(matched.sale_price_ecer) || 0;
+            const baseEcer = Number(matched.base_price_ecer) || 0;
+            cuanEcer = saleEcer - baseEcer;
+            if (cuanEcer <= 0 && Number(matched.sale_price) > Number(matched.base_price)) {
+              cuanEcer = (Number(matched.sale_price) - Number(matched.base_price)) / (isi || 1);
+            }
+          }
+          const profit = qty * isi * cuanEcer;
+          calculatedTotal += profit;
+          return {
+            name: it.name,
+            productId: matched ? matched.id : (it.productId || null),
+            qty,
+            isi,
+            cuanEcer,
+            profit
+          };
+        }).filter(Boolean);
+
+        if (calculatedTotal > 0 || finalAmount <= 0) {
+          finalAmount = calculatedTotal;
+        }
+      } catch (err) {
+        logger.warn("Server cuan calculation fallback:", err.message);
+      }
+    }
+
+    const itemsJson = itemsDetail.length > 0 ? JSON.stringify(itemsDetail) : null;
     const [result] = await db.query(
-      `INSERT INTO cuan_reports (execution_date, amount) VALUES (?, ?)`,
-      [item.executionDate || new Date().toISOString().split('T')[0], item.amount || 0]
+      `INSERT INTO cuan_reports (execution_date, amount, worker_name, items_detail, notes) VALUES (?, ?, ?, ?, ?)`,
+      [
+        item.executionDate || formatDate(new Date()),
+        finalAmount,
+        item.workerName || null,
+        itemsJson,
+        item.notes || null
+      ]
     );
     return findRow("cuan_reports", result.insertId);
   }
@@ -1446,9 +1535,9 @@ async function loginUser(name, password, req = null) {
   const [rows] = await db.query(`
     SELECT id, name, email, role, status, password_hash
     FROM users
-    WHERE name = ?
+    WHERE name = ? OR email = ?
     LIMIT 1
-  `, [safeName]);
+  `, [safeName, safeName]);
   const user = rows[0];
 
   let passwordMatch = false;
@@ -1493,6 +1582,15 @@ async function findRow(collection, id) {
     suppliers: mapSupplier,
     employees: mapEmployee,
     users: mapUser,
+    cuan_reports: (r) => ({
+      id: r.id,
+      executionDate: r.execution_date ? formatDate(r.execution_date) : null,
+      amount: Number(r.amount || 0),
+      workerName: r.worker_name || "",
+      itemsDetail: typeof r.items_detail === 'string' ? JSON.parse(r.items_detail || '[]') : (r.items_detail || []),
+      notes: r.notes || "",
+      createdAt: r.created_at
+    }),
     ngitungSales: (r) => ({ ...r, items: (typeof r.items === 'string' ? JSON.parse(r.items || '[]') : (r.items || [])), installments: (typeof r.installments === 'string' ? JSON.parse(r.installments || '[]') : (r.installments || [])) }),
   };
   const mapper = mappers[collection];
@@ -1961,13 +2059,13 @@ function normalizeProvider(provider) {
 
 function defaultAiModel(provider) {
   const models = {
-    gemini: "gemini-2.5-flash",
+    gemini: "gemini-3.5-flash-lite",
     openai: "gpt-4.1-mini",
     groq: "meta-llama/llama-4-scout-17b-16e-instruct",
     deepseek: "deepseek-chat",
     kie: "gpt-5-4"
   };
-  return models[normalizeProvider(provider)];
+  return models[normalizeProvider(provider)] || "gemini-3.5-flash-lite";
 }
 
 function providerModelSettingKey(provider) {
@@ -2347,29 +2445,48 @@ async function executeChatRequest(provider, keyRec, systemPrompt, userPrompt) {
 }
 
 async function executeGeminiChat(keyRec, systemPrompt, userPrompt) {
-  const model = await getSetting(providerModelSettingKey("gemini"), defaultAiModel("gemini"));
+  const preferredModel = await getSetting(providerModelSettingKey("gemini"), defaultAiModel("gemini"));
+  const candidateModels = Array.from(new Set([preferredModel, "gemini-3.5-flash-lite", "gemini-3.5-flash"])).filter(Boolean);
   const base = keyRec.baseUrl || defaultBaseUrl("gemini");
+  const isJsonExpected = /json/i.test(systemPrompt) || /json/i.test(userPrompt);
   
-  const response = await fetchWithTimeout(`${base}/v1beta/models/${model}:generateContent?key=${encodeURIComponent(keyRec.key)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: "user", parts: [{ text: userPrompt }] }]
-    })
-  }, 30000);
+  let lastErr = null;
+  for (const model of candidateModels) {
+    try {
+      const response = await fetchWithTimeout(`${base}/v1beta/models/${model}:generateContent?key=${encodeURIComponent(keyRec.key)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 8192,
+            ...(isJsonExpected ? { responseMimeType: "application/json" } : {})
+          }
+        })
+      }, 30000);
 
-  if (response.ok) {
-    const data = await response.json();
-    if (data.candidates && data.candidates.length > 0) {
-      return data.candidates[0].content.parts[0].text;
+      if (response.ok) {
+        const data = await response.json();
+        if (data.candidates && data.candidates.length > 0) {
+          return data.candidates[0].content.parts[0].text;
+        }
+      }
+      if (response.status === 404 || response.status === 503) {
+        logger.warn(`Model chat ${model} merespon HTTP ${response.status}, mencoba model cadangan...`);
+        continue;
+      }
+      const err = new Error(`Gemini HTTP ${response.status}`);
+      err.status = response.status;
+      throw err;
+    } catch (e) {
+      if (e.status === 404 || e.status === 503) continue;
+      lastErr = e;
+      throw e;
     }
-    throw new Error("Invalid response format from Gemini");
-  } else {
-    const err = new Error(`Gemini HTTP ${response.status}`);
-    err.status = response.status;
-    throw err;
   }
+  throw lastErr || new Error("Semua model Gemini chat yang dicoba gagal.");
 }
 
 async function executeOpenAiChat(keyRec, systemPrompt, userPrompt, provider) {
@@ -2437,42 +2554,65 @@ async function executeVisionRequest(provider, keyRec, imageDataUrl, instruction)
 
 async function executeGeminiVision(keyRec, imageDataUrl, instruction) {
   const { mimeType, data } = splitDataUrl(imageDataUrl);
-  const model = await getSetting(providerModelSettingKey("gemini"), defaultAiModel("gemini"));
+  const preferredModel = await getSetting(providerModelSettingKey("gemini"), defaultAiModel("gemini"));
+  const candidateModels = Array.from(new Set([preferredModel, "gemini-3.5-flash-lite", "gemini-3.5-flash"])).filter(Boolean);
   const base = keyRec.baseUrl || defaultBaseUrl("gemini");
+  const isJsonExpected = /json|minimarket|objek|kentang/i.test(instruction);
   
-  const response = await fetchWithTimeout(`${base}/v1beta/models/${model}:generateContent?key=${encodeURIComponent(keyRec.key)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{
-        role: "user",
-        parts: [
-          { text: instruction },
-          { inline_data: { mime_type: mimeType, data } }
-        ]
-      }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 2048 }
-    })
-  }, 45000);
-  
-  if (!response.ok) {
-    // Baca body error agar bisa bedakan invalid key (rotable ke Dead) vs error lain.
-    let detail = "";
+  let lastErr = null;
+  for (const model of candidateModels) {
     try {
-      const errJson = await response.json();
-      detail = (errJson && errJson.error && (errJson.error.message || errJson.error.status)) || JSON.stringify(errJson).slice(0, 200);
-    } catch (e) { /* body bukan JSON */ }
-    const err = new Error(`Gemini HTTP ${response.status}${detail ? " — " + detail : ""}`);
-    err.status = response.status;
-    // Gemini kadang balas 400 dengan "API key not valid" — perlakukan sebagai key mati.
-    if (response.status === 400 && /api key not valid|invalid api key|api key expired|permission denied/i.test(detail)) {
-      err.status = 401;
+      const bodyPayload = {
+        contents: [{
+          role: "user",
+          parts: [
+            { text: instruction },
+            { inline_data: { mime_type: mimeType, data } }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 8192,
+          ...(isJsonExpected ? { responseMimeType: "application/json" } : {})
+        }
+      };
+      
+      const response = await fetchWithTimeout(`${base}/v1beta/models/${model}:generateContent?key=${encodeURIComponent(keyRec.key)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bodyPayload)
+      }, 45000);
+      
+      if (response.ok) {
+        const json = await response.json();
+        const text = json.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("").trim();
+        if (text) return text;
+      }
+      
+      if (response.status === 404 || response.status === 503) {
+        logger.warn(`Model vision ${model} merespon HTTP ${response.status}, beralih ke model cadangan...`);
+        continue;
+      }
+
+      // Baca body error agar bisa bedakan invalid key (rotable ke Dead) vs error lain.
+      let detail = "";
+      try {
+        const errJson = await response.json();
+        detail = (errJson && errJson.error && (errJson.error.message || errJson.error.status)) || JSON.stringify(errJson).slice(0, 200);
+      } catch (e) { /* body bukan JSON */ }
+      const err = new Error(`Gemini HTTP ${response.status}${detail ? " — " + detail : ""}`);
+      err.status = response.status;
+      if (response.status === 400 && /api key not valid|invalid api key|api key expired|permission denied/i.test(detail)) {
+        err.status = 401;
+      }
+      throw err;
+    } catch (e) {
+      if (e.status === 404 || e.status === 503) continue;
+      lastErr = e;
+      throw e;
     }
-    throw err;
   }
-  
-  const json = await response.json();
-  return json.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("").trim();
+  throw lastErr || new Error("Semua model Gemini vision yang dicoba gagal.");
 }
 
 async function executeOpenAiVision(keyRec, imageDataUrl, instruction, provider = "openai") {
@@ -2662,6 +2802,12 @@ process.on("unhandledRejection", (reason) => {
 });
 
 // --- WEBAUTHN & MAGIC LINK LOGIC ---
+async function checkUserPasskeys(req) {
+  if (!req.user) return { count: 0 };
+  const [rows] = await db.query('SELECT COUNT(*) as cnt FROM passkeys WHERE user_id = ?', [req.user.id]);
+  return { count: rows[0].cnt || 0 };
+}
+
 
 // In-memory cache for WebAuthn challenges
 const currentChallenges = {}; // userId or challenge -> data
@@ -2780,7 +2926,7 @@ async function generateAuthenticationOptionsWebAuthn(payload, req) {
 
   const searchName = payload && payload.name ? payload.name.trim() : null;
   if (searchName) {
-    const [users] = await db.query('SELECT id FROM users WHERE name = ? LIMIT 1', [searchName]);
+    const [users] = await db.query('SELECT id FROM users WHERE name = ? OR email = ? LIMIT 1', [searchName, searchName]);
     if (users.length > 0) {
       expectedUserId = users[0].id;
       const [passkeys] = await db.query('SELECT id, transports FROM passkeys WHERE user_id = ?', [expectedUserId]);
@@ -3073,6 +3219,48 @@ async function loginKaryawan(employeeId, pin) {
 async function saveExpresCart(cart) {
   try {
     await setSetting('EXPRES_CART', JSON.stringify(cart));
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, message: e.message };
+  }
+}
+
+async function saveExpresDraft(payload) {
+  try {
+    const worker = String(payload?.worker || "karyawan1").toLowerCase();
+    const cart = Array.isArray(payload?.cart) ? payload.cart : [];
+    await setSetting(`EXPRES_DRAFT_${worker.toUpperCase()}`, JSON.stringify(cart));
+    return { ok: true, worker };
+  } catch(e) {
+    return { ok: false, message: e.message };
+  }
+}
+
+async function getExpresDrafts() {
+  try {
+    const [d1, d2, d3, tmpl] = await Promise.all([
+      getSetting("EXPRES_DRAFT_KARYAWAN1", null),
+      getSetting("EXPRES_DRAFT_KARYAWAN2", null),
+      getSetting("EXPRES_DRAFT_KARYAWAN3", null),
+      getSetting("EXPRES_TEMPLATES", null)
+    ]);
+    const parse = (s) => { try { return s ? JSON.parse(s) : null; } catch(e) { return null; } };
+    return {
+      drafts: {
+        karyawan1: parse(d1),
+        karyawan2: parse(d2),
+        karyawan3: parse(d3)
+      },
+      templates: parse(tmpl)
+    };
+  } catch(e) {
+    return { drafts: {}, templates: null };
+  }
+}
+
+async function saveExpresTemplates(payload) {
+  try {
+    await setSetting("EXPRES_TEMPLATES", JSON.stringify(payload || {}));
     return { ok: true };
   } catch(e) {
     return { ok: false, message: e.message };
