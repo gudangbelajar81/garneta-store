@@ -1,4 +1,4 @@
-const CACHE_NAME = 'garneta-cache-v3';
+const CACHE_NAME = 'garneta-cache-v1794436816113';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting(); // Force activate new service worker immediately

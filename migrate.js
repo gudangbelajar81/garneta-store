@@ -29,7 +29,7 @@ function prepareSql(sql) {
     .filter(Boolean)
     .filter((statement) => !/^CREATE\s+DATABASE\b/i.test(statement))
     .filter((statement) => !/^USE\s+/i.test(statement))
-    .map((statement) => statement.replace(/^CREATE\s+TABLE\b/i, "CREATE TABLE IF NOT EXISTS"));
+    .map((statement) => statement.replace(/^CREATE\s+TABLE\b(?!\s+IF\s+NOT\s+EXISTS\b)/i, "CREATE TABLE IF NOT EXISTS"));
 }
 
 async function migrate() {
