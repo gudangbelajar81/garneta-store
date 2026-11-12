@@ -4503,7 +4503,7 @@ Beras Premium 1"></textarea>
         if (!item.name || item.name.trim() === '') item.name = prod.name;
         const saleEcer = Number(String(prod.salePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
         const baseEcer = Number(String(prod.basePriceEcer || '0').replace(/[^0-9]/g, '')) || 0;
-        item.isi = Number(String(prod.unitContent || '1').replace(/[^0-9]/g, '')) || 1;
+        item.isi = parseDecimalNumber(prod.unitContent) || 1;
         let cuan = Math.max(0, saleEcer - baseEcer);
         if (cuan <= 0) {
           const saleP = Number(String(prod.salePrice || '0').replace(/[^0-9]/g, '')) || 0;
@@ -6011,8 +6011,8 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
             <td><input data-draft-field="name" value="${escapeAttr(row.name)}"></td>
             <td><input data-draft-field="category" value="${escapeAttr(row.category || "Umum")}"></td>
             <td><select data-draft-field="unit">${["sak", "karton/dus", "jligen", "kg", "ball", "pcs"].map((unit) => `<option ${row.unit === unit ? "selected" : ""}>${unit}</option>`).join("")}</select></td>
-            <td><input data-draft-field="unitContent" type="text" inputmode="numeric" oninput="formatNumberInput(this)" value="${formatInitialNumber(Number(row.unitContent || 1))}"></td>
-            <td><input data-draft-field="stock" type="text" inputmode="numeric" oninput="formatNumberInput(this)" value="${formatInitialNumber(Number(row.stock || 0))}"></td>
+            <td><input data-draft-field="unitContent" type="text" inputmode="decimal" value="${Number(row.unitContent || 1)}"></td>
+            <td><input data-draft-field="stock" type="text" inputmode="decimal" value="${Number(row.stock || 0)}"></td>
             <td><input data-draft-field="basePrice" type="text" inputmode="numeric" oninput="formatNumberInput(this)" value="${formatInitialNumber(Number(row.basePrice || 0))}"></td>
             <td><input data-draft-field="salePrice" type="text" inputmode="numeric" oninput="formatNumberInput(this)" value="${formatInitialNumber(Number(row.salePrice || 0))}"></td>
             <td><button class="btn danger delete-invoice-draft" data-id="${row.id}" type="button">Hapus</button></td>
@@ -6323,6 +6323,25 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       return Number.isFinite(parsed) ? parsed : 0;
     }
 
+    function parseDecimalNumber(value) {
+      if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+      let s = String(value ?? "").trim();
+      if (!s) return 0;
+      const hasComma = s.includes(",");
+      const dotMatches = s.match(/\./g) || [];
+      if (hasComma && dotMatches.length > 0) {
+        s = s.replace(/\./g, "").replace(",", ".");
+      } else if (hasComma) {
+        s = s.replace(",", ".");
+      } else if (dotMatches.length > 1) {
+        s = s.replace(/\./g, "");
+      } else if (dotMatches.length === 1 && /^\d{1,3}\.\d{3}$/.test(s) && !s.startsWith("0.")) {
+        s = s.replace(/\./g, "");
+      }
+      const parsed = Number(s.replace(/[^0-9.-]/g, ""));
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
     function splitRow(line) {
       return String(line).split(/[,;\t]/).map((cell) => cell.trim()).filter((cell) => cell !== "");
     }
@@ -6333,10 +6352,10 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
         name: cells[0],
         category: cells[1] || "Umum",
         unit: cells[2] || "pcs",
-        unitContent: plainNumber(cells[3]) || 1,
+        unitContent: parseDecimalNumber(cells[3]) || 1,
         basePrice: plainNumber(cells[4]),
         salePrice: plainNumber(cells[5]),
-        stock: plainNumber(cells[6]),
+        stock: parseDecimalNumber(cells[6]),
         barcode: cells[7] || ""
       };
     }
@@ -6349,7 +6368,7 @@ Payung, Tepung, sak, 25, 170000, 8500"></textarea>
       const rawUnit = (match[3] || "pcs").toLowerCase();
       return {
         name: match[1].trim(),
-        qty: plainNumber(match[2]),
+        qty: parseDecimalNumber(match[2]),
         unit: rawUnit === "karton" || rawUnit === "dus" ? "karton/dus" : rawUnit
       };
     }
@@ -6819,8 +6838,8 @@ function doPost(e) {
         tr.querySelectorAll("[data-draft-field]").forEach((input) => {
           row[input.dataset.draftField] = input.value;
         });
-        row.unitContent = plainNumber(row.unitContent) || 1;
-        row.stock = plainNumber(row.stock);
+        row.unitContent = parseDecimalNumber(row.unitContent) || 1;
+        row.stock = parseDecimalNumber(row.stock);
         row.basePrice = plainNumber(row.basePrice);
         row.salePrice = plainNumber(row.salePrice);
         rows.push(row);
@@ -7113,7 +7132,7 @@ function doPost(e) {
               // ── Validasi nama barang ──
               const namaBarang = (item.name || "").trim() || "Barang Tanpa Nama";
 
-              const purchaseQty = Number(String(item.qty || 1).replace(/[^0-9]/g, '')) || 1;
+              const purchaseQty = parseDecimalNumber(item.qty || 1) || 1;
 
               // ── Kirim SATU kali ke server purchases ──
               // Server handle semuanya: upsert products + insert purchases + price_history
@@ -7123,13 +7142,13 @@ function doPost(e) {
                 category:     (item.category || "Umum").trim(),
                 unit:         item.unit    || "pcs",
                 unitEcer:     item.unitEcer || "-",
-                unitContent:  Number(String(item.unitContent  || 1).replace(/[^0-9]/g, '')) || 1,
+                unitContent:  parseDecimalNumber(item.unitContent || 1) || 1,
                 basePrice:    Number(String(item.basePrice    || 0).replace(/[^0-9]/g, '')),
                 basePriceEcer:Number(String(item.basePriceEcer|| 0).replace(/[^0-9]/g, '')),
                 salePrice:    Number(String(item.salePrice    || 0).replace(/[^0-9]/g, '')),
                 salePriceEcer:Number(String(item.salePriceEcer|| 0).replace(/[^0-9]/g, '')),
                 qty:          purchaseQty,
-                total:        purchaseQty * Number(String(item.basePrice || 0).replace(/[^0-9]/g, ''))
+                total:        Math.round(purchaseQty * Number(String(item.basePrice || 0).replace(/[^0-9]/g, '')))
               };
 
               await gas("add", { collection: "purchases", item: purchasePayload });
@@ -8787,7 +8806,7 @@ function doPost(e) {
         if (e.target.name === 'basePriceEcer' || e.target.name === 'basePrice' || e.target.name === 'unitContent') {
           const rawUnit = form.unitContent?.value.trim();
           if (rawUnit !== '' && rawUnit !== undefined) {
-            const unitContent = parseFloat(rawUnit);
+            const unitContent = parseDecimalNumber(rawUnit);
             if (!isNaN(unitContent) && unitContent > 0) {
               if (e.target.name === 'basePriceEcer') {
                 const ecer = Number(String(e.target.value).replace(/[^0-9-]/g, '')) || 0;
@@ -8880,7 +8899,9 @@ function doPost(e) {
             updates.discountType = val.includes('%') ? '%' : 'Rp';
           } else if (field === "displayMin") {
             updates.discountMinQty = val.replace(/[^0-9]/g, '');
-          } else if (["basePrice", "basePriceEcer", "salePrice", "salePriceEcer", "unitContent"].includes(field)) {
+          } else if (field === "unitContent" || field === "stock") {
+            updates[field] = parseDecimalNumber(val) || 0;
+          } else if (["basePrice", "basePriceEcer", "salePrice", "salePriceEcer"].includes(field)) {
             updates[field] = Number(val.replace(/[^0-9-]/g, '')) || 0;
           } else {
             updates[field] = val;

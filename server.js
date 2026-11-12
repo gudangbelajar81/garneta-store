@@ -1179,13 +1179,13 @@ async function addRow(collection, item = {}, req = null) {
         item.category || 'Umum',
         item.unit || 'pcs',
         item.unitEcer || null,
-        number(item.unitContent) || 1,
+        decimalNumber(item.unitContent) || 1,
         number(item.basePrice),
         number(item.basePriceEcer),
         number(item.salePrice),
         number(item.salePriceEcer),
         item.barcode || null,
-        number(item.qty),
+        decimalNumber(item.qty),
         productId
       ]);
     } else {
@@ -1199,12 +1199,12 @@ async function addRow(collection, item = {}, req = null) {
         item.name,
         item.unit || 'pcs',
         item.unitEcer || null,
-        number(item.unitContent) || 1,
+        decimalNumber(item.unitContent) || 1,
         number(item.basePrice),
         number(item.basePriceEcer),
         number(item.salePrice),
         number(item.salePriceEcer),
-        number(item.qty),
+        decimalNumber(item.qty),
         item.barcode || null
       ]);
       productId = prodResult.insertId;
@@ -1222,13 +1222,13 @@ async function addRow(collection, item = {}, req = null) {
     await db.query(`
       INSERT INTO purchase_details (purchase_id, product_id, quantity, unit_price)
       VALUES (?, ?, ?, ?)
-    `, [purchaseId, productId, number(item.qty), number(item.basePrice)]);
+    `, [purchaseId, productId, decimalNumber(item.qty), number(item.basePrice)]);
 
     // 4. Catat riwayat harga
     await db.query(`
       INSERT INTO price_history (product_id, purchase_id, base_price, base_price_ecer, unit_content, sale_price, sale_price_ecer, recorded_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [productId, purchaseId, number(item.basePrice), number(item.basePriceEcer), number(item.unitContent) || 1, number(item.salePrice), number(item.salePriceEcer), item.date || new Date()]);
+    `, [productId, purchaseId, number(item.basePrice), number(item.basePriceEcer), decimalNumber(item.unitContent) || 1, number(item.salePrice), number(item.salePriceEcer), item.date || new Date()]);
     
     await recordAudit(`Omni-Pembelian: ${item.name} (${isNewProduct ? 'Baru' : 'Update'})`);
     return findRow("purchases", purchaseId);
@@ -1656,12 +1656,12 @@ function productPayload(item) {
     aliases: item.aliases || "",
     unit: item.unit || "pcs",
     unitEcer: item.unitEcer || null,
-    unitContent: number(item.unitContent) || 1,
+    unitContent: decimalNumber(item.unitContent) || 1,
     basePrice: number(item.basePrice),
     basePriceEcer: number(item.basePriceEcer),
     salePrice: number(item.salePrice),
     salePriceEcer: number(item.salePriceEcer),
-    stock: number(item.stock),
+    stock: decimalNumber(item.stock),
     barcode: item.barcode || null,
     discountType: item.discountType === "%" ? "%" : "Rp",
     discountValue: number(item.discountValue),
@@ -1679,7 +1679,7 @@ function supplierPayload(item) {
 }
 
 function purchasePayload(item) {
-  const qty = number(item.qty);
+  const qty = decimalNumber(item.qty);
   const amount = number(item.amount);
   return {
     supplierId: nullableNumber(item.supplierId),
@@ -1695,12 +1695,13 @@ function purchasePayload(item) {
 
 async function salePayload(item) {
   const product = await findRow("products", item.productId);
+  const parsedContent = decimalNumber(product.unitContent);
   return {
     userId: nullableNumber(item.userId) || 1,
     productId: required(item.productId, "Barang"),
     date: item.date || new Date(),
-    unitSold: number(item.unitSold),
-    unitContent: Math.max(number(product.unitContent), 1),
+    unitSold: decimalNumber(item.unitSold),
+    unitContent: parsedContent > 0 ? parsedContent : 1,
     costPrice: number(product.basePriceEcer),
     salePrice: number(product.salePriceEcer),
     notes: item.notes || null
@@ -2716,6 +2717,25 @@ function required(value, label) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
   }
+
+  function decimalNumber(value) {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    let s = String(value ?? '').trim();
+    if (!s) return 0;
+    const hasComma = s.includes(',');
+    const dotMatches = s.match(/\./g) || [];
+    if (hasComma && dotMatches.length > 0) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else if (hasComma) {
+      s = s.replace(',', '.');
+    } else if (dotMatches.length > 1) {
+      s = s.replace(/\./g, '');
+    } else if (dotMatches.length === 1 && /^\d{1,3}\.\d{3}$/.test(s) && !s.startsWith('0.')) {
+      s = s.replace(/\./g, '');
+    }
+    const parsed = Number(s.replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
   
   function nullableNumber(value) {
     if (typeof value === 'string') value = value.replace(/\./g, '').replace(',', '.');
@@ -3293,7 +3313,7 @@ async function saveBulkPurchases(payload) {
     const name = String(item.name || "").trim();
     if (!name) continue;
 
-    const qty = number(item.qty);
+    const qty = decimalNumber(item.qty);
     const basePrice = number(item.basePrice);
     const salePrice = number(item.salePrice);
 
@@ -3304,7 +3324,7 @@ async function saveBulkPurchases(payload) {
       salePrice,
       category: String(item.category || 'Umum').trim() || 'Umum',
       unit: String(item.unit || 'pcs').trim() || 'pcs',
-      unitContent: number(item.unitContent) || 1,
+      unitContent: decimalNumber(item.unitContent) || 1,
       total: qty * basePrice,
       supplier: cleanedSupplier,
       date: date || new Date()
